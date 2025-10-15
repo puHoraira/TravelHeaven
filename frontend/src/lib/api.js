@@ -5,17 +5,18 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // Request interceptor - add auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+    config.headers = config.headers || {};
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
     }
     return config;
   },

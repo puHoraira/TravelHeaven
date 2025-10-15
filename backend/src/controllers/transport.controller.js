@@ -1,4 +1,5 @@
 import { TransportRepository } from '../patterns/Repository.js';
+import { ensureGuideApproved } from '../utils/guide.js';
 
 const transportRepo = new TransportRepository();
 
@@ -7,10 +8,14 @@ const transportRepo = new TransportRepository();
  */
 export const createTransport = async (req, res) => {
   try {
+    if (!ensureGuideApproved(req, res)) return;
+
     const transportData = {
       ...req.body,
       guideId: req.user._id,
       approvalStatus: 'pending',
+      rejectionReason: null,
+      resubmittedAt: null,
     };
 
     // Handle uploaded images
@@ -111,6 +116,8 @@ export const getTransportById = async (req, res) => {
  */
 export const updateTransport = async (req, res) => {
   try {
+    if (!ensureGuideApproved(req, res)) return;
+
     const transport = await transportRepo.findById(req.params.id);
 
     if (!transport) {
@@ -142,6 +149,8 @@ export const updateTransport = async (req, res) => {
     // Reset approval status if content changed
     if (req.user.role === 'guide') {
       updateData.approvalStatus = 'pending';
+      updateData.rejectionReason = null;
+      updateData.resubmittedAt = new Date();
     }
 
     const updatedTransport = await transportRepo.update(req.params.id, updateData);
@@ -165,6 +174,8 @@ export const updateTransport = async (req, res) => {
  */
 export const deleteTransport = async (req, res) => {
   try {
+    if (!ensureGuideApproved(req, res)) return;
+
     const transport = await transportRepo.findById(req.params.id);
 
     if (!transport) {

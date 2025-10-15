@@ -1,4 +1,5 @@
 import { HotelRepository } from '../patterns/Repository.js';
+import { ensureGuideApproved } from '../utils/guide.js';
 
 const hotelRepo = new HotelRepository();
 
@@ -7,10 +8,14 @@ const hotelRepo = new HotelRepository();
  */
 export const createHotel = async (req, res) => {
   try {
+    if (!ensureGuideApproved(req, res)) return;
+
     const hotelData = {
       ...req.body,
       guideId: req.user._id,
       approvalStatus: 'pending',
+      rejectionReason: null,
+      resubmittedAt: null,
     };
 
     // Handle uploaded images
@@ -111,6 +116,8 @@ export const getHotelById = async (req, res) => {
  */
 export const updateHotel = async (req, res) => {
   try {
+    if (!ensureGuideApproved(req, res)) return;
+
     const hotel = await hotelRepo.findById(req.params.id);
 
     if (!hotel) {
@@ -142,6 +149,8 @@ export const updateHotel = async (req, res) => {
     // Reset approval status if content changed
     if (req.user.role === 'guide') {
       updateData.approvalStatus = 'pending';
+      updateData.rejectionReason = null;
+      updateData.resubmittedAt = new Date();
     }
 
     const updatedHotel = await hotelRepo.update(req.params.id, updateData);
@@ -165,6 +174,8 @@ export const updateHotel = async (req, res) => {
  */
 export const deleteHotel = async (req, res) => {
   try {
+    if (!ensureGuideApproved(req, res)) return;
+
     const hotel = await hotelRepo.findById(req.params.id);
 
     if (!hotel) {

@@ -64,6 +64,7 @@ const transportSchema = new mongoose.Schema({
   },
   approvedAt: Date,
   rejectionReason: String,
+  resubmittedAt: Date,
   createdAt: {
     type: Date,
     default: Date.now,

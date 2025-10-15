@@ -87,6 +87,8 @@ import { Hotel } from '../models/Hotel.js';
 import { Transport } from '../models/Transport.js';
 import { Booking } from '../models/Booking.js';
 import { Itinerary } from '../models/Itinerary.js';
+import { Review } from '../models/Review.js';
+import { Notification } from '../models/Notification.js';
 
 export class UserRepository extends BaseRepository {
   constructor() {
@@ -232,5 +234,40 @@ export class ItineraryRepository extends BaseRepository {
     itinerary.completeness = score;
     itinerary.updatedAt = Date.now();
     return await itinerary.save();
+  }
+}
+
+export class ReviewRepository extends BaseRepository {
+  constructor() {
+    super(Review);
+  }
+
+  async findByReference(reviewType, referenceId, options = {}) {
+    return await this.findAll({ reviewType, referenceId }, options);
+  }
+
+  async findByUser(userId, options = {}) {
+    return await this.findAll({ userId }, options);
+  }
+
+  async getAverageRating(reviewType, referenceId) {
+    const result = await this.model.aggregate([
+      { $match: { reviewType, referenceId } },
+      {
+        $group: {
+          _id: null,
+          average: { $avg: '$rating' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    return result.length > 0 ? result[0] : { average: 0, count: 0 };
+  }
+}
+
+export class NotificationRepository extends BaseRepository {
+  constructor() {
+    super(Notification);
   }
 }

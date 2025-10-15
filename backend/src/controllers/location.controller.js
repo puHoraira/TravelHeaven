@@ -1,4 +1,5 @@
 import { LocationRepository } from '../patterns/Repository.js';
+import { ensureGuideApproved } from '../utils/guide.js';
 
 const locationRepo = new LocationRepository();
 
@@ -7,10 +8,14 @@ const locationRepo = new LocationRepository();
  */
 export const createLocation = async (req, res) => {
   try {
+    if (!ensureGuideApproved(req, res)) return;
+
     const locationData = {
       ...req.body,
       guideId: req.user._id,
       approvalStatus: 'pending',
+      rejectionReason: null,
+      resubmittedAt: null,
     };
 
     // Handle uploaded images
@@ -116,6 +121,8 @@ export const getLocationById = async (req, res) => {
  */
 export const updateLocation = async (req, res) => {
   try {
+    if (!ensureGuideApproved(req, res)) return;
+
     const location = await locationRepo.findById(req.params.id);
 
     if (!location) {
@@ -147,6 +154,8 @@ export const updateLocation = async (req, res) => {
     // Reset approval status if content changed
     if (req.user.role === 'guide') {
       updateData.approvalStatus = 'pending';
+      updateData.rejectionReason = null;
+      updateData.resubmittedAt = new Date();
     }
 
     const updatedLocation = await locationRepo.update(req.params.id, updateData);
@@ -170,6 +179,8 @@ export const updateLocation = async (req, res) => {
  */
 export const deleteLocation = async (req, res) => {
   try {
+    if (!ensureGuideApproved(req, res)) return;
+
     const location = await locationRepo.findById(req.params.id);
 
     if (!location) {

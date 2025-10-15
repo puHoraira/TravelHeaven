@@ -1,21 +1,26 @@
+import { useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { 
-  Home, 
-  MapPin, 
-  Hotel, 
-  Bus, 
-  User, 
-  LogOut, 
-  Shield, 
-  Briefcase,
-  Calendar,
-  Map
-} from 'lucide-react';
+import { MapPin, User, LogOut } from 'lucide-react';
+import AdminNav from './AdminNav';
+import GuideNav from './GuideNav';
+import UserNav from './UserNav';
+import NotificationBell from './NotificationBell';
 
 const Layout = () => {
-  const { user, logout } = useAuthStore();
+  const { user, token, logout, getCurrentUser } = useAuthStore((state) => ({
+    user: state.user,
+    token: state.token,
+    logout: state.logout,
+    getCurrentUser: state.getCurrentUser,
+  }));
   const location = useLocation();
+
+  useEffect(() => {
+    if (token) {
+      getCurrentUser();
+    }
+  }, [token, getCurrentUser]);
 
   const isActive = (path) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
@@ -36,65 +41,32 @@ const Layout = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-8">
-              <Link to="/" className="flex items-center gap-2">
+              <Link to={user?.role === 'admin' ? '/admin' : user?.role === 'guide' ? '/guide' : '/home'} className="flex items-center gap-2">
                 <MapPin className="w-8 h-8 text-primary-600" />
                 <span className="text-xl font-bold text-gray-900">Travel Heaven</span>
               </Link>
 
               <nav className="hidden md:flex gap-4">
-                <Link to="/" className={navLinkClass('/')}>
-                  <Home className="w-4 h-4" />
-                  Home
-                </Link>
-                <Link to="/itineraries" className={navLinkClass('/itineraries')}>
-                  <Map className="w-4 h-4" />
-                  My Trips
-                </Link>
-                <Link to="/itineraries/public" className={navLinkClass('/itineraries/public')}>
-                  <MapPin className="w-4 h-4" />
-                  Explore
-                </Link>
-                <Link to="/locations" className={navLinkClass('/locations')}>
-                  <MapPin className="w-4 h-4" />
-                  Locations
-                </Link>
-                <Link to="/hotels" className={navLinkClass('/hotels')}>
-                  <Hotel className="w-4 h-4" />
-                  Hotels
-                </Link>
-                <Link to="/transportation" className={navLinkClass('/transportation')}>
-                  <Bus className="w-4 h-4" />
-                  Transportation
-                </Link>
+                {user?.role === 'admin' && <AdminNav />}
+                {user?.role === 'guide' && <GuideNav />}
+                {user?.role === 'user' && <UserNav />}
               </nav>
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Role-specific navigation */}
-              {user?.role === 'admin' && (
-                <Link to="/admin" className={navLinkClass('/admin')}>
-                  <Shield className="w-4 h-4" />
-                  Admin Panel
-                </Link>
-              )}
-
-              {user?.role === 'guide' && (
-                <Link to="/guide" className={navLinkClass('/guide')}>
-                  <Briefcase className="w-4 h-4" />
-                  Guide Dashboard
-                </Link>
-              )}
-
-              {user?.role === 'user' && (
-                <Link to="/bookings" className={navLinkClass('/bookings')}>
-                  <Calendar className="w-4 h-4" />
-                  My Bookings
-                </Link>
-              )}
+              <NotificationBell />
 
               <Link to="/profile" className={navLinkClass('/profile')}>
-                <User className="w-4 h-4" />
-                Profile
+                {user?.profile?.avatar ? (
+                  <img
+                    src={user.profile.avatar}
+                    alt={user.username}
+                    className="h-7 w-7 rounded-full object-cover"
+                  />
+                ) : (
+                  <User className="w-4 h-4" />
+                )}
+                <span>Profile</span>
               </Link>
 
               <button

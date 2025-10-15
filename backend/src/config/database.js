@@ -29,10 +29,7 @@ export class DatabaseConnection {
     }
 
     try {
-      this.#connection = await mongoose.connect(process.env.MONGODB_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      });
+      this.#connection = await mongoose.connect(process.env.MONGODB_URI);
       console.log('✅ MongoDB connected successfully');
       return this.#connection;
     } catch (error) {

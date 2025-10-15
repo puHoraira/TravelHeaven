@@ -25,7 +25,7 @@ const Register = () => {
       username: data.username,
       email: data.email,
       password: data.password,
-      role: data.role,
+      role: 'user', // Always user/tourist for this form
       profile: {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -53,7 +53,10 @@ const Register = () => {
         </div>
 
         <div className="card">
-          <h2 className="text-2xl font-bold text-center mb-6">Register</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">Register as Tourist</h2>
+          <p className="text-center text-gray-600 mb-6 text-sm">
+            Create your traveler account
+          </p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -157,26 +160,6 @@ const Register = () => {
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Role
-              </label>
-              <select
-                className="input"
-                {...register('role', { required: 'Please select a role' })}
-              >
-                <option value="">Select role</option>
-                <option value="user">Tourist (User)</option>
-                <option value="guide">Guide</option>
-              </select>
-              {errors.role && (
-                <p className="text-red-500 text-sm mt-1">{errors.role.message}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                Choose "Tourist" to book services or "Guide" to add locations
-              </p>
-            </div>
-
             <button
               type="submit"
               disabled={isLoading}
@@ -193,6 +176,16 @@ const Register = () => {
               Login
             </Link>
           </p>
+
+          <div className="mt-4 pt-4 border-t text-center">
+            <p className="text-gray-600 mb-2">Want to become a guide?</p>
+            <Link 
+              to="/guide/register"
+              className="inline-block px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
+            >
+              Register as Guide
+            </Link>
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,26 @@
 import { ItineraryRepository } from '../patterns/Repository.js';
 
 const itineraryRepo = new ItineraryRepository();
+const VIEW_COOLDOWN_MS = 5 * 60 * 1000;
+const viewCooldown = new Map();
+
+const appendActivityEntry = async (itineraryId, entry) => {
+  await itineraryRepo.model.findByIdAndUpdate(itineraryId, {
+    $push: {
+      activityLog: {
+        $each: [entry],
+        $slice: -100,
+      },
+    },
+  });
+};
+
+const buildActivityEntry = (type, message, userId) => ({
+  type,
+  message,
+  createdBy: userId,
+  createdAt: new Date(),
+});
 
 /**
  * Create new itinerary
@@ -22,6 +42,7 @@ export const createItinerary = async (req, res) => {
       data: itinerary,
     });
   } catch (error) {
+    console.error('Error creating itinerary:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to create itinerary',
@@ -162,6 +183,7 @@ export const updateItinerary = async (req, res) => {
 
     const updatedItinerary = await itineraryRepo.update(req.params.id, req.body);
     await itineraryRepo.updateCompleteness(req.params.id);
+    await appendActivityEntry(req.params.id, buildActivityEntry('update', 'Itinerary content updated', req.user._id));
 
     res.json({
       success: true,
@@ -238,6 +260,11 @@ export const addCollaborator = async (req, res) => {
 
     const updated = await itineraryRepo.addCollaborator(req.params.id, userId, permission);
 
+    await appendActivityEntry(
+      req.params.id,
+      buildActivityEntry('update', `Added collaborator (${permission})`, req.user._id)
+    );
+
     res.json({
       success: true,
       message: 'Collaborator added successfully',
@@ -276,6 +303,11 @@ export const removeCollaborator = async (req, res) => {
     }
 
     const updated = await itineraryRepo.removeCollaborator(req.params.id, userId);
+
+    await appendActivityEntry(
+      req.params.id,
+      buildActivityEntry('update', 'Removed collaborator', req.user._id)
+    );
 
     res.json({
       success: true,
@@ -331,6 +363,10 @@ export const addExpense = async (req, res) => {
 
     itinerary.budget.expenses.push(expense);
     await itinerary.save();
+    await appendActivityEntry(
+      req.params.id,
+      buildActivityEntry('update', `Added expense ${expense.name}`, req.user._id)
+    );
 
     res.json({
       success: true,
@@ -341,6 +377,142 @@ export const addExpense = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to add expense',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Like/Unlike itinerary
+ */
+export const toggleLikeItinerary = async (req, res) => {
+  try {
+    const itinerary = await itineraryRepo.findById(req.params.id);
+
+    if (!itinerary) {
+      return res.status(404).json({
+        success: false,
+        message: 'Itinerary not found',
+      });
+    }
+
+    if (!itinerary.isPublic) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only public itineraries can be liked',
+      });
+    }
+
+    const userIndex = itinerary.likes.findIndex(
+      (userId) => userId.toString() === req.user._id.toString()
+    );
+
+    if (userIndex > -1) {
+      itinerary.likes.splice(userIndex, 1);
+    } else {
+      itinerary.likes.push(req.user._id);
+    }
+
+    await itinerary.save();
+
+    res.json({
+      success: true,
+      message: userIndex > -1 ? 'Itinerary unliked' : 'Itinerary liked',
+      data: { likes: itinerary.likes.length },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to toggle like',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Increment itinerary views
+ */
+export const incrementViews = async (req, res) => {
+  try {
+    const itinerary = await itineraryRepo.findById(req.params.id);
+
+    if (!itinerary) {
+      return res.status(404).json({
+        success: false,
+        message: 'Itinerary not found',
+      });
+    }
+
+    const keyBase = req.user ? `user:${req.user._id}` : `ip:${req.ip}`;
+    const cooldownKey = `${keyBase}:${itinerary._id.toString()}`;
+
+    const lastView = viewCooldown.get(cooldownKey);
+    if (lastView && Date.now() - lastView < VIEW_COOLDOWN_MS) {
+      return res.json({
+        success: true,
+        data: { views: itinerary.views },
+        message: 'View already counted recently',
+      });
+    }
+
+    itinerary.views = (itinerary.views || 0) + 1;
+    await itinerary.save();
+    viewCooldown.set(cooldownKey, Date.now());
+
+    res.json({
+      success: true,
+      data: { views: itinerary.views },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to increment views',
+      error: error.message,
+    });
+  }
+};
+
+export const addCollaborationActivity = async (req, res) => {
+  try {
+    const { type, message } = req.body;
+    const itinerary = await itineraryRepo.findById(req.params.id);
+
+    if (!itinerary) {
+      return res.status(404).json({
+        success: false,
+        message: 'Itinerary not found',
+      });
+    }
+
+    const isOwner = itinerary.ownerId.toString() === req.user._id.toString();
+    const collaborator = itinerary.collaborators.find(
+      c => c.userId.toString() === req.user._id.toString()
+    );
+
+    const allowedPermissions = ['edit', 'comment', 'suggest'];
+    const canContribute = isOwner || (collaborator && allowedPermissions.includes(collaborator.permission));
+
+    if (!canContribute) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to add collaboration activity',
+      });
+    }
+
+    const activityType = type === 'suggestion' ? 'suggestion' : 'comment';
+    const entry = buildActivityEntry(activityType, message, req.user._id);
+
+    await appendActivityEntry(req.params.id, entry);
+
+    res.status(201).json({
+      success: true,
+      message: 'Collaboration activity recorded',
+      data: entry,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record collaboration activity',
       error: error.message,
     });
   }

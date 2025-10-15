@@ -26,7 +26,38 @@ const seed = async () => {
 
   // Create guide
   const guidePassword = await bcrypt.hash('guidepass', 10);
-  const guide = await User.create({ username: 'guide1', email: 'guide1@example.com', password: guidePassword, role: 'guide' });
+  const guide = await User.create({
+    username: 'guide1',
+    email: 'guide1@example.com',
+    password: guidePassword,
+    role: 'guide',
+    profile: {
+      firstName: 'John',
+      lastName: 'Traveler',
+      bio: 'Experienced travel guide with 10 years of expertise in Asian destinations.',
+      location: 'Tokyo, Japan',
+      languages: ['English', 'Japanese', 'Spanish'],
+      specialties: ['Cultural Tours', 'Food Tours', 'Adventure Travel'],
+    },
+    guideInfo: {
+      experience: '10+ years',
+      priceRange: {
+        min: 100,
+        max: 300,
+        currency: 'USD',
+      },
+      availability: 'Available weekdays and weekends',
+      contactMethods: {
+        phone: '+81-90-1234-5678',
+        email: 'guide1@example.com',
+        whatsapp: '+819012345678',
+      },
+      rating: {
+        average: 4.5,
+        count: 0,
+      },
+    },
+  });
 
   // Create a pending location
   const location = await Location.create({

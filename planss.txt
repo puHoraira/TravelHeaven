@@ -1,0 +1,101 @@
+TravelHeaven Platform Overview
+==============================
+
+1. Technology Stack & Structure
+-------------------------------
+- Backend: Node.js (Express) + MongoDB via Mongoose.
+- Frontend: React (Vite) with Tailwind CSS, Zustand state store, react-router.
+- Monorepo layout: `backend/` hosts API, `frontend/` hosts SPA, shared uploads in `uploads/`.
+
+Backend Architecture
+--------------------
+- Entry: `backend/src/server.js` wires Express app, middleware, routes under `/api` prefix.
+- Patterns:
+  * Repository Pattern wraps Mongoose models (`patterns/Repository.js`).
+  * Strategy Pattern for authz (`patterns/AuthorizationStrategy.js`).
+  * Observer Pattern for approval notifications (`patterns/Observer.js`) used by `services/approval.service.js`.
+  * Factory & Query Builder helpers (`patterns/Factory.js`).
+- Middleware: `middleware/auth.js` handles JWT auth + role checks, `validation.js` integrates express-validator, `upload.js` manages Multer file uploads, `errorHandler.js` centralizes errors.
+- Modules: `controllers/` grouped by domain (auth, admin, booking, hotel, location, transport, itinerary).
+- Utilities: `utils/guide.js` blocks pending/rejected guides from protected flows.
+
+Frontend Architecture
+---------------------
+- Bootstrapped with Vite (`frontend/src/main.jsx`, `App.jsx`).
+- Routing: `react-router-dom`; domain-specific layouts under `components/Layout.jsx`, `ProtectedRoute.jsx`.
+- State: `store/authStore.js` uses Zustand (persisted) for auth session + API helpers in `lib/api.js` (axios instance w/ interceptors).
+- Styling: Tailwind (`index.css`, `tailwind.config.js`), component utility classes defined in `.btn`, `.card` etc.
+- Feature pages: itineraries (create/view/list), admin dashboards, guide dashboards, user bookings, authentication (login/register), marketing landing (`pages/Home.jsx`).
+
+Business Logic Snapshot
+-----------------------
+- Roles: `user`, `guide`, `admin`. JWT-secured routes enforce role via `authorize(...)` middleware.
+- Guide lifecycle:
+  * Registration collects profile + document; `guideInfo.verificationStatus` defaults `pending`.
+  * Admin reviews via `/api/admin/pending-guides` (document URLs normalized) and approves/rejects using `approveGuide`/`rejectGuide`.
+  * Only approved guides surface in public search (`getAllGuides`) or detail fetches (`getGuideById`).
+  * Pending/rejected guides blocked from create/update/delete resource endpoints through `ensureGuideApproved`.
+- Content approvals:
+  * Guides submit locations/hotels/transport; records stamped with `approvalStatus: 'pending'` and hidden from public results.
+  * Admin dashboard aggregates pending submissions; `approval.service.js` centralizes approve/reject actions, emits Observer notifications.
+  * Approved items get `approvedBy`, `approvedAt`; rejections capture reason.
+- Itineraries:
+  * Users create itineraries, add days/stops referencing Location/Hotel/Transport or custom entries.
+  * Public itineraries accessible via `/api/itineraries/public`; detail view increments `views`, supports likes and subscriptions.
+  * Collaborators stored per itinerary with `permission` (view/edit).
+- Bookings & Reviews:
+  * Booking workflow tracks `bookingType`, `status`, `paymentStatus` for user reservations against hotels/transport.
+  * Reviews polymorphic (`reviewType`) with ratings, likes, optional images; aggregated to update resource ratings.
+- Authentication:
+  * local JWT issuance (`auth.controller.js`), refresh handled client-side by re-fetching `/auth/me`.
+  * Passwords hashed in model hooks (not shown here but implied by schema).
+
+User Entity Structure (Mongo Schema)
+-----------------------------------
+- Core fields: `username`, `email`, `password`, `role`, `isActive`, timestamps.
+- Profile: `firstName`, `lastName`, `phone`, `avatar`, `bio`, `location`, `languages[]`, `specialties[]`.
+- Guide-specific:
+  * `experience`, `availability`, `priceRange { min, max, currency }`.
+  * `contactMethods { phone, whatsapp, email }`.
+  * `rating { average, count }` aggregated from reviews.
+  * Verification bundle: `verificationDocument { filename, originalName, url, path, diskPath, uploadedAt }`, `verificationStatus ('pending'|'approved'|'rejected')`, `rejectionReason`, `verifiedBy`, `verifiedAt`.
+
+Key Domain Models
+-----------------
+- Location (`models/Location.js`):
+  * Fields: name, description, country, city, coordinates, images[], category, rating, views.
+  * Ownership: `guideId`, approval fields (`approvalStatus`, `approvedBy`, `approvedAt`, `rejectionReason`).
+- Hotel (`models/Hotel.js`):
+  * Fields: name, description, address, coordinates, amenities[], priceRange, images[], contactInfo.
+  * Links: `locationId`, `guideId`, approval metadata, rating, views.
+- Transport (`models/Transport.js`):
+  * Fields: name, type, description, route { from, to, stops[] }, schedule, pricing, contactInfo, images.
+  * Links: `locationId`, `guideId`, approval metadata.
+- Booking (`models/Booking.js`):
+  * Fields: `userId`, `bookingType`, `referenceId`, bookingDetails (dates, travelers, requests), status, totalPrice, paymentStatus.
+- Itinerary (`models/Itinerary.js`):
+  * Core: title, description, ownerId, collaborators[], isPublic, dates, tags, status, completeness score.
+  * Structure: days[] with stops referencing Location/Hotel/Transport or custom entries; budget with expenses, likes[], views.
+- Review (`models/Review.js`):
+  * Polymorphic via `reviewType` + `referenceId`, rating, title, comment, images[], likes[], `isVerified` flag.
+
+Feature Highlights & Current Implementation Notes
+-------------------------------------------------
+- Public discovery limited to approved guides and approved guide-submitted assets.
+- Admin tooling exposes aggregate stats, pending queues, and guide verification workflow.
+- Frontend displays guide approval status (e.g., Guide Dashboard banner) and disables submissions until approved while surfacing live submission metrics from `/guide/metrics`.
+- Axios layer auto-attaches auth tokens and handles automatic logout on 401.
+- State persistence via localStorage ensures sessions survive refresh.
+- Tailwind utility classes standardized through shared component layer (`.btn`, `.card`).
+- Guide workflows now support verification resubmission (`POST /guide/verification/resubmit`) and granular profile updates (general, pricing, contact endpoints).
+- Collaboration tooling tracks activity via itinerary `activityLog`, supports comment/suggestion roles, and exposes `/itineraries/:id/collaboration/activity` for feedback logging.
+- Approval notifications persist to MongoDB and are retrievable via `/notifications`, improving visibility beyond console logs.
+- Reviews marked `isVerified` only when a paid, completed booking exists for the referenced asset, clarifying authenticity flags.
+- Booking creation prevents overlapping pending/confirmed reservations for the same resource, reducing double-book risk.
+- Itinerary view increments enforce a per-user/IP cooldown to mitigate inflated metrics.
+
+Open Follow-Ups (from existing TODOs/observations)
+--------------------------------------------------
+- Surface persisted notifications inside the frontend header or dashboard to close the loop for guides.
+- Build UI affordances for itinerary collaboration activity feed (comments/suggestions) to leverage new backend logging.
+- Expand "pending" visibility in discovery views (e.g., optional badge or filter) to encourage peer feedback on new submissions.

@@ -7,7 +7,7 @@ import { LogIn, MapPin } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
+  const { login, user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -23,7 +23,16 @@ const Login = () => {
 
     if (result.success) {
       toast.success('Login successful!');
-      navigate('/');
+      
+      // Redirect based on user role
+      const userRole = result.user?.role || user?.role;
+      if (userRole === 'admin') {
+        navigate('/admin');
+      } else if (userRole === 'guide') {
+        navigate('/guide');
+      } else {
+        navigate('/home');
+      }
     } else {
       toast.error(result.error || 'Login failed');
     }
@@ -41,7 +50,10 @@ const Login = () => {
         </div>
 
         <div className="card">
-          <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">Login</h2>
+          <p className="text-center text-gray-600 mb-6 text-sm">
+            For Users, Guides, and Admins
+          </p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>

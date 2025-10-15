@@ -133,24 +133,68 @@ export default function CreateItinerary() {
     setLoading(true);
     try {
       const itineraryData = {
-        ...data,
-        days: days.map(day => ({
+        title: data.title,
+        description: data.description,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        isPublic: data.isPublic,
+        days: days.map((day, index) => ({
+          dayNumber: index + 1,
           date: day.date,
-          stops: day.stops.filter(s => s.name), // Only include stops with names
+          title: `Day ${index + 1}`,
+          stops: day.stops
+            .filter(s => s.name || s.referenceId) // Only include stops with data
+            .map((stop, stopIndex) => {
+              const stopData = {
+                order: stopIndex,
+                notes: stop.notes || '',
+              };
+
+              // Map based on stop type
+              if (stop.type === 'location' && stop.referenceId) {
+                stopData.locationId = stop.referenceId;
+              } else if (stop.type === 'hotel' && stop.referenceId) {
+                stopData.hotelId = stop.referenceId;
+              } else if (stop.type === 'transport' && stop.referenceId) {
+                stopData.transportId = stop.referenceId;
+              } else if (stop.type === 'custom') {
+                stopData.customName = stop.name;
+                stopData.customDescription = stop.notes;
+                if (stop.coordinates && (stop.coordinates.lat || stop.coordinates.lng)) {
+                  stopData.customCoordinates = {
+                    latitude: stop.coordinates.lat,
+                    longitude: stop.coordinates.lng,
+                  };
+                }
+              }
+
+              return stopData;
+            }),
         })),
-        budget: data.budgetTotal > 0 ? {
+      };
+
+      // Add budget if provided
+      if (data.budgetTotal > 0) {
+        itineraryData.budget = {
           total: parseFloat(data.budgetTotal),
           currency: data.budgetCurrency,
           expenses: [],
-        } : undefined,
-      };
+        };
+      }
 
       const response = await api.post('/itineraries', itineraryData);
       toast.success('Itinerary created successfully!');
-      navigate(`/itineraries/${response.data.data._id}`);
+      
+      // Extract the ID from nested response structure
+      const itineraryId = response.data?._id || response._id;
+      if (itineraryId) {
+        navigate(`/itineraries/${itineraryId}`);
+      } else {
+        navigate('/itineraries');
+      }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create itinerary');
-      console.error(error);
+      toast.error(error?.message || 'Failed to create itinerary');
+      console.error('Error creating itinerary:', error);
     } finally {
       setLoading(false);
     }

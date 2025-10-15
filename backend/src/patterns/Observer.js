@@ -1,3 +1,4 @@
+import { NotificationRepository } from './Repository.js';
 /**
  * Observer Pattern - Approval Notification System
  * Observers are notified when approval status changes
@@ -55,6 +56,40 @@ export class DatabaseNotificationObserver extends Observer {
   }
 }
 
+export class GuideNotificationObserver extends Observer {
+  constructor() {
+    super();
+    this.notifications = new NotificationRepository();
+  }
+
+  async update(data) {
+    if (!data?.guideId) {
+      return;
+    }
+
+    try {
+      const statusLabel = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+      const itemName = data.itemName || 'submission';
+      const title = `${statusLabel} ${data.type}`;
+      const message = `Your ${data.type} "${itemName}" was ${data.status} by an administrator.`;
+
+      await this.notifications.create({
+        userId: data.guideId,
+        title,
+        message,
+        type: 'approval',
+        metadata: new Map([
+          ['resourceId', data.id.toString()],
+          ['resourceType', data.type],
+          ['status', data.status],
+        ]),
+      });
+    } catch (error) {
+      console.error('Notification persistence failed', error);
+    }
+  }
+}
+
 /**
  * Approval Subject - manages approval notifications
  */
@@ -65,6 +100,7 @@ export class ApprovalSubject extends Subject {
     this.attach(new EmailNotificationObserver());
     this.attach(new LogNotificationObserver());
     this.attach(new DatabaseNotificationObserver());
+    this.attach(new GuideNotificationObserver());
   }
 
   approvalStatusChanged(type, item, status, adminId) {

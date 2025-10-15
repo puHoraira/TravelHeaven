@@ -26,10 +26,16 @@ const hotelSchema = new mongoose.Schema({
     longitude: Number,
   },
   rating: {
-    type: Number,
-    min: 1,
-    max: 5,
-    default: 3,
+    average: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+    count: {
+      type: Number,
+      default: 0,
+    },
   },
   amenities: [String],
   priceRange: {
@@ -65,6 +71,11 @@ const hotelSchema = new mongoose.Schema({
   },
   approvedAt: Date,
   rejectionReason: String,
+  resubmittedAt: Date,
+  views: {
+    type: Number,
+    default: 0,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -76,5 +87,7 @@ const hotelSchema = new mongoose.Schema({
 });
 
 hotelSchema.index({ approvalStatus: 1, locationId: 1 });
+hotelSchema.index({ 'rating.average': -1 });
+hotelSchema.index({ views: -1 });
 
 export const Hotel = mongoose.model('Hotel', hotelSchema);

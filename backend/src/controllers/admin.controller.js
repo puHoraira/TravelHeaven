@@ -2,12 +2,52 @@ import {
   LocationRepository,
   HotelRepository,
   TransportRepository,
+  UserRepository,
 } from '../patterns/Repository.js';
 import { approvalService } from '../services/approval.service.js';
+
+const normalizeVerificationDocument = (guide) => {
+  if (!guide || !guide.guideInfo || !guide.guideInfo.verificationDocument) {
+    return guide;
+  }
+
+  const guideCopy = typeof guide.toObject === 'function' ? guide.toObject() : { ...guide };
+  const doc = guideCopy.guideInfo.verificationDocument;
+
+  const rawPath = doc.url || doc.path || doc.diskPath;
+  if (!rawPath) {
+    guideCopy.guideInfo.verificationDocument = {
+      ...doc,
+    };
+    return guideCopy;
+  }
+
+  if (/^https?:\/\//i.test(rawPath)) {
+    guideCopy.guideInfo.verificationDocument = {
+      ...doc,
+      url: rawPath,
+    };
+    return guideCopy;
+  }
+
+  const cleaned = rawPath.replace(/\\/g, '/');
+  const uploadsIndex = cleaned.lastIndexOf('uploads');
+  const relative = uploadsIndex !== -1 ? cleaned.slice(uploadsIndex) : cleaned.replace(/^\/?/, '');
+  const normalized = `/${relative.replace(/^\/?/, '')}`;
+
+  guideCopy.guideInfo.verificationDocument = {
+    ...doc,
+    path: relative,
+    url: normalized,
+  };
+
+  return guideCopy;
+};
 
 const locationRepo = new LocationRepository();
 const hotelRepo = new HotelRepository();
 const transportRepo = new TransportRepository();
+const userRepo = new UserRepository();
 
 /**
  * Get all pending approvals (Admin only)
@@ -255,6 +295,156 @@ export const getAllSubmissions = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get submissions',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get all pending guide verifications
+ */
+export const getPendingGuides = async (req, res) => {
+  try {
+    const pendingGuides = await userRepo.findAll(
+      { 
+        role: 'guide', 
+        'guideInfo.verificationStatus': 'pending' 
+      },
+      { 
+        populate: [],
+        sort: { createdAt: -1 }
+      }
+    );
+    const guides = pendingGuides.data.map(normalizeVerificationDocument);
+
+    res.json({
+      success: true,
+      guides,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get pending guides',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Approve guide verification
+ */
+export const approveGuide = async (req, res) => {
+  try {
+    const { guideId } = req.params;
+
+    const guide = await userRepo.findById(guideId);
+    if (!guide) {
+      return res.status(404).json({
+        success: false,
+        message: 'Guide not found',
+      });
+    }
+
+    if (guide.role !== 'guide') {
+      return res.status(400).json({
+        success: false,
+        message: 'User is not a guide',
+      });
+    }
+
+    if (guide.guideInfo.verificationStatus !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Guide verification is not pending',
+      });
+    }
+
+    // Update guide verification status
+    guide.guideInfo.verificationStatus = 'approved';
+    guide.guideInfo.verifiedBy = req.user._id;
+    guide.guideInfo.verifiedAt = new Date();
+    
+    await guide.save();
+
+    res.json({
+      success: true,
+      message: 'Guide approved successfully',
+      guide: {
+        id: guide._id,
+        username: guide.username,
+        email: guide.email,
+        verificationStatus: guide.guideInfo.verificationStatus,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to approve guide',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Reject guide verification
+ */
+export const rejectGuide = async (req, res) => {
+  try {
+    const { guideId } = req.params;
+    const { reason } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rejection reason is required',
+      });
+    }
+
+    const guide = await userRepo.findById(guideId);
+    if (!guide) {
+      return res.status(404).json({
+        success: false,
+        message: 'Guide not found',
+      });
+    }
+
+    if (guide.role !== 'guide') {
+      return res.status(400).json({
+        success: false,
+        message: 'User is not a guide',
+      });
+    }
+
+    if (guide.guideInfo.verificationStatus !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Guide verification is not pending',
+      });
+    }
+
+    // Update guide verification status
+    guide.guideInfo.verificationStatus = 'rejected';
+    guide.guideInfo.rejectionReason = reason;
+    guide.guideInfo.verifiedBy = req.user._id;
+    guide.guideInfo.verifiedAt = new Date();
+    
+    await guide.save();
+
+    res.json({
+      success: true,
+      message: 'Guide rejected successfully',
+      guide: {
+        id: guide._id,
+        username: guide.username,
+        email: guide.email,
+        verificationStatus: guide.guideInfo.verificationStatus,
+        rejectionReason: reason,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reject guide',
       error: error.message,
     });
   }

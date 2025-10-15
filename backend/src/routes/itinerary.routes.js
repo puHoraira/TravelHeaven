@@ -10,6 +10,9 @@ import {
   addCollaborator,
   removeCollaborator,
   addExpense,
+  toggleLikeItinerary,
+  incrementViews,
+  addCollaborationActivity,
 } from '../controllers/itinerary.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
@@ -19,18 +22,24 @@ const router = express.Router();
 // Validation rules
 const itineraryValidation = [
   body('title').trim().notEmpty().withMessage('Title is required'),
-  body('startDate').optional().isISO8601().withMessage('Invalid start date'),
-  body('endDate').optional().isISO8601().withMessage('Invalid end date'),
+  body('startDate').optional({ nullable: true }).isISO8601().withMessage('Invalid start date'),
+  body('endDate').optional({ nullable: true }).isISO8601().withMessage('Invalid end date'),
+  body('days').optional().isArray().withMessage('Days must be an array'),
 ];
 
 const collaboratorValidation = [
   body('userId').notEmpty().withMessage('User ID is required'),
-  body('permission').optional().isIn(['view', 'edit']).withMessage('Invalid permission'),
+  body('permission').optional().isIn(['view', 'edit', 'comment', 'suggest']).withMessage('Invalid permission'),
 ];
 
 const expenseValidation = [
   body('name').trim().notEmpty().withMessage('Expense name is required'),
   body('amount').isNumeric().withMessage('Amount must be a number'),
+];
+
+const collaborationActivityValidation = [
+  body('type').isIn(['comment', 'suggestion']).withMessage('Invalid activity type'),
+  body('message').trim().notEmpty().withMessage('Message is required'),
 ];
 
 // Public routes
@@ -82,5 +91,17 @@ router.post(
   validate,
   addExpense
 );
+
+router.post(
+  '/:id/collaboration/activity',
+  authenticate,
+  collaborationActivityValidation,
+  validate,
+  addCollaborationActivity
+);
+
+// Engagement routes
+router.post('/:id/like', authenticate, toggleLikeItinerary);
+router.post('/:id/view', incrementViews);
 
 export default router;

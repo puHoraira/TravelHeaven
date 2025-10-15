@@ -1,5 +1,11 @@
 import jwt from 'jsonwebtoken';
-import { UserRepository } from '../patterns/Repository.js';
+import { 
+  UserRepository, 
+  LocationRepository, 
+  HotelRepository, 
+  TransportRepository, 
+  BookingRepository 
+} from '../patterns/Repository.js';
 import { AuthorizationStrategyFactory, AuthorizationContext } from '../patterns/AuthorizationStrategy.js';
 
 /**
@@ -117,7 +123,29 @@ export const checkOwnership = (model) => {
       }
 
       const resourceId = req.params.id;
-      const repository = new (require('../patterns/Repository.js')[`${model}Repository`])();
+      
+      // Get the appropriate repository based on model name
+      let repository;
+      switch (model) {
+        case 'Location':
+          repository = new LocationRepository();
+          break;
+        case 'Hotel':
+          repository = new HotelRepository();
+          break;
+        case 'Transport':
+          repository = new TransportRepository();
+          break;
+        case 'Booking':
+          repository = new BookingRepository();
+          break;
+        default:
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid resource type.',
+          });
+      }
+      
       const resource = await repository.findById(resourceId);
 
       if (!resource) {

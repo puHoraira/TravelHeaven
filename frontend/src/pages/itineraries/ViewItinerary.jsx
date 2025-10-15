@@ -1,8 +1,23 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, Edit, Share2, Users, DollarSign, Calendar, 
-  MapPin, Globe, Lock, Trash2, Plus, Save 
+import { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
+import {
+  ArrowLeft,
+  Edit,
+  Users,
+  Calendar,
+  MapPin,
+  Globe,
+  Lock,
+  Trash2,
+  Plus,
+  Save,
+  BookmarkPlus,
+  BookmarkCheck,
+  Loader2,
+  MessageCircle,
+  Lightbulb,
+  History,
+  Send,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
@@ -21,38 +36,166 @@ import BudgetTracker from '../../components/itinerary/BudgetTracker';
 export default function ViewItinerary() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuthStore();
   
   const [itinerary, setItinerary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
+  const [likesCount, setLikesCount] = useState(0);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscribeLoading, setSubscribeLoading] = useState(false);
+  const [activityLog, setActivityLog] = useState([]);
+  const [activityType, setActivityType] = useState('comment');
+  const [activityMessage, setActivityMessage] = useState('');
+  const [activitySubmitting, setActivitySubmitting] = useState(false);
+
+  const normalizeId = (value) => {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object') {
+      if (value._id) return value._id.toString();
+      if (value.id) return value.id.toString();
+      if (typeof value.toString === 'function') {
+        const stringValue = value.toString();
+        if (stringValue !== '[object Object]') return stringValue;
+      }
+    }
+    return `${value}`;
+  };
+
+  const currentUserId = normalizeId(user?._id || user?.id);
+
+  const normalizeItineraryData = (rawItinerary) => {
+    if (!rawItinerary) return rawItinerary;
+
+    const normalizeCoordinate = (source) => {
+      if (!source) return null;
+      const latValue = source.lat ?? source.latitude;
+      const lngValue = source.lng ?? source.longitude;
+      const lat = typeof latValue === 'number' ? latValue : parseFloat(latValue);
+      const lng = typeof lngValue === 'number' ? lngValue : parseFloat(lngValue);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng };
+      }
+      return null;
+    };
+
+    const normalizeStop = (stop) => {
+      const location = stop?.locationId && typeof stop.locationId === 'object' ? stop.locationId : null;
+      const hotel = stop?.hotelId && typeof stop.hotelId === 'object' ? stop.hotelId : null;
+      const transport = stop?.transportId && typeof stop.transportId === 'object' ? stop.transportId : null;
+
+      const resolvedType = stop?.type
+        || (location ? 'location'
+        : hotel ? 'hotel'
+        : transport ? 'transport'
+        : 'custom');
+
+      const resolvedCoordinates = normalizeCoordinate(stop?.coordinates)
+        || normalizeCoordinate(stop?.customCoordinates)
+        || normalizeCoordinate(location?.coordinates)
+        || normalizeCoordinate(hotel?.coordinates)
+        || normalizeCoordinate(transport?.coordinates);
+
+      const resolvedName = stop?.name
+        || stop?.customName
+        || location?.name
+        || hotel?.name
+        || transport?.name
+        || undefined;
+
+      return {
+        ...stop,
+        type: resolvedType,
+        name: resolvedName,
+        coordinates: resolvedCoordinates || undefined,
+      };
+    };
+
+    const normalizedDays = (rawItinerary.days || []).map((day) => ({
+      ...day,
+      stops: (day.stops || []).map(normalizeStop),
+    }));
+
+    return {
+      ...rawItinerary,
+      days: normalizedDays,
+    };
+  };
 
   useEffect(() => {
     fetchItinerary();
-  }, [id]);
+  }, [id, location.pathname]);
 
   const fetchItinerary = async () => {
     try {
-      const response = await api.get(`/itineraries/${id}`);
-      setItinerary(response.data.data);
+      const endpoint = location.pathname.endsWith('/view')
+        ? `/itineraries/${id}/view`
+        : `/itineraries/${id}`;
+      const response = await api.get(endpoint);
+      
+      // Backend returns { success, data: itinerary }
+      const itineraryData = response.data || response;
+      const normalizedItinerary = normalizeItineraryData(itineraryData);
+      setItinerary(normalizedItinerary);
+      const likeList = Array.isArray(normalizedItinerary.likes) ? normalizedItinerary.likes : [];
+      setLikesCount(likeList.length);
+      if (user) {
+        const userId = user._id || user.id;
+        const hasSubscribed = likeList.some((like) => {
+          if (!like) return false;
+          if (typeof like === 'string') return like === userId;
+          if (typeof like === 'object') {
+            return like._id === userId || like.id === userId || like.toString?.() === userId;
+          }
+          return false;
+        });
+        setIsSubscribed(hasSubscribed);
+      } else {
+        setIsSubscribed(false);
+      }
       setEditForm({
-        title: response.data.data.title,
-        description: response.data.data.description,
-        isPublic: response.data.data.isPublic,
+        title: normalizedItinerary.title || '',
+        description: normalizedItinerary.description || '',
+        isPublic: normalizedItinerary.isPublic || false,
       });
+
+      const activityEntries = Array.isArray(normalizedItinerary.activityLog)
+        ? [...normalizedItinerary.activityLog].sort(
+            (first, second) => new Date(second.createdAt) - new Date(first.createdAt)
+          )
+        : [];
+      setActivityLog(activityEntries);
+      setActivityMessage('');
+      setActivityType('comment');
+
+      try {
+        await api.post(`/itineraries/${id}/view`);
+      } catch (viewError) {
+        console.error('Failed to record view:', viewError);
+      }
     } catch (error) {
-      toast.error('Failed to load itinerary');
-      console.error(error);
+      console.error('Failed to load itinerary:', error);
+      toast.error(error?.message || 'Failed to load itinerary');
       navigate('/itineraries');
     } finally {
       setLoading(false);
     }
   };
 
-  const isOwner = user && itinerary && user.id === itinerary.ownerId?._id;
-  const canEdit = isOwner || itinerary?.collaborators?.some(
-    c => c.userId?._id === user?.id && c.permission === 'edit'
+  const ownerId = normalizeId(itinerary?.ownerId);
+  const isOwner = Boolean(currentUserId && ownerId && currentUserId === ownerId);
+
+  const collaboratorEntry = useMemo(() => {
+    if (!itinerary || !currentUserId) return null;
+    return itinerary.collaborators?.find((collaborator) => normalizeId(collaborator.userId) === currentUserId) || null;
+  }, [itinerary, currentUserId]);
+
+  const canEdit = Boolean(isOwner || (collaboratorEntry && collaboratorEntry.permission === 'edit'));
+  const canCollaborate = Boolean(
+    isOwner || (collaboratorEntry && ['edit', 'comment', 'suggest'].includes(collaboratorEntry.permission))
   );
 
   const handleSaveBasicInfo = async () => {
@@ -82,12 +225,122 @@ export default function ViewItinerary() {
 
   const handleRemoveCollaborator = async (userId) => {
     try {
-      await api.delete(`/itineraries/${id}/collaborators/${userId}`);
+      await api.delete(`/itineraries/${id}/collaborators`, { data: { userId } });
       toast.success('Collaborator removed');
       fetchItinerary();
     } catch (error) {
       toast.error('Failed to remove collaborator');
       console.error(error);
+    }
+  };
+
+  const handleToggleSubscribe = async () => {
+    if (!user) {
+      toast.error('Login required to subscribe');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      setSubscribeLoading(true);
+      const response = await api.post(`/itineraries/${id}/like`);
+      const likes = response?.data?.likes ?? response?.likes ?? likesCount;
+      setLikesCount(likes);
+      const nextSubscribed = !isSubscribed;
+      setIsSubscribed(nextSubscribed);
+      toast.success(nextSubscribed ? 'Trip saved to your subscriptions' : 'Removed from subscriptions');
+    } catch (error) {
+      console.error('Failed to update subscription:', error);
+      toast.error(error?.message || 'Failed to update subscription');
+    } finally {
+      setSubscribeLoading(false);
+    }
+  };
+
+  const getProfileName = (profile, fallback = '') => {
+    if (!profile) return fallback;
+    const firstName = profile.firstName?.trim();
+    const lastName = profile.lastName?.trim();
+    const fullName = [firstName, lastName].filter(Boolean).join(' ').trim();
+    return fullName || profile.displayName || fallback;
+  };
+
+  const resolveUserLabel = (targetId) => {
+    const candidateId = normalizeId(targetId);
+    if (!candidateId) return 'System';
+
+    if (ownerId && candidateId === ownerId) {
+      const fallback = itinerary?.ownerId?.username || 'Owner';
+      return getProfileName(itinerary?.ownerId?.profile, fallback) || 'Owner';
+    }
+
+    const collaboratorMatch = itinerary?.collaborators?.find(
+      (entry) => normalizeId(entry.userId) === candidateId
+    );
+    if (collaboratorMatch) {
+      const fallback = collaboratorMatch.userId?.username || 'Collaborator';
+      return getProfileName(collaboratorMatch.userId?.profile, fallback) || 'Collaborator';
+    }
+
+    if (candidateId === currentUserId) {
+      const fallback = user?.username || 'You';
+      return getProfileName(user?.profile, fallback) || 'You';
+    }
+
+    return 'Team member';
+  };
+
+  const formatActivityRelativeTime = (value) => {
+    if (!value) return '';
+    const dateValue = new Date(value);
+    if (Number.isNaN(dateValue.getTime())) return '';
+
+    const diffMs = Date.now() - dateValue.getTime();
+    if (diffMs < 60 * 1000) return 'just now';
+
+    const minutes = Math.floor(diffMs / (60 * 1000));
+    if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'} ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hr${hours === 1 ? '' : 's'} ago`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`;
+
+    return dateValue.toLocaleString();
+  };
+
+  const handleSubmitActivity = async (event) => {
+    event.preventDefault();
+    if (!activityMessage.trim()) {
+      toast.error('Add a short message first');
+      return;
+    }
+
+    try {
+      setActivitySubmitting(true);
+      const payload = await api.post(`/itineraries/${id}/collaboration/activity`, {
+        type: activityType,
+        message: activityMessage.trim(),
+      });
+
+      const entry = payload?.data || payload;
+      entry.createdAt = entry.createdAt || new Date().toISOString();
+      entry.createdBy = entry.createdBy || currentUserId;
+      entry.type = entry.type || activityType;
+
+      setActivityLog((previous) =>
+        [...(previous || []), entry]
+          .sort((first, second) => new Date(second.createdAt) - new Date(first.createdAt))
+      );
+      setActivityMessage('');
+      setActivityType('comment');
+      toast.success('Shared with collaborators');
+    } catch (error) {
+      console.error('Failed to record collaboration activity:', error);
+      toast.error(error?.message || 'Failed to share activity');
+    } finally {
+      setActivitySubmitting(false);
     }
   };
 
@@ -191,15 +444,28 @@ export default function ViewItinerary() {
                     )}
                   </div>
                   
-                  {canEdit && (
+                  {(itinerary.isPublic && !isOwner) || canEdit || isOwner ? (
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => setEditing(true)}
-                        className="btn-secondary flex items-center gap-2"
-                      >
-                        <Edit size={16} />
-                        Edit
-                      </button>
+                      {itinerary.isPublic && !isOwner && (
+                        <button
+                          onClick={handleToggleSubscribe}
+                          className={`btn-secondary flex items-center gap-2 ${isSubscribed ? 'text-blue-600 hover:bg-blue-50' : ''}`}
+                          disabled={subscribeLoading}
+                        >
+                          {isSubscribed ? <BookmarkCheck size={16} /> : <BookmarkPlus size={16} />}
+                          {isSubscribed ? 'Subscribed' : 'Subscribe'}
+                          {likesCount > 0 && <span className="ml-1 text-xs text-gray-500">({likesCount})</span>}
+                        </button>
+                      )}
+                      {canEdit && (
+                        <button
+                          onClick={() => setEditing(true)}
+                          className="btn-secondary flex items-center gap-2"
+                        >
+                          <Edit size={16} />
+                          Edit
+                        </button>
+                      )}
                       {isOwner && (
                         <button
                           onClick={handleDeleteItinerary}
@@ -210,7 +476,7 @@ export default function ViewItinerary() {
                         </button>
                       )}
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Meta Info */}
@@ -231,6 +497,12 @@ export default function ViewItinerary() {
                     <Users size={16} />
                     <span>{itinerary.collaborators?.length || 0} collaborators</span>
                   </div>
+                  {likesCount > 0 && (
+                    <div className="flex items-center gap-1">
+                      <BookmarkCheck size={16} />
+                      <span>{likesCount} subscribed</span>
+                    </div>
+                  )}
                   <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
                     itinerary.status === 'active' ? 'bg-green-100 text-green-800' :
                     itinerary.status === 'completed' ? 'bg-gray-100 text-gray-800' :
@@ -298,10 +570,118 @@ export default function ViewItinerary() {
           {/* Collaborators */}
           <CollaboratorsList
             collaborators={itinerary.collaborators || []}
-            ownerId={itinerary.ownerId?._id}
+            ownerId={normalizeId(itinerary.ownerId)}
             isOwner={isOwner}
             onRemove={handleRemoveCollaborator}
           />
+
+          <div className="card">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Collaboration Activity</h3>
+              {activityLog.length > 0 && (
+                <span className="text-xs text-gray-500">{activityLog.length} updates</span>
+              )}
+            </div>
+
+            {canCollaborate && (
+              <form onSubmit={handleSubmitActivity} className="mb-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <select
+                    className="input"
+                    value={activityType}
+                    onChange={(event) => setActivityType(event.target.value)}
+                  >
+                    <option value="comment">Comment</option>
+                    <option value="suggestion">Suggestion</option>
+                  </select>
+                  <span className="text-xs text-gray-500">
+                    Collaborators see this instantly
+                  </span>
+                </div>
+                <textarea
+                  value={activityMessage}
+                  onChange={(event) => setActivityMessage(event.target.value)}
+                  placeholder="Share feedback, ask a question, or suggest a change"
+                  className="input min-h-[80px]"
+                  maxLength={280}
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <span className="text-xs text-gray-400">{activityMessage.length}/280</span>
+                  <button
+                    type="submit"
+                    className="btn btn-primary inline-flex items-center gap-2"
+                    disabled={activitySubmitting || !activityMessage.trim()}
+                  >
+                    {activitySubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                    Share
+                  </button>
+                </div>
+              </form>
+            )}
+
+            <div className="grid max-h-72 gap-3 overflow-y-auto pr-1">
+              {activityLog.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  {canCollaborate
+                    ? 'No updates yet. Be the first to leave a note for the team.'
+                    : 'No collaboration activity recorded yet.'}
+                </p>
+              ) : (
+                activityLog.map((entry, index) => {
+                  const entryKey = entry._id || `${entry.type}-${entry.createdAt}-${index}`;
+                  const typeLabel =
+                    entry.type === 'suggestion'
+                      ? 'Suggestion'
+                      : entry.type === 'comment'
+                        ? 'Comment'
+                        : 'Update';
+                  const iconClass =
+                    entry.type === 'suggestion'
+                      ? 'text-amber-500'
+                      : entry.type === 'comment'
+                        ? 'text-blue-500'
+                        : 'text-purple-500';
+                  const badgeClass =
+                    entry.type === 'suggestion'
+                      ? 'bg-amber-50 text-amber-700'
+                      : entry.type === 'comment'
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'bg-purple-50 text-purple-700';
+
+                  const icon =
+                    entry.type === 'suggestion' ? (
+                      <Lightbulb className={`h-4 w-4 ${iconClass}`} />
+                    ) : entry.type === 'comment' ? (
+                      <MessageCircle className={`h-4 w-4 ${iconClass}`} />
+                    ) : (
+                      <History className={`h-4 w-4 ${iconClass}`} />
+                    );
+
+                  return (
+                    <div key={entryKey} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <div className="inline-flex items-center gap-2">
+                          {icon}
+                          <span className={`rounded-full px-2 py-0.5 font-medium ${badgeClass}`}>
+                            {typeLabel}
+                          </span>
+                        </div>
+                        <span>{formatActivityRelativeTime(entry.createdAt)}</span>
+                      </div>
+                      <p className="mt-2 text-sm text-gray-700">{entry.message}</p>
+                      <p className="mt-2 text-xs text-gray-500">
+                        — {resolveUserLabel(entry.createdBy)}
+                      </p>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
 
           {/* Completeness Score */}
           {itinerary.completeness !== undefined && (

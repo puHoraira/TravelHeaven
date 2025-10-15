@@ -10,6 +10,9 @@ import transportRoutes from './routes/transport.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
 import itineraryRoutes from './routes/itinerary.routes.js';
+import reviewRoutes from './routes/review.routes.js';
+import guideRoutes from './routes/guide.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 dotenv.config();
 
@@ -33,6 +36,9 @@ app.use('/api/transportation', transportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/itineraries', itineraryRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/guides', guideRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

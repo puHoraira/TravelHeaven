@@ -22,7 +22,7 @@ const itinerarySchema = new mongoose.Schema({
     },
     permission: {
       type: String,
-      enum: ['view', 'edit'],
+      enum: ['view', 'edit', 'comment', 'suggest'],
       default: 'view',
     },
   }],
@@ -98,6 +98,30 @@ const itinerarySchema = new mongoose.Schema({
     min: 0,
     max: 100,
   },
+  likes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
+  activityLog: [{
+    type: {
+      type: String,
+      enum: ['update', 'comment', 'suggestion'],
+      default: 'update',
+    },
+    message: String,
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
+  views: {
+    type: Number,
+    default: 0,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -111,5 +135,6 @@ const itinerarySchema = new mongoose.Schema({
 itinerarySchema.index({ ownerId: 1, createdAt: -1 });
 itinerarySchema.index({ isPublic: 1, createdAt: -1 });
 itinerarySchema.index({ 'collaborators.userId': 1 });
+itinerarySchema.index({ views: -1 });
 
 export const Itinerary = mongoose.model('Itinerary', itinerarySchema);

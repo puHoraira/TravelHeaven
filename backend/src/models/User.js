@@ -29,6 +29,63 @@ const userSchema = new mongoose.Schema({
     lastName: String,
     phone: String,
     avatar: String,
+    bio: String,
+    location: String,
+    languages: [String],
+    specialties: [String],
+  },
+  guideInfo: {
+    experience: String,
+    priceRange: {
+      min: Number,
+      max: Number,
+      currency: {
+        type: String,
+        default: 'USD',
+      },
+    },
+    availability: String,
+    contactMethods: {
+      phone: String,
+      whatsapp: String,
+      email: String,
+    },
+    rating: {
+      average: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 5,
+      },
+      count: {
+        type: Number,
+        default: 0,
+      },
+    },
+    // Guide verification documents
+    verificationDocument: {
+      filename: String,
+      originalName: String,
+      path: String,
+      url: String,
+      diskPath: String,
+      uploadedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+    verificationStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    rejectionReason: String,
+    verificationResubmittedAt: Date,
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    verifiedAt: Date,
   },
   isActive: {
     type: Boolean,
@@ -39,5 +96,7 @@ const userSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
+userSchema.index({ role: 1, 'guideInfo.rating.average': -1 });
 
 export const User = mongoose.model('User', userSchema);

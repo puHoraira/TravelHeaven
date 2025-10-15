@@ -19,10 +19,17 @@ export default function PublicItineraries() {
   const fetchPublicItineraries = async () => {
     try {
       const response = await api.get('/itineraries/public');
-      setItineraries(response.data.data || []);
+      const items = Array.isArray(response?.data?.data)
+        ? response.data.data
+        : Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response)
+            ? response
+            : [];
+      setItineraries(items);
     } catch (error) {
-      toast.error('Failed to load public itineraries');
-      console.error(error);
+      console.error('Failed to load public itineraries:', error);
+      toast.error(error?.message || 'Failed to load public itineraries');
     } finally {
       setLoading(false);
     }
@@ -75,7 +82,7 @@ export default function PublicItineraries() {
             return (
               <Link
                 key={itinerary._id}
-                to={`/itineraries/${itinerary._id}/view`}
+                to={`/itineraries/${itinerary._id}`}
                 className="card hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
               >
                 {/* Header */}

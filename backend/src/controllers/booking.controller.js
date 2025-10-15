@@ -14,11 +14,41 @@ export const createBooking = async (req, res) => {
       paymentStatus: 'pending',
     };
 
+    // Prevent duplicate or overlapping active bookings for the same resource
+    const activeStatuses = ['pending', 'confirmed'];
+    const conflictQuery = {
+      userId: req.user._id,
+      bookingType: bookingData.bookingType,
+      referenceId: bookingData.referenceId,
+      status: { $in: activeStatuses },
+    };
+
+    const { bookingDetails } = bookingData;
+    if (bookingDetails?.startDate && bookingDetails?.endDate) {
+      const startDate = new Date(bookingDetails.startDate);
+      const endDate = new Date(bookingDetails.endDate);
+      conflictQuery['bookingDetails.startDate'] = { $lte: endDate };
+      conflictQuery['bookingDetails.endDate'] = { $gte: startDate };
+    }
+
+    const conflictingBooking = await bookingRepo.model.findOne(conflictQuery);
+
+    if (conflictingBooking) {
+      return res.status(409).json({
+        success: false,
+        message: 'You already have an active booking for these dates. Please update or cancel the existing booking before creating a new one.',
+        data: {
+          existingBookingId: conflictingBooking._id,
+          status: conflictingBooking.status,
+        },
+      });
+    }
+
     const booking = await bookingRepo.create(bookingData);
 
     res.status(201).json({
       success: true,
-      message: 'Booking created successfully',
+      message: 'Booking created successfully. Awaiting confirmation and payment.',
       data: booking,
     });
   } catch (error) {

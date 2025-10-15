@@ -34,9 +34,9 @@ router.post(
   createLocation
 );
 
-router.get('/', authenticate, getLocations);
+router.get('/', getLocations);
 router.get('/my-locations', authenticate, authorize('guide'), getMyLocations);
-router.get('/:id', authenticate, getLocationById);
+router.get('/:id', getLocationById);
 
 router.put(
   '/:id',

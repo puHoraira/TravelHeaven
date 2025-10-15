@@ -9,7 +9,8 @@ import {
   LogOut, 
   Shield, 
   Briefcase,
-  Calendar
+  Calendar,
+  Map
 } from 'lucide-react';
 
 const Layout = () => {
@@ -44,6 +45,14 @@ const Layout = () => {
                 <Link to="/" className={navLinkClass('/')}>
                   <Home className="w-4 h-4" />
                   Home
+                </Link>
+                <Link to="/itineraries" className={navLinkClass('/itineraries')}>
+                  <Map className="w-4 h-4" />
+                  My Trips
+                </Link>
+                <Link to="/itineraries/public" className={navLinkClass('/itineraries/public')}>
+                  <MapPin className="w-4 h-4" />
+                  Explore
                 </Link>
                 <Link to="/locations" className={navLinkClass('/locations')}>
                   <MapPin className="w-4 h-4" />

@@ -86,6 +86,7 @@ import { Location } from '../models/Location.js';
 import { Hotel } from '../models/Hotel.js';
 import { Transport } from '../models/Transport.js';
 import { Booking } from '../models/Booking.js';
+import { Itinerary } from '../models/Itinerary.js';
 
 export class UserRepository extends BaseRepository {
   constructor() {
@@ -174,5 +175,62 @@ export class BookingRepository extends BaseRepository {
 
   async findByStatus(status, options = {}) {
     return await this.findAll({ status }, options);
+  }
+}
+
+export class ItineraryRepository extends BaseRepository {
+  constructor() {
+    super(Itinerary);
+  }
+
+  async findByOwner(ownerId, options = {}) {
+    return await this.findAll({ ownerId }, options);
+  }
+
+  async findPublic(options = {}) {
+    return await this.findAll({ isPublic: true }, options);
+  }
+
+  async findByCollaborator(userId, options = {}) {
+    return await this.findAll({ 'collaborators.userId': userId }, options);
+  }
+
+  async addCollaborator(itineraryId, userId, permission = 'view') {
+    const itinerary = await this.findById(itineraryId);
+    if (!itinerary) return null;
+    
+    // Check if already a collaborator
+    const exists = itinerary.collaborators.some(c => c.userId.toString() === userId.toString());
+    if (exists) return itinerary;
+    
+    itinerary.collaborators.push({ userId, permission });
+    return await itinerary.save();
+  }
+
+  async removeCollaborator(itineraryId, userId) {
+    const itinerary = await this.findById(itineraryId);
+    if (!itinerary) return null;
+    
+    itinerary.collaborators = itinerary.collaborators.filter(
+      c => c.userId.toString() !== userId.toString()
+    );
+    return await itinerary.save();
+  }
+
+  async updateCompleteness(itineraryId) {
+    const itinerary = await this.findById(itineraryId);
+    if (!itinerary) return null;
+    
+    let score = 0;
+    if (itinerary.title) score += 20;
+    if (itinerary.startDate && itinerary.endDate) score += 20;
+    if (itinerary.days && itinerary.days.length > 0) score += 30;
+    if (itinerary.budget && itinerary.budget.total) score += 15;
+    const hasStops = itinerary.days?.some(d => d.stops && d.stops.length > 0);
+    if (hasStops) score += 15;
+    
+    itinerary.completeness = score;
+    itinerary.updatedAt = Date.now();
+    return await itinerary.save();
   }
 }

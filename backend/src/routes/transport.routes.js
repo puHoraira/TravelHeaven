@@ -32,9 +32,9 @@ router.post(
   createTransport
 );
 
-router.get('/', authenticate, getTransportation);
+router.get('/', getTransportation);
 router.get('/my-transport', authenticate, authorize('guide'), getMyTransport);
-router.get('/:id', authenticate, getTransportById);
+router.get('/:id', getTransportById);
 
 router.put(
   '/:id',

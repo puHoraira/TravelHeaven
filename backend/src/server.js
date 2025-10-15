@@ -9,6 +9,7 @@ import hotelRoutes from './routes/hotel.routes.js';
 import transportRoutes from './routes/transport.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
+import itineraryRoutes from './routes/itinerary.routes.js';
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.use('/api/hotels', hotelRoutes);
 app.use('/api/transportation', transportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/itineraries', itineraryRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -82,13 +82,14 @@ export const getHotelById = async (req, res) => {
       });
     }
 
-    // Only show approved hotels to non-admin users
-    if (req.user.role !== 'admin' && hotel.approvalStatus !== 'approved') {
-      if (req.user.role === 'guide' && hotel.guideId._id.toString() !== req.user._id.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied',
-        });
+    // Only show approved hotels to non-admin users / public
+    const role = req.user?.role || 'public';
+    if (role !== 'admin' && hotel.approvalStatus !== 'approved') {
+      if (role === 'guide' && hotel.guideId._id.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
+      }
+      if (role === 'public') {
+        return res.status(403).json({ success: false, message: 'Access denied' });
       }
     }
 

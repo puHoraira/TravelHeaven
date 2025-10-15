@@ -83,13 +83,18 @@ export const getLocationById = async (req, res) => {
       });
     }
 
-    // Only show approved locations to non-admin users
-    if (req.user.role !== 'admin' && location.approvalStatus !== 'approved') {
-      if (req.user.role === 'guide' && location.guideId._id.toString() !== req.user._id.toString()) {
+    // Only show approved locations to non-admin users / public
+    const role = req.user?.role || 'public';
+    if (role !== 'admin' && location.approvalStatus !== 'approved') {
+      if (role === 'guide' && location.guideId._id.toString() !== req.user._id.toString()) {
         return res.status(403).json({
           success: false,
           message: 'Access denied',
         });
+      }
+      // Public users (not logged in) cannot view pending items
+      if (role === 'public') {
+        return res.status(403).json({ success: false, message: 'Access denied' });
       }
     }
 

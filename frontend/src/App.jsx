@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
+import 'leaflet/dist/leaflet.css';
 
 // Layouts
 import Layout from './components/Layout';
@@ -25,6 +26,12 @@ import GuideHotels from './pages/guide/Hotels';
 import GuideTransport from './pages/guide/Transport';
 
 import UserBookings from './pages/user/Bookings';
+
+// Itinerary pages
+import MyItineraries from './pages/itineraries/MyItineraries';
+import PublicItineraries from './pages/itineraries/PublicItineraries';
+import CreateItinerary from './pages/itineraries/CreateItinerary';
+import ViewItinerary from './pages/itineraries/ViewItinerary';
 
 function App() {
   const { user } = useAuthStore();
@@ -57,6 +64,13 @@ function App() {
 
           {/* User routes */}
           <Route path="bookings" element={<ProtectedRoute requiredRole="user"><UserBookings /></ProtectedRoute>} />
+
+          {/* Itinerary routes */}
+          <Route path="itineraries" element={<MyItineraries />} />
+          <Route path="itineraries/public" element={<PublicItineraries />} />
+          <Route path="itineraries/create" element={<CreateItinerary />} />
+          <Route path="itineraries/:id" element={<ViewItinerary />} />
+          <Route path="itineraries/:id/view" element={<ViewItinerary />} />
         </Route>
       </Routes>
     </BrowserRouter>

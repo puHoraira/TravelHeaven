@@ -82,13 +82,14 @@ export const getTransportById = async (req, res) => {
       });
     }
 
-    // Only show approved transport to non-admin users
-    if (req.user.role !== 'admin' && transport.approvalStatus !== 'approved') {
-      if (req.user.role === 'guide' && transport.guideId._id.toString() !== req.user._id.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied',
-        });
+    // Only show approved transport to non-admin users / public
+    const role = req.user?.role || 'public';
+    if (role !== 'admin' && transport.approvalStatus !== 'approved') {
+      if (role === 'guide' && transport.guideId._id.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
+      }
+      if (role === 'public') {
+        return res.status(403).json({ success: false, message: 'Access denied' });
       }
     }
 

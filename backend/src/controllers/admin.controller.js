@@ -3,12 +3,11 @@ import {
   HotelRepository,
   TransportRepository,
 } from '../patterns/Repository.js';
-import { getApprovalSubject } from '../patterns/Observer.js';
+import { approvalService } from '../services/approval.service.js';
 
 const locationRepo = new LocationRepository();
 const hotelRepo = new HotelRepository();
 const transportRepo = new TransportRepository();
-const approvalSubject = getApprovalSubject();
 
 /**
  * Get all pending approvals (Admin only)
@@ -72,30 +71,7 @@ export const approveSubmission = async (req, res) => {
         });
     }
 
-    const item = await repository.findById(id);
-
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        message: `${type} not found`,
-      });
-    }
-
-    if (item.approvalStatus === 'approved') {
-      return res.status(400).json({
-        success: false,
-        message: `${type} is already approved`,
-      });
-    }
-
-    const updatedItem = await repository.update(id, {
-      approvalStatus: 'approved',
-      approvedBy: req.user._id,
-      approvedAt: new Date(),
-    });
-
-    // Notify observers (Observer Pattern)
-    approvalSubject.approvalStatusChanged(type, updatedItem, 'approved', req.user._id);
+  const updatedItem = await approvalService.approveItem(repository, type, id, req.user._id, comments);
 
     res.json({
       success: true,
@@ -103,9 +79,10 @@ export const approveSubmission = async (req, res) => {
       data: updatedItem,
     });
   } catch (error) {
-    res.status(500).json({
+    const status = error.code || 500;
+    res.status(status).json({
       success: false,
-      message: 'Failed to approve submission',
+      message: error.message || 'Failed to approve submission',
       error: error.message,
     });
   }
@@ -143,25 +120,7 @@ export const rejectSubmission = async (req, res) => {
           message: 'Invalid type. Must be location, hotel, or transport',
         });
     }
-
-    const item = await repository.findById(id);
-
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        message: `${type} not found`,
-      });
-    }
-
-    const updatedItem = await repository.update(id, {
-      approvalStatus: 'rejected',
-      rejectionReason: reason,
-      approvedBy: req.user._id,
-      approvedAt: new Date(),
-    });
-
-    // Notify observers (Observer Pattern)
-    approvalSubject.approvalStatusChanged(type, updatedItem, 'rejected', req.user._id);
+  const updatedItem = await approvalService.rejectItem(repository, type, id, req.user._id, reason);
 
     res.json({
       success: true,
@@ -169,9 +128,10 @@ export const rejectSubmission = async (req, res) => {
       data: updatedItem,
     });
   } catch (error) {
-    res.status(500).json({
+    const status = error.code || 500;
+    res.status(status).json({
       success: false,
-      message: 'Failed to reject submission',
+      message: error.message || 'Failed to reject submission',
       error: error.message,
     });
   }

@@ -33,9 +33,9 @@ router.post(
   createHotel
 );
 
-router.get('/', authenticate, getHotels);
+router.get('/', getHotels);
 router.get('/my-hotels', authenticate, authorize('guide'), getMyHotels);
-router.get('/:id', authenticate, getHotelById);
+router.get('/:id', getHotelById);
 
 router.put(
   '/:id',

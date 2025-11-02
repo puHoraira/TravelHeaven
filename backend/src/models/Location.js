@@ -18,6 +18,9 @@ const locationSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  address: {
+    type: String,
+  },
   coordinates: {
     latitude: Number,
     longitude: Number,
@@ -30,6 +33,26 @@ const locationSchema = new mongoose.Schema({
     type: String,
     enum: ['historical', 'natural', 'adventure', 'cultural', 'beach', 'mountain', 'other'],
     default: 'other',
+  },
+  attractions: [{
+    type: String,
+  }],
+  activities: [{
+    type: String,
+  }],
+  bestTimeToVisit: {
+    type: String,
+  },
+  entryFee: {
+    amount: Number,
+    currency: {
+      type: String,
+      default: 'USD',
+    },
+    details: String,
+  },
+  openingHours: {
+    type: String,
   },
   guideId: {
     type: mongoose.Schema.Types.ObjectId,

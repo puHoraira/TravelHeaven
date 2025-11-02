@@ -11,12 +11,59 @@ export const createLocation = async (req, res) => {
     if (!ensureGuideApproved(req, res)) return;
 
     const locationData = {
-      ...req.body,
+      name: req.body.name,
+      description: req.body.description,
+      country: req.body.country,
+      city: req.body.city,
+      category: req.body.category,
       guideId: req.user._id,
       approvalStatus: 'pending',
       rejectionReason: null,
       resubmittedAt: null,
     };
+
+    // Optional fields
+    if (req.body.address) locationData.address = req.body.address;
+    if (req.body.bestTimeToVisit) locationData.bestTimeToVisit = req.body.bestTimeToVisit;
+    if (req.body.openingHours) locationData.openingHours = req.body.openingHours;
+    
+    // Coordinates
+    if (req.body.latitude || req.body.longitude) {
+      locationData.coordinates = {
+        latitude: parseFloat(req.body.latitude) || 0,
+        longitude: parseFloat(req.body.longitude) || 0,
+      };
+    }
+
+    // Entry fee
+    if (req.body.entryFeeAmount) {
+      locationData.entryFee = {
+        amount: parseFloat(req.body.entryFeeAmount),
+        currency: req.body.entryFeeCurrency || 'USD',
+        details: req.body.entryFeeDetails || '',
+      };
+    }
+
+    // Arrays - parse JSON if sent as strings
+    if (req.body.attractions) {
+      try {
+        locationData.attractions = typeof req.body.attractions === 'string' 
+          ? JSON.parse(req.body.attractions) 
+          : req.body.attractions;
+      } catch (e) {
+        locationData.attractions = [];
+      }
+    }
+
+    if (req.body.activities) {
+      try {
+        locationData.activities = typeof req.body.activities === 'string' 
+          ? JSON.parse(req.body.activities) 
+          : req.body.activities;
+      } catch (e) {
+        locationData.activities = [];
+      }
+    }
 
     // Handle uploaded images
     if (req.files && req.files.length > 0) {

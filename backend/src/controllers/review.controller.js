@@ -14,7 +14,25 @@ const bookingRepo = new BookingRepository();
  */
 export const createReview = async (req, res) => {
   try {
-    const { reviewType, referenceId, rating, title, comment, images } = req.body;
+    const { reviewType, referenceId, rating, title, comment } = req.body;
+
+    // Handle uploaded images
+    const images = req.files ? req.files.map(file => ({
+      url: `/uploads/${file.filename}`,
+      caption: ''
+    })) : [];
+
+    // Parse images from body if sent as JSON (non-multipart request)
+    let parsedImages = images;
+    if (!req.files && req.body.images) {
+      try {
+        parsedImages = typeof req.body.images === 'string' 
+          ? JSON.parse(req.body.images) 
+          : req.body.images;
+      } catch (e) {
+        parsedImages = [];
+      }
+    }
 
     const isVerified = await hasCompletedBooking(req.user._id, reviewType, referenceId);
 
@@ -23,10 +41,10 @@ export const createReview = async (req, res) => {
       userId: req.user._id,
       reviewType,
       referenceId,
-      rating,
+      rating: parseInt(rating),
       title,
       comment,
-      images: images || [],
+      images: parsedImages,
       isVerified,
     });
 

@@ -104,7 +104,7 @@ const GuideLogin = () => {
 
           <p className="text-center mt-6 text-gray-600">
             Don't have a guide account?{' '}
-            <Link to="/register?role=guide" className="text-purple-600 hover:text-purple-700 font-medium">
+            <Link to="/guide/register" className="text-purple-600 hover:text-purple-700 font-medium">
               Register as Guide
             </Link>
           </p>

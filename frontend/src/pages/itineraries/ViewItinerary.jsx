@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -26,9 +26,10 @@ import MapView from '../../components/itinerary/MapView';
 import DayCard from '../../components/itinerary/DayCard';
 import CollaboratorsList from '../../components/itinerary/CollaboratorsList';
 import BudgetTracker from '../../components/itinerary/BudgetTracker';
+import AddDayModal from '../../components/itinerary/AddDayModal';
 
 /**
- * ViewItinerary Page - Display and edit itinerary details with map
+ * ViewItinerary Page - Display and edit itinerary details with interactive journey map
  * Design Patterns: 
  * - Observer Pattern: Updates propagate to collaborators
  * - Strategy Pattern: Different views for owner/collaborator/public
@@ -50,6 +51,9 @@ export default function ViewItinerary() {
   const [activityType, setActivityType] = useState('comment');
   const [activityMessage, setActivityMessage] = useState('');
   const [activitySubmitting, setActivitySubmitting] = useState(false);
+  const [activeDay, setActiveDay] = useState(null);
+  const dayRefs = useRef([]);
+  const [showAddDayModal, setShowAddDayModal] = useState(false);
 
   const normalizeId = (value) => {
     if (!value) return '';
@@ -231,6 +235,21 @@ export default function ViewItinerary() {
     } catch (error) {
       toast.error('Failed to remove collaborator');
       console.error(error);
+    }
+  };
+
+  const handleSaveDay = async (dayData) => {
+    try {
+      const response = await api.put(`/itineraries/${id}`, {
+        days: [...(itinerary.days || []), dayData]
+      });
+      
+      toast.success('Day added successfully!');
+      setShowAddDayModal(false);
+      fetchItinerary();
+    } catch (error) {
+      console.error('Failed to add day:', error);
+      toast.error('Failed to add day. Please try again.');
     }
   };
 
@@ -515,13 +534,46 @@ export default function ViewItinerary() {
             )}
           </div>
 
-          {/* Map View */}
+          {/* Map View - Interactive Journey Map */}
           <div className="card">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <MapPin className="text-blue-600" />
-              Trip Map
+              Your Journey on Map
             </h2>
-            <MapView stops={allStops} showRoute={true} height={500} />
+            <MapView 
+              days={itinerary.days || []} 
+              activeDay={activeDay}
+              onMarkerClick={(dayIndex, stopIndex) => {
+                setActiveDay(dayIndex);
+                // Scroll to the day card
+                if (dayRefs.current[dayIndex]) {
+                  dayRefs.current[dayIndex].scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                  });
+                }
+              }}
+              showRoute={true} 
+              height={500} 
+            />
+            <div className="mt-3 flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                <span>Start</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                <span>End</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full bg-purple-500"></span>
+                <span>Day Markers</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-8 h-0.5 bg-blue-500" style={{ borderTop: '2px dashed #3B82F6' }}></span>
+                <span>Route</span>
+              </div>
+            </div>
           </div>
 
           {/* Days */}
@@ -529,7 +581,10 @@ export default function ViewItinerary() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold text-gray-900">Day by Day</h2>
               {canEdit && (
-                <button className="btn-secondary flex items-center gap-2">
+                <button 
+                  onClick={() => setShowAddDayModal(true)}
+                  className="btn-secondary flex items-center gap-2"
+                >
                   <Plus size={16} />
                   Add Day
                 </button>
@@ -539,12 +594,20 @@ export default function ViewItinerary() {
             {itinerary.days && itinerary.days.length > 0 ? (
               <div className="space-y-4">
                 {itinerary.days.map((day, index) => (
-                  <DayCard
+                  <div
                     key={day._id || index}
-                    day={day}
-                    dayNumber={index + 1}
-                    editable={canEdit}
-                  />
+                    ref={(el) => (dayRefs.current[index] = el)}
+                    onClick={() => setActiveDay(index)}
+                    className={`transition-all duration-300 ${
+                      activeDay === index ? 'ring-4 ring-blue-400 rounded-xl' : ''
+                    }`}
+                  >
+                    <DayCard
+                      day={day}
+                      dayNumber={index + 1}
+                      editable={canEdit}
+                    />
+                  </div>
                 ))}
               </div>
             ) : (
@@ -723,6 +786,14 @@ export default function ViewItinerary() {
           )}
         </div>
       </div>
+
+      {/* Add Day Modal */}
+      <AddDayModal
+        isOpen={showAddDayModal}
+        onClose={() => setShowAddDayModal(false)}
+        onSave={handleSaveDay}
+        dayNumber={(itinerary?.days?.length || 0) + 1}
+      />
     </div>
   );
 }

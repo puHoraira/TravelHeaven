@@ -8,15 +8,18 @@ import {
   toggleLikeReview,
 } from '../controllers/review.controller.js';
 import { authenticate } from '../middleware/auth.js';
+import { upload } from '../middleware/upload.js';
 
 const router = express.Router();
 
-// All routes require authentication
+// Public routes (no auth required)
+router.get('/', getReviews);
+
+// Protected routes (authentication required)
 router.use(authenticate);
 
-// Review routes
 router.post('/', createReview);
-router.get('/', getReviews);
+router.post('/with-images', upload.array('images', 5), createReview);
 router.get('/my-reviews', getMyReviews);
 router.put('/:id', updateReview);
 router.delete('/:id', deleteReview);

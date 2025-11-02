@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Search, MapPin, Star, Compass, RefreshCcw, User } from 'lucide-react';
+import { Search, MapPin, Star, Compass, RefreshCcw, User, X, Image as ImageIcon, Info, MapPinned, Calendar, Clock, DollarSign, Eye } from 'lucide-react';
 import api from '../lib/api';
+import ReviewSection from '../components/ReviewSection';
 
 const Locations = () => {
   const [locations, setLocations] = useState([]);
@@ -10,6 +11,8 @@ const Locations = () => {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   const fetchLocations = useCallback(async (page = 1) => {
     try {
@@ -64,6 +67,296 @@ const Locations = () => {
     setCountryFilter('all');
     fetchLocations(1);
   };
+
+  const handleViewDetails = (location) => {
+    setSelectedLocation(location);
+    setShowDetails(true);
+  };
+
+  const refreshLocationData = async () => {
+    if (!selectedLocation) return;
+    
+    try {
+      const response = await api.get(`/locations/${selectedLocation._id}`);
+      if (response.data) {
+        setSelectedLocation(response.data);
+        // Update in the list as well
+        setLocations(prev => prev.map(loc => 
+          loc._id === response.data._id ? response.data : loc
+        ));
+      }
+    } catch (error) {
+      console.error('Failed to refresh location:', error);
+    }
+  };
+
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    if (imagePath.startsWith('http')) return imagePath;
+    return `http://localhost:5000${imagePath}`;
+  };
+
+  if (showDetails && selectedLocation) {
+    return (
+      <div className="max-w-6xl mx-auto">
+        <div className="card">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+              <MapPin className="text-blue-600" />
+              {selectedLocation.name}
+            </h2>
+            <button
+              onClick={() => {
+                setShowDetails(false);
+                setSelectedLocation(null);
+              }}
+              className="text-gray-500 hover:text-gray-700 transition-colors p-2 hover:bg-gray-100 rounded-full"
+            >
+              <X size={28} />
+            </button>
+          </div>
+
+          {/* Images Gallery */}
+          {selectedLocation.images && selectedLocation.images.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <ImageIcon className="text-blue-600" />
+                Images
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {selectedLocation.images.map((image, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={getImageUrl(image.url || image)}
+                      alt={`${selectedLocation.name} - ${index + 1}`}
+                      className="w-full h-64 object-cover rounded-lg shadow-md"
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                      }}
+                    />
+                    {image.caption && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white p-2 text-sm rounded-b-lg">
+                        {image.caption}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Location Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            {/* Basic Info */}
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <Info className="text-blue-600" />
+                  Basic Information
+                </h3>
+                <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                  <div>
+                    <span className="font-semibold text-gray-700">Location:</span>
+                    <p className="text-gray-900">{selectedLocation.city}, {selectedLocation.country}</p>
+                  </div>
+                  {selectedLocation.address && (
+                    <div>
+                      <span className="font-semibold text-gray-700">Address:</span>
+                      <p className="text-gray-900">{selectedLocation.address}</p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="font-semibold text-gray-700">Category:</span>
+                    <p className="text-gray-900 capitalize">{selectedLocation.category}</p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">Rating:</span>
+                    <div className="flex items-center gap-2">
+                      <Star className="text-yellow-500 fill-yellow-500" size={18} />
+                      <span className="text-gray-900 font-semibold">
+                        {selectedLocation.rating?.average?.toFixed(1) || '0.0'} 
+                        <span className="text-gray-500 text-sm ml-1">
+                          ({selectedLocation.rating?.count || 0} reviews)
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">Views:</span>
+                    <p className="text-gray-900 flex items-center gap-1">
+                      <Eye size={16} />
+                      {selectedLocation.views || 0}
+                    </p>
+                  </div>
+                  {selectedLocation.guideId && (
+                    <div>
+                      <span className="font-semibold text-gray-700">Guide:</span>
+                      <p className="text-gray-900 flex items-center gap-1">
+                        <User size={16} />
+                        {selectedLocation.guideId.profile
+                          ? `${selectedLocation.guideId.profile.firstName || ''} ${selectedLocation.guideId.profile.lastName || ''}`.trim()
+                          : selectedLocation.guideId.username || 'Unknown'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* GPS Coordinates */}
+              {selectedLocation.coordinates?.latitude && (
+                <div>
+                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <MapPinned className="text-blue-600" />
+                    GPS Coordinates
+                  </h3>
+                  <div className="space-y-2 bg-gray-50 p-4 rounded-lg">
+                    <div className="flex justify-between">
+                      <span className="font-semibold text-gray-700">Latitude:</span>
+                      <span className="text-gray-900">{selectedLocation.coordinates.latitude}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-semibold text-gray-700">Longitude:</span>
+                      <span className="text-gray-900">{selectedLocation.coordinates.longitude}</span>
+                    </div>
+                    <a
+                      href={`https://www.google.com/maps?q=${selectedLocation.coordinates.latitude},${selectedLocation.coordinates.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 w-full mt-2"
+                    >
+                      View on Google Maps
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Visiting Information */}
+            <div className="space-y-6">
+              {/* Best Time to Visit */}
+              {selectedLocation.bestTimeToVisit && (
+                <div>
+                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Calendar className="text-blue-600" />
+                    Best Time to Visit
+                  </h3>
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <p className="text-gray-900">{selectedLocation.bestTimeToVisit}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Opening Hours */}
+              {selectedLocation.openingHours && (
+                <div>
+                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Clock className="text-blue-600" />
+                    Opening Hours
+                  </h3>
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <p className="text-gray-900">{selectedLocation.openingHours}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Entry Fee */}
+              {selectedLocation.entryFee?.amount && (
+                <div>
+                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <DollarSign className="text-blue-600" />
+                    Entry Fee
+                  </h3>
+                  <div className="bg-yellow-50 p-4 rounded-lg space-y-2">
+                    <div className="text-2xl font-bold text-gray-900">
+                      {selectedLocation.entryFee.currency} {selectedLocation.entryFee.amount}
+                    </div>
+                    {selectedLocation.entryFee.details && (
+                      <p className="text-sm text-gray-700">{selectedLocation.entryFee.details}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="mb-8">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Info className="text-blue-600" />
+              Description
+            </h3>
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <p className="text-gray-900 leading-relaxed whitespace-pre-line">
+                {selectedLocation.description}
+              </p>
+            </div>
+          </div>
+
+          {/* Attractions */}
+          {selectedLocation.attractions && selectedLocation.attractions.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Compass className="text-blue-600" />
+                Attractions
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {selectedLocation.attractions.map((attraction, index) => (
+                  <div key={index} className="bg-purple-50 p-4 rounded-lg flex items-start gap-3">
+                    <div className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
+                      {index + 1}
+                    </div>
+                    <p className="text-gray-900 flex-1">{attraction}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Activities */}
+          {selectedLocation.activities && selectedLocation.activities.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Compass className="text-blue-600" />
+                Activities
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {selectedLocation.activities.map((activity, index) => (
+                  <div key={index} className="bg-green-50 p-4 rounded-lg flex items-start gap-3">
+                    <div className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
+                      {index + 1}
+                    </div>
+                    <p className="text-gray-900 flex-1">{activity}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reviews Section */}
+          <ReviewSection 
+            reviewType="location"
+            referenceId={selectedLocation._id}
+            locationName={selectedLocation.name}
+            guideId={selectedLocation.guideId?._id || selectedLocation.guideId}
+            onReviewSubmitted={refreshLocationData}
+          />
+
+          {/* Close Button */}
+          <div className="flex justify-end pt-6 border-t mt-6">
+            <button
+              onClick={() => {
+                setShowDetails(false);
+                setSelectedLocation(null);
+              }}
+              className="btn bg-gray-200 text-gray-800 hover:bg-gray-300"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -144,12 +437,19 @@ const Locations = () => {
                 : 'border-amber-100 bg-amber-50 text-amber-700';
 
               return (
-                <div key={location._id} className="card flex h-full flex-col gap-4">
+                <div 
+                  key={location._id} 
+                  className="card flex h-full flex-col gap-4 cursor-pointer hover:shadow-xl transition-shadow"
+                  onClick={() => handleViewDetails(location)}
+                >
                   {coverImage && (
                     <img
-                      src={coverImage}
+                      src={getImageUrl(coverImage)}
                       alt={location.name}
                       className="h-40 w-full rounded-lg object-cover"
+                      onError={(e) => {
+                        e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+                      }}
                     />
                   )}
                   <div className="flex flex-1 flex-col gap-3">

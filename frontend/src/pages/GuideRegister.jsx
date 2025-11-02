@@ -272,7 +272,7 @@ const GuideRegister = () => {
               className="btn btn-primary w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700"
             >
               <Briefcase className="w-4 h-4" />
-              {isLoading ? 'Submitting...' : 'Register as Guide'}
+              {isLoading ? 'Submitting...' : 'Submit'}
             </button>
           </form>
 

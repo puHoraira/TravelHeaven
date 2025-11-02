@@ -22,7 +22,56 @@ const Locations = () => {
       if (countryFilter !== 'all') params.country = countryFilter;
 
       const { data = [], pagination: pageInfo = {} } = await api.get('/locations', { params });
-      setLocations(data);
+
+      // Normalize attractions/activities fields for items that may have been stored as JSON strings
+      const normalizeArrays = (item) => {
+        const copy = { ...item };
+        ['attractions', 'activities'].forEach((key) => {
+          let v = copy[key];
+          const parseMaybeJsonArray = (val) => {
+            if (typeof val === 'string') {
+              const s = val.trim();
+              if ((s.startsWith('[') && s.endsWith(']')) || (s.startsWith('"[') && s.endsWith(']"'))) {
+                try {
+                  const parsed = JSON.parse(s.replace(/^"|"$/g, ''));
+                  return Array.isArray(parsed) ? parsed : [val];
+                } catch {
+                  return [val];
+                }
+              }
+              return [val];
+            }
+            return Array.isArray(val) ? val : [val];
+          };
+
+          if (!v) {
+            copy[key] = [];
+            return;
+          }
+
+          // If it's a string, try parse as JSON array
+          if (typeof v === 'string') {
+            v = parseMaybeJsonArray(v);
+          } else if (!Array.isArray(v)) {
+            v = [v];
+          }
+
+          // Handle case: array contains a single JSON-array string or mixed nested arrays
+          const flattened = v.flatMap((el) => {
+            if (typeof el === 'string') {
+              const res = parseMaybeJsonArray(el);
+              return Array.isArray(res) ? res : [el];
+            }
+            return Array.isArray(el) ? el : [el];
+          });
+
+          // Ensure all items are strings
+          copy[key] = flattened.map((x) => (typeof x === 'string' ? x : String(x)));
+        });
+        return copy;
+      };
+
+      setLocations(data.map(normalizeArrays));
       setPagination({
         page: pageInfo.page || page,
         pages: pageInfo.pages || 1,
@@ -73,17 +122,93 @@ const Locations = () => {
     setShowDetails(true);
   };
 
-  const refreshLocationData = async () => {
-    if (!selectedLocation) return;
-    
+  // Accept optional updatedLocation argument from child so we can apply it immediately
+  const refreshLocationData = async (updatedLocationArg) => {
+    // Normalize helper (same logic as in fetchLocations)
+    const normalizeArrays = (item) => {
+      if (!item) return item;
+      const copy = { ...item };
+      const parseMaybeJsonArray = (val) => {
+        if (typeof val === 'string') {
+          const s = val.trim();
+          if ((s.startsWith('[') && s.endsWith(']')) || (s.startsWith('"[') && s.endsWith(']"'))) {
+            try {
+              const parsed = JSON.parse(s.replace(/^"|"$/g, ''));
+              return Array.isArray(parsed) ? parsed : [val];
+            } catch {
+              return [val];
+            }
+          }
+          return [val];
+        }
+        return Array.isArray(val) ? val : [val];
+      };
+
+      ['attractions', 'activities'].forEach((key) => {
+        let v = copy[key];
+        if (!v) {
+          copy[key] = [];
+          return;
+        }
+
+        if (typeof v === 'string') {
+          v = parseMaybeJsonArray(v);
+        } else if (!Array.isArray(v)) {
+          v = [v];
+        }
+
+        const flattened = v.flatMap((el) => {
+          if (typeof el === 'string') {
+            const res = parseMaybeJsonArray(el);
+            return Array.isArray(res) ? res : [el];
+          }
+          return Array.isArray(el) ? el : [el];
+        });
+
+        copy[key] = flattened.map((x) => (typeof x === 'string' ? x : String(x)));
+      });
+      return copy;
+    };
+
     try {
-      const response = await api.get(`/locations/${selectedLocation._id}`);
-      if (response.data) {
-        setSelectedLocation(response.data);
-        // Update in the list as well
-        setLocations(prev => prev.map(loc => 
-          loc._id === response.data._id ? response.data : loc
-        ));
+      let updatedLocation = null;
+
+      if (updatedLocationArg) {
+        // Parent received updated entity from child
+        updatedLocation = typeof updatedLocationArg === 'object' ? (updatedLocationArg.data || updatedLocationArg) : null;
+      }
+
+      if (!updatedLocation) {
+        if (!selectedLocation) return;
+        const response = await api.get(`/locations/${selectedLocation._id}`);
+        updatedLocation = response?.data || response;
+      }
+
+      if (updatedLocation) {
+        updatedLocation = normalizeArrays(updatedLocation);
+
+        setSelectedLocation(updatedLocation);
+
+        // Update in the list as well (robust id comparison)
+        setLocations(prev => {
+          let found = false;
+          const mapped = prev.map(loc => {
+            if (loc?._id?.toString() === updatedLocation?._id?.toString()) {
+              found = true;
+              return updatedLocation;
+            }
+            return loc;
+          });
+          // If location wasn't in the current list (different page), refresh the list
+          if (!found) {
+            try { fetchLocations(pagination.page || 1); } catch (e) { /* ignore */ }
+            return mapped;
+          }
+          return mapped;
+        });
+
+        // Also proactively refresh the current page (keeps aggregates consistent)
+        try { fetchLocations(pagination.page || 1); } catch (e) { /* ignore */ }
       }
     } catch (error) {
       console.error('Failed to refresh location:', error);
@@ -109,6 +234,8 @@ const Locations = () => {
               onClick={() => {
                 setShowDetails(false);
                 setSelectedLocation(null);
+                // Ensure list reflects any new reviews/ratings after closing details
+                try { fetchLocations(pagination.page || 1); } catch (e) { /* ignore */ }
               }}
               className="text-gray-500 hover:text-gray-700 transition-colors p-2 hover:bg-gray-100 rounded-full"
             >

@@ -1,7 +1,38 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, CheckCircle, XCircle, Clock, MapPin, Hotel, Bus, Users, Eye } from 'lucide-react';
+import toast from 'react-hot-toast';
+import api from '../../lib/api';
 
 const AdminDashboard = () => {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const resp = await api.get('/admin/statistics');
+        // api interceptor returns response.data
+        setStats(resp.data || resp);
+      } catch (err) {
+        toast.error(err?.message || 'Failed to load admin statistics');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const fmt = (n) => (typeof n === 'number' ? n : 0);
+  const pendingTotal = fmt(stats?.pending?.total);
+  const approvedTotal = fmt(stats?.approved?.total);
+  const rejectedTotal = fmt(stats?.rejected?.total);
+  const totalGuides = fmt(stats?.total?.guides);
+  const totalLocations = fmt(stats?.total?.locations);
+  const totalHotels = fmt(stats?.total?.hotels);
+  const totalTransport = fmt(stats?.total?.transport);
+
   return (
     <div className="space-y-6">
       {/* Admin Header - BIG DOMAIN */}
@@ -22,7 +53,7 @@ const AdminDashboard = () => {
             <Clock className="w-8 h-8 text-orange-600" />
             <h3 className="font-bold text-lg">Pending Approvals</h3>
           </div>
-          <p className="text-3xl font-bold text-orange-600 mb-1">--</p>
+          <p className="text-3xl font-bold text-orange-600 mb-1">{loading ? '…' : pendingTotal}</p>
           <p className="text-sm text-gray-600">Locations, Hotels, Transport</p>
         </Link>
 
@@ -31,7 +62,7 @@ const AdminDashboard = () => {
             <CheckCircle className="w-8 h-8 text-green-600" />
             <h3 className="font-bold text-lg">Approved</h3>
           </div>
-          <p className="text-3xl font-bold text-green-600 mb-1">--</p>
+          <p className="text-3xl font-bold text-green-600 mb-1">{loading ? '…' : approvedTotal}</p>
           <p className="text-sm text-gray-600">Total approved items</p>
         </div>
 
@@ -40,7 +71,7 @@ const AdminDashboard = () => {
             <XCircle className="w-8 h-8 text-red-600" />
             <h3 className="font-bold text-lg">Rejected</h3>
           </div>
-          <p className="text-3xl font-bold text-red-600 mb-1">--</p>
+          <p className="text-3xl font-bold text-red-600 mb-1">{loading ? '…' : rejectedTotal}</p>
           <p className="text-sm text-gray-600">Total rejected items</p>
         </div>
 
@@ -49,7 +80,7 @@ const AdminDashboard = () => {
             <Users className="w-8 h-8 text-blue-600" />
             <h3 className="font-bold text-lg">Total Guides</h3>
           </div>
-          <p className="text-3xl font-bold text-blue-600 mb-1">--</p>
+          <p className="text-3xl font-bold text-blue-600 mb-1">{loading ? '…' : totalGuides}</p>
           <p className="text-sm text-gray-600">Registered guides</p>
         </Link>
       </div>
@@ -66,7 +97,7 @@ const AdminDashboard = () => {
               <MapPin className="w-6 h-6 text-blue-600" />
               <h3 className="font-semibold">Locations</h3>
             </div>
-            <p className="text-2xl font-bold text-blue-600">--</p>
+            <p className="text-2xl font-bold text-blue-600">{loading ? '…' : totalLocations}</p>
             <p className="text-sm text-gray-600 mt-1">View all locations</p>
           </Link>
 
@@ -75,7 +106,7 @@ const AdminDashboard = () => {
               <Hotel className="w-6 h-6 text-green-600" />
               <h3 className="font-semibold">Hotels</h3>
             </div>
-            <p className="text-2xl font-bold text-green-600">--</p>
+            <p className="text-2xl font-bold text-green-600">{loading ? '…' : totalHotels}</p>
             <p className="text-sm text-gray-600 mt-1">View all hotels</p>
           </Link>
 
@@ -84,7 +115,7 @@ const AdminDashboard = () => {
               <Bus className="w-6 h-6 text-purple-600" />
               <h3 className="font-semibold">Transportation</h3>
             </div>
-            <p className="text-2xl font-bold text-purple-600">--</p>
+            <p className="text-2xl font-bold text-purple-600">{loading ? '…' : totalTransport}</p>
             <p className="text-sm text-gray-600 mt-1">View all transport</p>
           </Link>
         </div>

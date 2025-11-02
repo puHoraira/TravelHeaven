@@ -192,6 +192,11 @@ export const getStatistics = async (req, res) => {
       approvedLocations,
       approvedHotels,
       approvedTransport,
+      rejectedLocations,
+      rejectedHotels,
+      rejectedTransport,
+      totalGuides,
+      pendingGuides
     ] = await Promise.all([
       locationRepo.count(),
       hotelRepo.count(),
@@ -202,6 +207,11 @@ export const getStatistics = async (req, res) => {
       locationRepo.count({ approvalStatus: 'approved' }),
       hotelRepo.count({ approvalStatus: 'approved' }),
       transportRepo.count({ approvalStatus: 'approved' }),
+      locationRepo.count({ approvalStatus: 'rejected' }),
+      hotelRepo.count({ approvalStatus: 'rejected' }),
+      transportRepo.count({ approvalStatus: 'rejected' }),
+      userRepo.count({ role: 'guide' }),
+      userRepo.count({ role: 'guide', 'guideInfo.verificationStatus': 'pending' })
     ]);
 
     res.json({
@@ -211,11 +221,13 @@ export const getStatistics = async (req, res) => {
           locations: totalLocations,
           hotels: totalHotels,
           transport: totalTransport,
+          guides: totalGuides,
         },
         pending: {
           locations: pendingLocations,
           hotels: pendingHotels,
           transport: pendingTransport,
+          guides: pendingGuides,
           total: pendingLocations + pendingHotels + pendingTransport,
         },
         approved: {
@@ -223,6 +235,12 @@ export const getStatistics = async (req, res) => {
           hotels: approvedHotels,
           transport: approvedTransport,
           total: approvedLocations + approvedHotels + approvedTransport,
+        },
+        rejected: {
+          locations: rejectedLocations,
+          hotels: rejectedHotels,
+          transport: rejectedTransport,
+          total: rejectedLocations + rejectedHotels + rejectedTransport,
         },
       },
     });

@@ -8,7 +8,7 @@ import {
   deleteLocation,
   getMyLocations,
 } from '../controllers/location.controller.js';
-import { authenticate, authorize, authorizeResource } from '../middleware/auth.js';
+import { authenticate, authorize, authorizeResource, authenticateOptional } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
 import { upload } from '../middleware/upload.js';
 
@@ -36,7 +36,7 @@ router.post(
 
 router.get('/', getLocations);
 router.get('/my-locations', authenticate, authorize('guide'), getMyLocations);
-router.get('/:id', getLocationById);
+router.get('/:id', authenticateOptional, getLocationById);
 
 router.put(
   '/:id',

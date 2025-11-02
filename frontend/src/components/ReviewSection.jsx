@@ -306,10 +306,21 @@ const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onRevie
       
       // Observer Pattern: Notify subscribers
       reviewNotifier.notify({ referenceId, action: 'create' });
-      
-      // Call parent callback to refresh location data
-      if (onReviewSubmitted) {
-        onReviewSubmitted();
+
+      // Fetch the updated referenced entity (e.g., location) so parent gets the latest rating
+      try {
+        if (onReviewSubmitted) {
+          try {
+            const locResp = await api.get(`/locations/${referenceId}`);
+            const latest = locResp?.data || locResp;
+            onReviewSubmitted(latest);
+          } catch (e) {
+            // If fetching the updated entity fails, still call parent to trigger a refresh
+            onReviewSubmitted();
+          }
+        }
+      } catch (e) {
+        // ignore
       }
       
       // Reset form

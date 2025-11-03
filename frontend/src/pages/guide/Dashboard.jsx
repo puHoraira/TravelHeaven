@@ -31,7 +31,8 @@ const GuideDashboard = () => {
       setLoadingMetrics(true);
       setMetricsError(null);
       try {
-        const response = await api.get('/guide/metrics');
+  // NOTE: API route is mounted at /api/guides in the backend (plural)
+  const response = await api.get('/guides/metrics');
         if (isMounted && response.success) {
           setMetrics(response.data);
         }

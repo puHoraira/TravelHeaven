@@ -51,6 +51,30 @@ export const authenticate = async (req, res, next) => {
 };
 
 /**
+ * Optional authentication - if a Bearer token is present, validate and attach user to req.user.
+ * If no token is present, continue without error (public access).
+ */
+export const authenticateOptional = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) return next();
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userRepo = new UserRepository();
+    const user = await userRepo.findById(decoded.userId);
+
+    if (user && user.isActive) {
+      req.user = user;
+    }
+
+    return next();
+  } catch (error) {
+    // Do not block public requests if token is invalid; just proceed without user
+    return next();
+  }
+};
+
+/**
  * Role-based authorization middleware using Strategy Pattern
  */
 export const authorize = (...roles) => {

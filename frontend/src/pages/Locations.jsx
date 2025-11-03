@@ -13,6 +13,7 @@ const Locations = () => {
   const [countryFilter, setCountryFilter] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [locationReviews, setLocationReviews] = useState([]);
 
   const fetchLocations = useCallback(async (page = 1) => {
     try {
@@ -22,7 +23,35 @@ const Locations = () => {
       if (countryFilter !== 'all') params.country = countryFilter;
 
       const { data = [], pagination: pageInfo = {} } = await api.get('/locations', { params });
-      setLocations(data);
+      
+      // Fetch reviews for all locations and calculate real-time ratings
+      const locationsWithRatings = await Promise.all(
+        data.map(async (location) => {
+          try {
+            const reviewsResponse = await api.get('/reviews', {
+              params: { reviewType: 'location', referenceId: location._id }
+            });
+            const reviews = reviewsResponse.data?.data || [];
+            
+            if (reviews.length > 0) {
+              const average = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+              return {
+                ...location,
+                rating: {
+                  average: parseFloat(average.toFixed(2)),
+                  count: reviews.length
+                }
+              };
+            }
+            return { ...location, rating: { average: 0, count: 0 } };
+          } catch (error) {
+            console.error(`Failed to fetch reviews for ${location.name}:`, error);
+            return location; // Return original location if review fetch fails
+          }
+        })
+      );
+      
+      setLocations(locationsWithRatings);
       setPagination({
         page: pageInfo.page || page,
         pages: pageInfo.pages || 1,
@@ -70,6 +99,7 @@ const Locations = () => {
 
   const handleViewDetails = (location) => {
     setSelectedLocation(location);
+    setLocationReviews([]); // Reset reviews when opening new location
     setShowDetails(true);
   };
 
@@ -89,6 +119,60 @@ const Locations = () => {
       console.error('Failed to refresh location:', error);
     }
   };
+
+  // Handle reviews change - calculate rating from actual reviews
+  const handleReviewsChange = (reviews) => {
+    setLocationReviews(reviews);
+    
+    if (!selectedLocation?._id) return; // Safety check
+    
+    if (reviews.length === 0) {
+      // No reviews, set to 0
+      const updatedRating = { average: 0, count: 0 };
+      
+      // Update selected location
+      setSelectedLocation(prev => ({
+        ...prev,
+        rating: updatedRating
+      }));
+      
+      // Update in locations list
+      setLocations(prev => prev.map(loc => 
+        loc._id === selectedLocation._id 
+          ? { ...loc, rating: updatedRating }
+          : loc
+      ));
+    } else {
+      // Calculate from reviews
+      const average = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+      const updatedRating = {
+        average: parseFloat(average.toFixed(2)),
+        count: reviews.length
+      };
+      
+      // Update selected location
+      setSelectedLocation(prev => ({
+        ...prev,
+        rating: updatedRating
+      }));
+      
+      // Update in locations list
+      setLocations(prev => prev.map(loc => 
+        loc._id === selectedLocation._id 
+          ? { ...loc, rating: updatedRating }
+          : loc
+      ));
+    }
+  };
+
+  // Calculate average rating from reviews
+  const calculateAverageRating = () => {
+    if (locationReviews.length === 0) return '0.0';
+    const average = locationReviews.reduce((sum, r) => sum + r.rating, 0) / locationReviews.length;
+    return average.toFixed(1);
+  };
+
+  const averageRating = calculateAverageRating();
 
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
@@ -170,13 +254,13 @@ const Locations = () => {
                     <p className="text-gray-900 capitalize">{selectedLocation.category}</p>
                   </div>
                   <div>
-                    <span className="font-semibold text-gray-700">Rating:</span>
+                    <span className="font-semibold text-gray-700">Ratings:</span>
                     <div className="flex items-center gap-2">
                       <Star className="text-yellow-500 fill-yellow-500" size={18} />
                       <span className="text-gray-900 font-semibold">
-                        {selectedLocation.rating?.average?.toFixed(1) || '0.0'} 
+                        {averageRating} 
                         <span className="text-gray-500 text-sm ml-1">
-                          ({selectedLocation.rating?.count || 0} reviews)
+                          ({locationReviews.length} reviews)
                         </span>
                       </span>
                     </div>
@@ -339,6 +423,7 @@ const Locations = () => {
             locationName={selectedLocation.name}
             guideId={selectedLocation.guideId?._id || selectedLocation.guideId}
             onReviewSubmitted={refreshLocationData}
+            onReviewsChange={handleReviewsChange}
           />
 
           {/* Close Button */}

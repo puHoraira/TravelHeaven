@@ -260,32 +260,43 @@ export const toggleLikeReview = async (req, res) => {
  * Helper function to update entity rating
  */
 async function updateEntityRating(reviewType, referenceId) {
-  const { average, count } = await reviewRepo.getAverageRating(reviewType, referenceId);
+  try {
+    console.log(`🔄 Updating rating for ${reviewType} ${referenceId}`);
+    
+    const { average, count } = await reviewRepo.getAverageRating(reviewType, referenceId);
+    console.log(`📊 Calculated rating: ${average} (${count} reviews)`);
 
-  let repository;
-  switch (reviewType) {
-    case 'location':
-      repository = new LocationRepository();
-      break;
-    case 'hotel':
-      repository = new HotelRepository();
-      break;
-    case 'guide':
-      repository = new UserRepository();
-      await repository.model.findByIdAndUpdate(referenceId, {
-        'guideInfo.rating.average': average,
-        'guideInfo.rating.count': count,
+    let repository;
+    switch (reviewType) {
+      case 'location':
+        repository = new LocationRepository();
+        break;
+      case 'hotel':
+        repository = new HotelRepository();
+        break;
+      case 'guide':
+        repository = new UserRepository();
+        await repository.model.findByIdAndUpdate(referenceId, {
+          'guideInfo.rating.average': average,
+          'guideInfo.rating.count': count,
+        });
+        console.log(`✅ Guide rating updated`);
+        return;
+      default:
+        console.warn(`⚠️ Unknown review type: ${reviewType}`);
+        return;
+    }
+
+    if (repository) {
+      const result = await repository.update(referenceId, {
+        'rating.average': average,
+        'rating.count': count,
       });
-      return;
-    default:
-      return;
-  }
-
-  if (repository) {
-    await repository.update(referenceId, {
-      'rating.average': average,
-      'rating.count': count,
-    });
+      console.log(`✅ ${reviewType} rating updated:`, result);
+    }
+  } catch (error) {
+    console.error(`❌ Error updating entity rating:`, error);
+    throw error;
   }
 }
 

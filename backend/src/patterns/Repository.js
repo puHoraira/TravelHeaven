@@ -251,8 +251,21 @@ export class ReviewRepository extends BaseRepository {
   }
 
   async getAverageRating(reviewType, referenceId) {
+    // Ensure referenceId is ObjectId
+    const mongoose = await import('mongoose');
+    const objectId = mongoose.default.Types.ObjectId.isValid(referenceId) 
+      ? new mongoose.default.Types.ObjectId(referenceId) 
+      : referenceId;
+    
+    console.log(`🔍 Calculating average for ${reviewType}, referenceId:`, objectId);
+    
     const result = await this.model.aggregate([
-      { $match: { reviewType, referenceId } },
+      { 
+        $match: { 
+          reviewType, 
+          referenceId: objectId
+        } 
+      },
       {
         $group: {
           _id: null,
@@ -262,7 +275,10 @@ export class ReviewRepository extends BaseRepository {
       },
     ]);
 
-    return result.length > 0 ? result[0] : { average: 0, count: 0 };
+    const rating = result.length > 0 ? result[0] : { average: 0, count: 0 };
+    console.log(`📊 Rating result:`, rating);
+    
+    return rating;
   }
 }
 

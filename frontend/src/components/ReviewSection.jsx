@@ -160,7 +160,7 @@ class ReviewFormBuilder {
  * Main ReviewSection Component
  * Implements Composite Pattern: Contains multiple sub-components
  */
-const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onReviewSubmitted }) => {
+const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onReviewSubmitted, onReviewsChange }) => {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -230,6 +230,11 @@ const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onRevie
       
       setReviews(reviewsData);
       setPagination(response.data?.pagination || { page: 1, pages: 1, total: reviewsData.length });
+      
+      // Notify parent component about reviews change
+      if (onReviewsChange) {
+        onReviewsChange(reviewsData);
+      }
     } catch (error) {
       console.error('Failed to fetch reviews:', error);
       toast.error('Failed to load reviews');
@@ -307,11 +312,6 @@ const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onRevie
       // Observer Pattern: Notify subscribers
       reviewNotifier.notify({ referenceId, action: 'create' });
       
-      // Call parent callback to refresh location data
-      if (onReviewSubmitted) {
-        onReviewSubmitted();
-      }
-      
       // Reset form
       reset();
       setRating(5);
@@ -321,7 +321,15 @@ const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onRevie
       setHasReviewed(true);
       formBuilder.reset();
       
+      // Fetch updated reviews
       fetchReviews();
+      
+      // Call parent callback to refresh location data (with slight delay to ensure backend updated)
+      if (onReviewSubmitted) {
+        setTimeout(() => {
+          onReviewSubmitted();
+        }, 500);
+      }
     } catch (error) {
       console.error('Failed to submit review:', error);
       toast.error(error.response?.data?.message || 'Failed to submit review');

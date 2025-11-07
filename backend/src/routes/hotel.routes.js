@@ -7,6 +7,9 @@ import {
   updateHotel,
   deleteHotel,
   getMyHotels,
+  addRoomToHotel,
+  updateRoomInHotel,
+  deleteRoomFromHotel,
 } from '../controllers/hotel.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
@@ -46,5 +49,40 @@ router.put(
 );
 
 router.delete('/:id', authenticate, authorize('guide', 'admin'), deleteHotel);
+
+// Rooms management
+const roomValidation = [
+  body('roomType').trim().notEmpty().withMessage('Room type is required'),
+  body('capacity').isInt({ min: 1 }).withMessage('Capacity must be at least 1'),
+  body('pricePerNight').isFloat({ min: 0 }).withMessage('Price per night must be >= 0'),
+  body('currency').optional().isString(),
+  body('amenities').optional().isArray(),
+  body('notes').optional().isString(),
+];
+
+router.post(
+  '/:id/rooms',
+  authenticate,
+  authorize('guide', 'admin'),
+  upload.array('photos', 10),
+  roomValidation,
+  validate,
+  addRoomToHotel
+);
+
+router.put(
+  '/:id/rooms/:roomIndex',
+  authenticate,
+  authorize('guide', 'admin'),
+  upload.array('photos', 10),
+  updateRoomInHotel
+);
+
+router.delete(
+  '/:id/rooms/:roomIndex',
+  authenticate,
+  authorize('guide', 'admin'),
+  deleteRoomFromHotel
+);
 
 export default router;

@@ -40,6 +40,7 @@ const itinerarySchema = new mongoose.Schema({
     dayNumber: Number,
     date: Date,
     title: String,
+    description: String,
     stops: [{
       locationId: {
         type: mongoose.Schema.Types.ObjectId,

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { 
-  ArrowLeft, Calendar, MapPin, Plus, X, Save, DollarSign 
+  ArrowLeft, Calendar, MapPin, Plus, X, Save 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
@@ -127,6 +127,81 @@ export default function CreateItinerary() {
       stop.order = idx;
     });
     setDays(newDays);
+  };
+
+  // Suggestion helpers (adds first approved hotel/transport for the day's first location)
+  const getFirstLocationIdForDay = (dayIndex) => {
+    const day = days[dayIndex];
+    const loc = day?.stops?.find((s) => s.type === 'location' && s.referenceId);
+    return loc?.referenceId || null;
+  };
+
+  const suggestHotelForDay = async (dayIndex) => {
+    const locationId = getFirstLocationIdForDay(dayIndex);
+    if (!locationId) {
+      toast.error('Add a location to this day first.');
+      return;
+    }
+    try {
+      const res = await api.get('/hotels', { params: { locationId, limit: 1 } });
+      const list = res.data || res;
+      const hotel = Array.isArray(list) ? list[0] : list?.data?.[0];
+      if (!hotel) {
+        toast.error('No approved hotels found for that location.');
+        return;
+      }
+      setDays(prev => {
+        const copy = [...prev];
+        const stop = {
+          type: 'hotel',
+          name: hotel.name,
+          time: '',
+          notes: '',
+          referenceId: hotel._id,
+          coordinates: hotel.coordinates || { lat: 0, lng: 0 },
+          order: copy[dayIndex].stops.length,
+        };
+        copy[dayIndex] = { ...copy[dayIndex], stops: [...copy[dayIndex].stops, stop] };
+        return copy;
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to fetch hotel suggestions');
+    }
+  };
+
+  const suggestTransportForDay = async (dayIndex) => {
+    const locationId = getFirstLocationIdForDay(dayIndex);
+    if (!locationId) {
+      toast.error('Add a location to this day first.');
+      return;
+    }
+    try {
+      const res = await api.get('/transportation', { params: { locationId, limit: 1 } });
+      const list = res.data || res;
+      const item = Array.isArray(list) ? list[0] : list?.data?.[0];
+      if (!item) {
+        toast.error('No approved transport found for that location.');
+        return;
+      }
+      setDays(prev => {
+        const copy = [...prev];
+        const stop = {
+          type: 'transport',
+          name: item.name,
+          time: '',
+          notes: '',
+          referenceId: item._id,
+          coordinates: item.coordinates || { lat: 0, lng: 0 },
+          order: copy[dayIndex].stops.length,
+        };
+        copy[dayIndex] = { ...copy[dayIndex], stops: [...copy[dayIndex].stops, stop] };
+        return copy;
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to fetch transport suggestions');
+    }
   };
 
   const onSubmit = async (data) => {
@@ -511,6 +586,22 @@ export default function CreateItinerary() {
                     >
                       <Plus size={14} />
                       Add Custom Stop
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => suggestHotelForDay(dayIndex)}
+                      className="btn-secondary btn-sm flex items-center gap-1"
+                    >
+                      <Plus size={14} />
+                      Suggest Hotel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => suggestTransportForDay(dayIndex)}
+                      className="btn-secondary btn-sm flex items-center gap-1"
+                    >
+                      <Plus size={14} />
+                      Suggest Transport
                     </button>
                   </div>
                 </div>

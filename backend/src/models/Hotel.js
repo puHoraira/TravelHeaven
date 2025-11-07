@@ -50,6 +50,16 @@ const hotelSchema = new mongoose.Schema({
     url: String,
     caption: String,
   }],
+  rooms: [{
+    roomType: { type: String, trim: true },
+    bedType: { type: String, trim: true },
+    capacity: { type: Number, min: 1 },
+    pricePerNight: { type: Number, min: 0 },
+    currency: { type: String, default: 'USD' },
+    amenities: [String],
+    photos: [{ url: String, caption: String }],
+    notes: String,
+  }],
   contactInfo: {
     phone: String,
     email: String,

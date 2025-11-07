@@ -54,6 +54,9 @@ export default function ViewItinerary() {
   const [activeDay, setActiveDay] = useState(null);
   const dayRefs = useRef([]);
   const [showAddDayModal, setShowAddDayModal] = useState(false);
+  const [showEditDayModal, setShowEditDayModal] = useState(false);
+  const [editingDayIndex, setEditingDayIndex] = useState(null);
+  const [autoOpenAddStop, setAutoOpenAddStop] = useState(false);
 
   const normalizeId = (value) => {
     if (!value) return '';
@@ -251,6 +254,35 @@ export default function ViewItinerary() {
       console.error('Failed to add day:', error);
       toast.error('Failed to add day. Please try again.');
     }
+  };
+
+  const handleUpdateDay = async (dayData) => {
+    try {
+      const updated = [...(itinerary.days || [])];
+      if (editingDayIndex == null || editingDayIndex < 0 || editingDayIndex >= updated.length) {
+        toast.error('Invalid day selected');
+        return;
+      }
+      updated[editingDayIndex] = {
+        ...updated[editingDayIndex],
+        ...dayData,
+      };
+      await api.put(`/itineraries/${id}`, { days: updated });
+      toast.success('Day updated successfully!');
+      setShowEditDayModal(false);
+      setEditingDayIndex(null);
+      setAutoOpenAddStop(false);
+      fetchItinerary();
+    } catch (error) {
+      console.error('Failed to update day:', error);
+      toast.error('Failed to update day. Please try again.');
+    }
+  };
+
+  const openEditDay = (index, { addStop = false } = {}) => {
+    setEditingDayIndex(index);
+    setAutoOpenAddStop(Boolean(addStop));
+    setShowEditDayModal(true);
   };
 
   const handleToggleSubscribe = async () => {
@@ -534,49 +566,7 @@ export default function ViewItinerary() {
             )}
           </div>
 
-          {/* Map View - Interactive Journey Map */}
-          <div className="card">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <MapPin className="text-blue-600" />
-              Your Journey on Map
-            </h2>
-            <MapView 
-              days={itinerary.days || []} 
-              activeDay={activeDay}
-              onMarkerClick={(dayIndex, stopIndex) => {
-                setActiveDay(dayIndex);
-                // Scroll to the day card
-                if (dayRefs.current[dayIndex]) {
-                  dayRefs.current[dayIndex].scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center' 
-                  });
-                }
-              }}
-              showRoute={true} 
-              height={500} 
-            />
-            <div className="mt-3 flex items-center gap-4 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
-                <span>Start</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-block w-3 h-3 rounded-full bg-red-500"></span>
-                <span>End</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-block w-3 h-3 rounded-full bg-purple-500"></span>
-                <span>Day Markers</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-block w-8 h-0.5 bg-blue-500" style={{ borderTop: '2px dashed #3B82F6' }}></span>
-                <span>Route</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Days */}
+          {/* Days - move above map to avoid overlay/layout confusion */}
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold text-gray-900">Day by Day</h2>
@@ -606,6 +596,8 @@ export default function ViewItinerary() {
                       day={day}
                       dayNumber={index + 1}
                       editable={canEdit}
+                      onEditDay={(i) => openEditDay(i)}
+                      onAddStop={(i) => openEditDay(i, { addStop: true })}
                     />
                   </div>
                 ))}
@@ -617,6 +609,46 @@ export default function ViewItinerary() {
                 {canEdit && <p className="text-sm text-gray-500 mt-1">Click "Add Day" to start planning</p>}
               </div>
             )}
+          </div>
+
+          {/* Map View - Interactive Journey Map (moved below) */}
+          <div className="card">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <MapPin className="text-blue-600" />
+              Your Journey on Map
+            </h2>
+            <div className="relative z-0">
+              <MapView 
+                days={itinerary.days || []} 
+                activeDay={activeDay}
+                onMarkerClick={(dayIndex, stopIndex) => {
+                  setActiveDay(dayIndex);
+                  if (dayRefs.current[dayIndex]) {
+                    dayRefs.current[dayIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }}
+                showRoute={true} 
+                height={500} 
+              />
+            </div>
+            <div className="mt-3 flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                <span>Start</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                <span>End</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full bg-purple-500"></span>
+                <span>Day Markers</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-8 h-0.5 bg-blue-500" style={{ borderTop: '2px dashed #3B82F6' }}></span>
+                <span>Route</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -794,6 +826,18 @@ export default function ViewItinerary() {
         onSave={handleSaveDay}
         dayNumber={(itinerary?.days?.length || 0) + 1}
       />
+
+      {/* Edit Day Modal */}
+      {showEditDayModal && (
+        <AddDayModal
+          isOpen={showEditDayModal}
+          onClose={() => { setShowEditDayModal(false); setEditingDayIndex(null); setAutoOpenAddStop(false); }}
+          onSave={handleUpdateDay}
+          existingDay={editingDayIndex != null ? itinerary.days[editingDayIndex] : null}
+          dayNumber={(editingDayIndex ?? 0) + 1}
+          autoOpenAddStop={autoOpenAddStop}
+        />
+      )}
     </div>
   );
 }

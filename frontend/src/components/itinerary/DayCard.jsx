@@ -1,4 +1,4 @@
-import { MapPin, Clock, FileText, Trash2 } from 'lucide-react';
+import { MapPin, Clock, FileText, Trash2, Edit, Plus } from 'lucide-react';
 
 /**
  * DayCard Component - Displays a single day in an itinerary
@@ -9,7 +9,7 @@ import { MapPin, Clock, FileText, Trash2 } from 'lucide-react';
  * @param {Function} onRemoveStop - Callback when stop is removed
  * @param {boolean} editable - Whether the day can be edited
  */
-export default function DayCard({ day, dayNumber, onRemoveStop, editable = false }) {
+export default function DayCard({ day, dayNumber, onRemoveStop, onEditDay, onAddStop, editable = false }) {
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -33,10 +33,46 @@ export default function DayCard({ day, dayNumber, onRemoveStop, editable = false
     <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
       {/* Day Header */}
       <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4">
-        <h3 className="text-xl font-bold">Day {dayNumber}</h3>
-        {day.date && (
-          <p className="text-blue-100 text-sm mt-1">{formatDate(day.date)}</p>
-        )}
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            {/* Day number + title */}
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/20">
+                Day {dayNumber}
+              </span>
+              <h3 className="text-xl font-bold truncate">
+                {day?.title || `Day ${dayNumber}`}
+              </h3>
+            </div>
+            {/* Description (separate line) */}
+            {day?.description && (
+              <p className="text-blue-100 text-sm mt-1 line-clamp-1">
+                {day.description}
+              </p>
+            )}
+            {day.date && (
+              <p className="text-blue-100 text-sm mt-1">{formatDate(day.date)}</p>
+            )}
+          </div>
+          {editable && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onEditDay?.(dayNumber - 1)}
+                className="p-1.5 hover:bg-white/20 rounded"
+                title="Edit day"
+              >
+                <Edit size={18} />
+              </button>
+              <button
+                onClick={() => onAddStop?.(dayNumber - 1)}
+                className="p-1.5 hover:bg-white/20 rounded"
+                title="Add stop"
+              >
+                <Plus size={18} />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Stops List */}
@@ -106,7 +142,17 @@ export default function DayCard({ day, dayNumber, onRemoveStop, editable = false
           <div className="text-center py-8 text-gray-500">
             <MapPin size={48} className="mx-auto mb-2 opacity-30" />
             <p>No stops added for this day</p>
-            {editable && <p className="text-sm mt-1">Click "Add Stop" to start planning</p>}
+            {editable && (
+              <div className="mt-2">
+                <button
+                  onClick={() => onAddStop?.(dayNumber - 1)}
+                  className="btn-secondary inline-flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  Add Stop
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

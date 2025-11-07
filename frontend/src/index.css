@@ -47,5 +47,13 @@
   /* Leaflet map customization */
   .leaflet-container {
     @apply rounded-lg;
+    /* Ensure the page modal can always overlay the map */
+    z-index: 0;
+  }
+
+  /* Optional: make Leaflet popups/controls sit under modal overlays */
+  .leaflet-pane,
+  .leaflet-control-container {
+    z-index: 0;
   }
 }

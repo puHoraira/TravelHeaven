@@ -137,6 +137,31 @@ export const updateHotel = async (req, res) => {
 
     const updateData = { ...req.body };
 
+    // Parse complex fields if they arrive as JSON strings (from multipart forms)
+    const tryParse = (value) => {
+      if (value == null) return value;
+      if (typeof value !== 'string') return value;
+      try {
+        return JSON.parse(value);
+      } catch (_) {
+        return value;
+      }
+    };
+
+    if (updateData.amenities) {
+      // allow comma-separated or JSON array
+      const parsed = tryParse(updateData.amenities);
+      updateData.amenities = Array.isArray(parsed)
+        ? parsed
+        : String(parsed)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+    }
+    if (updateData.priceRange) updateData.priceRange = tryParse(updateData.priceRange);
+    if (updateData.contactInfo) updateData.contactInfo = tryParse(updateData.contactInfo);
+    if (updateData.address) updateData.address = tryParse(updateData.address);
+
     // Handle uploaded images
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map(file => ({
@@ -232,5 +257,125 @@ export const getMyHotels = async (req, res) => {
       message: 'Failed to get hotels',
       error: error.message,
     });
+  }
+};
+
+/**
+ * Add a room to a hotel (Guide owner or Admin)
+ */
+export const addRoomToHotel = async (req, res) => {
+  try {
+    const hotel = await hotelRepo.findById(req.params.id);
+    if (!hotel) return res.status(404).json({ success: false, message: 'Hotel not found' });
+
+    // Ownership or admin
+    if (req.user.role === 'guide' && hotel.guideId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'You can only modify your own hotels' });
+    }
+
+    const room = {
+      roomType: req.body.roomType,
+      bedType: req.body.bedType,
+      capacity: req.body.capacity,
+      pricePerNight: req.body.pricePerNight,
+      currency: req.body.currency || 'USD',
+      amenities: req.body.amenities || [],
+      notes: req.body.notes || '',
+      photos: [],
+    };
+
+    // Handle room photos via upload field name `photos`
+    if (req.files && req.files.length > 0) {
+      room.photos = req.files.map(f => ({ url: `/uploads/${f.filename}`, caption: f.originalname }));
+    }
+
+    hotel.rooms = hotel.rooms || [];
+    hotel.rooms.push(room);
+
+    // Content changed -> set pending if guide
+    if (req.user.role === 'guide') {
+      hotel.approvalStatus = 'pending';
+      hotel.rejectionReason = null;
+      hotel.resubmittedAt = new Date();
+    }
+
+    await hotel.save();
+
+    res.status(201).json({ success: true, message: 'Room added', data: hotel });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to add room', error: error.message });
+  }
+};
+
+/**
+ * Update a room in a hotel
+ */
+export const updateRoomInHotel = async (req, res) => {
+  try {
+    const hotel = await hotelRepo.findById(req.params.id);
+    if (!hotel) return res.status(404).json({ success: false, message: 'Hotel not found' });
+
+    if (req.user.role === 'guide' && hotel.guideId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'You can only modify your own hotels' });
+    }
+
+    const idx = Number(req.params.roomIndex);
+    if (!hotel.rooms || idx < 0 || idx >= hotel.rooms.length) {
+      return res.status(404).json({ success: false, message: 'Room not found' });
+    }
+
+    const target = hotel.rooms[idx];
+    const updates = ['roomType','bedType','capacity','pricePerNight','currency','amenities','notes'];
+    updates.forEach((k) => {
+      if (req.body[k] !== undefined) target[k] = req.body[k];
+    });
+
+    if (req.files && req.files.length > 0) {
+      const newPhotos = req.files.map(f => ({ url: `/uploads/${f.filename}`, caption: f.originalname }));
+      target.photos = [...(target.photos || []), ...newPhotos];
+    }
+
+    if (req.user.role === 'guide') {
+      hotel.approvalStatus = 'pending';
+      hotel.rejectionReason = null;
+      hotel.resubmittedAt = new Date();
+    }
+
+    await hotel.save();
+    res.json({ success: true, message: 'Room updated', data: hotel });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to update room', error: error.message });
+  }
+};
+
+/**
+ * Delete a room from a hotel
+ */
+export const deleteRoomFromHotel = async (req, res) => {
+  try {
+    const hotel = await hotelRepo.findById(req.params.id);
+    if (!hotel) return res.status(404).json({ success: false, message: 'Hotel not found' });
+
+    if (req.user.role === 'guide' && hotel.guideId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'You can only modify your own hotels' });
+    }
+
+    const idx = Number(req.params.roomIndex);
+    if (!hotel.rooms || idx < 0 || idx >= hotel.rooms.length) {
+      return res.status(404).json({ success: false, message: 'Room not found' });
+    }
+
+    hotel.rooms.splice(idx, 1);
+
+    if (req.user.role === 'guide') {
+      hotel.approvalStatus = 'pending';
+      hotel.rejectionReason = null;
+      hotel.resubmittedAt = new Date();
+    }
+
+    await hotel.save();
+    res.json({ success: true, message: 'Room deleted', data: hotel });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to delete room', error: error.message });
   }
 };

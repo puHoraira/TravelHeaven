@@ -11,6 +11,7 @@ import {
   Globe,
   Mail,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import api from '../lib/api';
 
 const formatPriceRange = (priceRange) => {
@@ -169,17 +170,21 @@ const Hotels = () => {
               return (
                 <div key={hotel._id} className="card flex h-full flex-col gap-4">
                   {coverImage && (
-                    <img
-                      src={coverImage}
-                      alt={hotel.name}
-                      className="h-40 w-full rounded-lg object-cover"
-                    />
+                    <Link to={`/hotels/${hotel._id}`}>
+                      <img
+                        src={coverImage}
+                        alt={hotel.name}
+                        className="h-40 w-full rounded-lg object-cover hover:opacity-95"
+                      />
+                    </Link>
                   )}
 
                   <div className="flex flex-1 flex-col gap-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{hotel.name}</h3>
+                        <Link to={`/hotels/${hotel._id}`} className="text-lg font-semibold text-gray-900 hover:underline">
+                          {hotel.name}
+                        </Link>
                         <div className="mt-1 flex items-center gap-1 text-sm text-gray-500">
                           <MapPin className="h-4 w-4" />
                           <span>

@@ -13,6 +13,9 @@ import itineraryRoutes from './routes/itinerary.routes.js';
 import reviewRoutes from './routes/review.routes.js';
 import guideRoutes from './routes/guide.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import expenseRoutes from './routes/expense.route.js';
+
+
 
 dotenv.config();
 
@@ -39,6 +42,8 @@ app.use('/api/itineraries', itineraryRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/guides', guideRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/itineraries/:itineraryId/expenses', expenseRoutes);
+
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -56,3 +61,7 @@ app.listen(PORT, () => {
 });
 
 export default app;
+
+
+
+

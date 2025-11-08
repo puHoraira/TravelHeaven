@@ -74,7 +74,11 @@ const itinerarySchema = new mongoose.Schema({
     expenses: [{
       name: String,
       amount: Number,
-      category: String,
+      category: {
+        type: String,
+        enum: ['accommodation', 'transport', 'food', 'activities', 'shopping', 'other'],
+        default: 'other'
+      },
       paidBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -83,6 +87,7 @@ const itinerarySchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
       }],
+      dayNumber: Number,  // ADD THIS LINE - links expense to specific day
       date: Date,
       notes: String,
     }],

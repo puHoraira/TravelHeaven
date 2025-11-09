@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -7,6 +8,7 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
 import MapView from '../../components/itinerary/MapView';
+import LocationSearchInput from '../../components/LocationSearchInput';
 
 /**
  * CreateItinerary Page - Form to create new itinerary
@@ -31,6 +33,8 @@ export default function CreateItinerary() {
   const [hotels, setHotels] = useState([]);
   const [transports, setTransports] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showLocationSearch, setShowLocationSearch] = useState(false);
+  const [currentEditingStop, setCurrentEditingStop] = useState({ dayIndex: null, stopIndex: null });
 
   useEffect(() => {
     fetchResources();
@@ -43,12 +47,17 @@ export default function CreateItinerary() {
         api.get('/hotels'),
         api.get('/transportation'),
       ]);
-      setLocations(locRes.data.data || []);
-      setHotels(hotRes.data.data || []);
-      setTransports(traRes.data.data || []);
+
+      const locData = Array.isArray(locRes.data) ? locRes.data : locRes.data?.data || [];
+      const hotData = Array.isArray(hotRes.data) ? hotRes.data : hotRes.data?.data || [];
+      const traData = Array.isArray(traRes.data) ? traRes.data : traRes.data?.data || [];
+
+      setLocations(locData);
+      setHotels(hotData);
+      setTransports(traData);
     } catch (error) {
+      console.error('Error fetching resources:', error);
       toast.error('Failed to load resources');
-      console.error(error);
     }
   };
 
@@ -89,6 +98,13 @@ export default function CreateItinerary() {
     };
     newDays[dayIndex].stops.push(newStop);
     setDays(newDays);
+
+    // If it's a custom stop, open the location search modal
+    if (stopType === 'custom') {
+      const stopIndex = newDays[dayIndex].stops.length - 1;
+      setCurrentEditingStop({ dayIndex, stopIndex });
+      setShowLocationSearch(true);
+    }
   };
 
   const updateStop = (dayIndex, stopIndex, field, value) => {
@@ -111,7 +127,10 @@ export default function CreateItinerary() {
       if (resource) {
         newDays[dayIndex].stops[stopIndex].name = resource.name;
         if (resource.coordinates) {
-          newDays[dayIndex].stops[stopIndex].coordinates = resource.coordinates;
+          newDays[dayIndex].stops[stopIndex].coordinates = {
+            lat: resource.coordinates.latitude ?? resource.coordinates.lat ?? 0,
+            lng: resource.coordinates.longitude ?? resource.coordinates.lng ?? 0
+          };
         }
       }
     }
@@ -127,6 +146,31 @@ export default function CreateItinerary() {
       stop.order = idx;
     });
     setDays(newDays);
+  };
+
+  // Handle location selection from LocationSearchInput
+  const handleLocationSelect = (location) => {
+    const { dayIndex, stopIndex } = currentEditingStop;
+    
+    if (dayIndex !== null && stopIndex !== null) {
+      const newDays = [...days];
+      newDays[dayIndex].stops[stopIndex].name = location.name;
+      newDays[dayIndex].stops[stopIndex].customDescription = location.fullAddress;
+      newDays[dayIndex].stops[stopIndex].coordinates = {
+        lat: location.coordinates.latitude,
+        lng: location.coordinates.longitude
+      };
+      setDays(newDays);
+      
+      toast.success('Location selected successfully!');
+      setShowLocationSearch(false);
+      setCurrentEditingStop({ dayIndex: null, stopIndex: null });
+    }
+  };
+
+  const openLocationSearchForCustomStop = (dayIndex, stopIndex) => {
+    setCurrentEditingStop({ dayIndex, stopIndex });
+    setShowLocationSearch(true);
   };
 
   // Suggestion helpers (adds first approved hotel/transport for the day's first location)
@@ -234,7 +278,7 @@ export default function CreateItinerary() {
                 stopData.transportId = stop.referenceId;
               } else if (stop.type === 'custom') {
                 stopData.customName = stop.name;
-                stopData.customDescription = stop.notes;
+                stopData.customDescription = stop.customDescription || stop.notes;
                 if (stop.coordinates && (stop.coordinates.lat || stop.coordinates.lng)) {
                   stopData.customCoordinates = {
                     latitude: stop.coordinates.lat,
@@ -449,16 +493,32 @@ export default function CreateItinerary() {
                                 </label>
                                 <select
                                   value={stop.referenceId || ''}
-                                  onChange={(e) => updateStop(dayIndex, stopIndex, 'referenceId', e.target.value)}
-                                  className="input input-sm"
+                                  onChange={(e) => {
+                                    const selectedId = e.target.value;
+                                    const items = stop.type === 'location' ? locations :
+                                      stop.type === 'hotel' ? hotels :
+                                        transports;
+                                    const selectedItem = items.find(item => item._id === selectedId);
+
+                                    updateStop(dayIndex, stopIndex, 'referenceId', selectedId);
+                                    if (selectedItem) {
+                                      updateStop(dayIndex, stopIndex, 'name', selectedItem.name);
+                                      if (selectedItem.coordinates) {
+                                        updateStop(dayIndex, stopIndex, 'coordinates', {
+                                          lat: selectedItem.coordinates.latitude || selectedItem.coordinates.lat || 0,
+                                          lng: selectedItem.coordinates.longitude || selectedItem.coordinates.lng || 0
+                                        });
+                                      }
+                                    }
+                                  }}
+                                  className="input input-sm w-full"
                                 >
-                                  <option value="">Choose...</option>
+                                  <option value="">Choose {stop.type}...</option>
                                   {(stop.type === 'location' ? locations :
                                     stop.type === 'hotel' ? hotels :
-                                    transports
-                                  ).map(item => (
+                                      transports).map(item => (
                                     <option key={item._id} value={item._id}>
-                                      {item.name}
+                                      {item.name} {item.city ? `- ${item.city}` : ''}
                                     </option>
                                   ))}
                                 </select>
@@ -474,6 +534,7 @@ export default function CreateItinerary() {
                                   onChange={(e) => updateStop(dayIndex, stopIndex, 'name', e.target.value)}
                                   className="input input-sm"
                                   placeholder="Stop name"
+                                  readOnly
                                 />
                               </div>
                             )}
@@ -503,41 +564,52 @@ export default function CreateItinerary() {
                               />
                             </div>
 
+                            {/* Custom Stop Location Display */}
                             {stop.type === 'custom' && (
-                              <>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                                    Latitude
-                                  </label>
-                                  <input
-                                    type="number"
-                                    value={stop.coordinates.lat}
-                                    onChange={(e) => updateStop(dayIndex, stopIndex, 'coordinates', {
-                                      ...stop.coordinates,
-                                      lat: parseFloat(e.target.value) || 0
-                                    })}
-                                    className="input input-sm"
-                                    placeholder="0.0"
-                                    step="0.000001"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                                    Longitude
-                                  </label>
-                                  <input
-                                    type="number"
-                                    value={stop.coordinates.lng}
-                                    onChange={(e) => updateStop(dayIndex, stopIndex, 'coordinates', {
-                                      ...stop.coordinates,
-                                      lng: parseFloat(e.target.value) || 0
-                                    })}
-                                    className="input input-sm"
-                                    placeholder="0.0"
-                                    step="0.000001"
-                                  />
-                                </div>
-                              </>
+                              <div className="md:col-span-2">
+                                {stop.name ? (
+                                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="flex-1">
+                                        <p className="text-sm font-semibold text-green-900 mb-1">
+                                          ✓ Location Selected
+                                        </p>
+                                        <p className="text-sm text-gray-900 font-medium">{stop.name}</p>
+                                        {stop.customDescription && (
+                                          <p className="text-xs text-gray-600 mt-1">{stop.customDescription}</p>
+                                        )}
+                                        {stop.coordinates && (stop.coordinates.lat || stop.coordinates.lng) && (
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            📍 {Number(stop.coordinates.lat).toFixed(6)}, {Number(stop.coordinates.lng).toFixed(6)}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => openLocationSearchForCustomStop(dayIndex, stopIndex)}
+                                        className="btn-secondary btn-sm flex items-center gap-1 flex-shrink-0"
+                                      >
+                                        <MapPin size={14} />
+                                        Change
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <p className="text-sm text-blue-900 mb-2">
+                                      📍 Click below to search and select a location
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => openLocationSearchForCustomStop(dayIndex, stopIndex)}
+                                      className="btn-primary btn-sm flex items-center gap-2 w-full justify-center"
+                                    >
+                                      <MapPin size={14} />
+                                      Search Location
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
 
@@ -625,6 +697,75 @@ export default function CreateItinerary() {
           </button>
         </div>
       </form>
+
+      {/* Location Search Modal */}
+      {showLocationSearch && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+            <div className="p-6 border-b flex justify-between items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-2xl">
+              <div>
+                <h3 className="text-xl font-bold">Search Location</h3>
+                <p className="text-blue-100 text-sm mt-1">Find and select your destination</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLocationSearch(false);
+                  setCurrentEditingStop({ dayIndex: null, stopIndex: null });
+                }}
+                className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {/* Helpful Info Banner */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p className="text-blue-900 font-semibold mb-2">💡 How to add a location:</p>
+                <ol className="text-blue-800 space-y-1 ml-4 list-decimal text-sm">
+                  <li>Type any place name (e.g., "Paris", "Eiffel Tower", "Central Park")</li>
+                  <li>Wait for search results to appear below</li>
+                  <li>Click on the location you want from the dropdown</li>
+                  <li>The coordinates will be automatically fetched!</li>
+                </ol>
+                <p className="text-blue-700 mt-2 text-xs italic">
+                  ✨ No need to know latitude/longitude - we handle that for you!
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <MapPin size={16} className="inline mr-1" />
+                  Search Location
+                </label>
+                <LocationSearchInput
+                  onLocationSelect={handleLocationSelect}
+                  placeholder="Type a place name: Eiffel Tower, Times Square, etc..."
+                />
+              </div>
+
+              {currentEditingStop.dayIndex !== null && currentEditingStop.stopIndex !== null && (
+                (() => {
+                  const stop = days[currentEditingStop.dayIndex]?.stops[currentEditingStop.stopIndex];
+                  return stop?.coordinates?.lat && stop?.coordinates?.lng ? (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <p className="text-green-900 font-semibold mb-2">✓ Location Selected Successfully!</p>
+                      <p className="text-sm text-gray-900"><strong>{stop.name}</strong></p>
+                      {stop.customDescription && (
+                        <p className="text-xs text-gray-600 mt-1">{stop.customDescription}</p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">
+                        📍 Coordinates: {stop.coordinates.lat.toFixed(6)}, {stop.coordinates.lng.toFixed(6)}
+                      </p>
+                    </div>
+                  ) : null;
+                })()
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

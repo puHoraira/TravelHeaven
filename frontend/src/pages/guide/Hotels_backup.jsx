@@ -79,8 +79,8 @@ const GuideHotel = () => {
 
   const fetchMyHotels = async () => {
     try {
-      const response = await api.get('/hotels/my-hotels');
-      const hotels = response.data || [];
+      const { data } = await api.get('/hotels/my-hotels');
+      const hotels = data.data || [];
       setMyHotels(hotels);
       
       // Calculate stats
@@ -91,7 +91,7 @@ const GuideHotel = () => {
         rejected: hotels.filter(h => h.approvalStatus === 'rejected').length,
         totalViews: hotels.reduce((sum, h) => sum + (h.views || 0), 0),
         averageRating: hotels.length > 0 
-          ? (hotels.reduce((sum, h) => sum + (h.rating?.average || 0), 0) / hotels.length).toFixed(1)
+          ? (hotels.reduce((sum, h) => sum + (h.rating || 0), 0) / hotels.length).toFixed(1)
           : 0
       };
       setStats(stats);
@@ -198,68 +198,38 @@ const GuideHotel = () => {
       return;
     }
 
-    if (form.rooms.length === 0) {
-      toast.error('Please add at least one room');
-      return;
-    }
-
     setLoading(true);
 
     try {
       const formData = new FormData();
       formData.append('name', form.name);
       formData.append('description', form.description);
+      formData.append('locationId', form.locationId || '');
       
-      // Only append locationId if it exists and is not empty
-      if (form.locationId && form.locationId.trim() !== '') {
-        formData.append('locationId', form.locationId);
-      }
-      
-      // GPS coordinates in GeoJSON format - [longitude, latitude]
-      formData.append('location', JSON.stringify({
-        type: 'Point',
-        coordinates: [
-          parseFloat(form.locationCoordinates.longitude),
-          parseFloat(form.locationCoordinates.latitude)
-        ]
+      // GPS coordinates
+      formData.append('coordinates', JSON.stringify({
+        latitude: form.locationCoordinates.latitude,
+        longitude: form.locationCoordinates.longitude
       }));
 
       // Address
-      formData.append('address', JSON.stringify({
-        street: form.address.street || '',
-        city: form.address.city || '',
-        country: form.address.country || '',
-        zipCode: form.address.zipCode || ''
-      }));
+      formData.append('address', JSON.stringify(form.address));
       
       // Contact
-      formData.append('contactInfo', JSON.stringify({
-        phone: form.contactInfo.phone || '',
-        email: form.contactInfo.email || '',
-        website: form.contactInfo.website || ''
-      }));
+      formData.append('contactInfo', JSON.stringify(form.contactInfo));
       
       // Price range
       formData.append('priceRange', JSON.stringify({
         min: parseFloat(form.priceRange.min) || 0,
         max: parseFloat(form.priceRange.max) || 0,
-        currency: form.priceRange.currency || 'BDT'
+        currency: form.priceRange.currency
       }));
 
       // Amenities
-      formData.append('amenities', JSON.stringify(form.amenities || []));
+      formData.append('amenities', JSON.stringify(form.amenities));
 
-      // Rooms - ensure all fields are properly formatted
-      const roomsData = form.rooms.map(room => ({
-        roomType: room.roomType || '',
-        bedType: room.bedType || '',
-        capacity: parseInt(room.capacity) || 1,
-        pricePerNight: parseFloat(room.pricePerNight) || 0,
-        currency: room.currency || 'BDT',
-        amenities: room.amenities || [],
-        notes: room.notes || ''
-      }));
-      formData.append('rooms', JSON.stringify(roomsData));
+      // Rooms
+      formData.append('rooms', JSON.stringify(form.rooms));
 
       // Images
       if (form.images && form.images.length > 0) {
@@ -268,7 +238,7 @@ const GuideHotel = () => {
         });
       }
 
-      const response = await api.post('/hotels', formData, {
+      await api.post('/hotels', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -276,7 +246,6 @@ const GuideHotel = () => {
       fetchMyHotels();
       setActiveTab('list'); // Switch to list view
       setImagePreview([]); // Clear previews
-      setEditingId(null);
       
       // Reset form
       setForm({
@@ -296,13 +265,7 @@ const GuideHotel = () => {
       
     } catch (error) {
       console.error('Submit error:', error);
-      console.error('Error response:', error.response?.data);
-      
-      const errorMessage = error.response?.data?.message 
-        || error.response?.data?.error 
-        || 'Failed to create hotel. Please check all fields.';
-      
-      toast.error(errorMessage);
+      toast.error(error.response?.data?.message || 'Failed to create hotel');
     } finally {
       setLoading(false);
     }
@@ -717,381 +680,336 @@ const GuideHotel = () => {
                   </div>
                   <h3 className="text-lg font-semibold text-gray-800">Location & Address</h3>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Search Location *</label>
-                  <LocationSearchInput
-                    placeholder="Search for hotel location (e.g., Gulshan, Dhaka)"
-                    onLocationSelect={handleLocationSelect}
+              <MapPin className="w-5 h-5" />
+              Location (GPS-based)
+            </h3>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Search Location *</label>
+              <LocationSearchInput
+                placeholder="Search for hotel location (e.g., Gulshan, Dhaka)"
+                onLocationSelect={handleLocationSelect}
+              />
+              {form.locationCoordinates && (
+                <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded">
+                  <p className="text-sm font-medium text-green-800">✓ Location Selected</p>
+                  <p className="text-xs text-gray-600 mt-1">{form.locationName}</p>
+                  <p className="text-xs text-gray-500">{form.locationAddress}</p>
+                  <p className="text-xs text-gray-400 mt-1 font-mono">
+                    GPS: {form.locationCoordinates.latitude.toFixed(6)}, {form.locationCoordinates.longitude.toFixed(6)}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">City</label>
+                <input
+                  name="address.city"
+                  value={form.address.city}
+                  onChange={handleChange}
+                  className="input"
+                  placeholder="e.g., Dhaka"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Country</label>
+                <input
+                  name="address.country"
+                  value={form.address.country}
+                  onChange={handleChange}
+                  className="input"
+                  placeholder="e.g., Bangladesh"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">Contact Information</h3>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Phone</label>
+                <input
+                  name="contactInfo.phone"
+                  type="tel"
+                  value={form.contactInfo.phone}
+                  onChange={handleChange}
+                  className="input"
+                  placeholder="+880-XXX-XXXXXX"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Email</label>
+                <input
+                  name="contactInfo.email"
+                  type="email"
+                  value={form.contactInfo.email}
+                  onChange={handleChange}
+                  className="input"
+                  placeholder="info@hotel.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Website</label>
+                <input
+                  name="contactInfo.website"
+                  type="url"
+                  value={form.contactInfo.website}
+                  onChange={handleChange}
+                  className="input"
+                  placeholder="https://hotel.com"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Price Range */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">Price Range</h3>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Minimum Price</label>
+                <input
+                  name="priceRange.min"
+                  type="number"
+                  value={form.priceRange.min}
+                  onChange={handleChange}
+                  className="input"
+                  placeholder="1000"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Maximum Price</label>
+                <input
+                  name="priceRange.max"
+                  type="number"
+                  value={form.priceRange.max}
+                  onChange={handleChange}
+                  className="input"
+                  placeholder="5000"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Currency</label>
+                <select
+                  name="priceRange.currency"
+                  value={form.priceRange.currency}
+                  onChange={handleChange}
+                  className="input"
+                >
+                  <option value="BDT">BDT</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Amenities */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">Hotel Amenities</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {commonAmenities.map(amenity => (
+                <label key={amenity} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.amenities.includes(amenity)}
+                    onChange={() => toggleAmenity(amenity)}
+                    className="w-4 h-4"
                   />
-                  {form.locationCoordinates && (
-                    <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-medium text-green-800">✓ Location Selected</p>
-                      <p className="text-xs text-gray-600 mt-1">{form.locationName}</p>
-                      <p className="text-xs text-gray-500">{form.locationAddress}</p>
-                      {form.locationCoordinates.latitude && form.locationCoordinates.longitude && (
-                        <p className="text-xs text-gray-400 mt-1 font-mono">
-                          GPS: {form.locationCoordinates.latitude.toFixed(6)}, {form.locationCoordinates.longitude.toFixed(6)}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
+                  <span className="text-sm capitalize">{amenity.replace('-', ' ')}</span>
+                </label>
+              ))}
+            </div>
+          </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                    <input
-                      name="address.city"
-                      value={form.address.city}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                      placeholder="e.g., Dhaka"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-                    <input
-                      name="address.country"
-                      value={form.address.country}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                      placeholder="e.g., Bangladesh"
-                    />
-                  </div>
+          {/* Rooms */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">Rooms</h3>
+            
+            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+              <h4 className="font-medium">Add Room Type</h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Room Type</label>
+                  <input
+                    value={newRoom.roomType}
+                    onChange={(e) => setNewRoom(prev => ({ ...prev, roomType: e.target.value }))}
+                    className="input"
+                    placeholder="e.g., Deluxe Double"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Bed Type</label>
+                  <select
+                    value={newRoom.bedType}
+                    onChange={(e) => setNewRoom(prev => ({ ...prev, bedType: e.target.value }))}
+                    className="input"
+                  >
+                    <option value="">Select</option>
+                    <option value="single">Single</option>
+                    <option value="double">Double</option>
+                    <option value="queen">Queen</option>
+                    <option value="king">King</option>
+                    <option value="twin">Twin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Capacity</label>
+                  <input
+                    type="number"
+                    value={newRoom.capacity}
+                    onChange={(e) => setNewRoom(prev => ({ ...prev, capacity: e.target.value }))}
+                    className="input"
+                    placeholder="2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Price per Night</label>
+                  <input
+                    type="number"
+                    value={newRoom.pricePerNight}
+                    onChange={(e) => setNewRoom(prev => ({ ...prev, pricePerNight: e.target.value }))}
+                    className="input"
+                    placeholder="2500"
+                  />
                 </div>
               </div>
 
-              {/* Contact Information */}
-              <div className="space-y-4 border-t pt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="bg-green-100 p-2 rounded-lg">
-                    <Phone className="w-5 h-5 text-green-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Contact Information</h3>
-                </div>
-                
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                    <input
-                      name="contactInfo.phone"
-                      type="tel"
-                      value={form.contactInfo.phone}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                      placeholder="+880-XXX-XXXXXX"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                    <input
-                      name="contactInfo.email"
-                      type="email"
-                      value={form.contactInfo.email}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                      placeholder="info@hotel.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
-                    <input
-                      name="contactInfo.website"
-                      type="url"
-                      value={form.contactInfo.website}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                      placeholder="https://hotel.com"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Price Range */}
-              <div className="space-y-4 border-t pt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="bg-yellow-100 p-2 rounded-lg">
-                    <DollarSign className="w-5 h-5 text-yellow-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Price Range</h3>
-                </div>
-                
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Price</label>
-                    <input
-                      name="priceRange.min"
-                      type="number"
-                      value={form.priceRange.min}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                      placeholder="1000"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Maximum Price</label>
-                    <input
-                      name="priceRange.max"
-                      type="number"
-                      value={form.priceRange.max}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                      placeholder="5000"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                    <select
-                      name="priceRange.currency"
-                      value={form.priceRange.currency}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                    >
-                      <option value="BDT">BDT - Bangladeshi Taka</option>
-                      <option value="USD">USD - US Dollar</option>
-                      <option value="EUR">EUR - Euro</option>
-                      <option value="GBP">GBP - British Pound</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Amenities */}
-              <div className="space-y-4 border-t pt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="bg-pink-100 p-2 rounded-lg">
-                    <Sparkles className="w-5 h-5 text-pink-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Hotel Amenities</h3>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {commonAmenities.map(amenity => (
-                    <label key={amenity} className="flex items-center gap-2 cursor-pointer hover:bg-purple-50 p-2 rounded-lg transition">
+              <div>
+                <label className="block text-sm font-medium mb-2">Room Amenities</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {roomAmenities.map(amenity => (
+                    <label key={amenity} className="flex items-center gap-2 cursor-pointer text-sm">
                       <input
                         type="checkbox"
-                        checked={form.amenities.includes(amenity)}
-                        onChange={() => toggleAmenity(amenity)}
-                        className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+                        checked={newRoom.amenities.includes(amenity)}
+                        onChange={() => toggleRoomAmenity(amenity)}
+                        className="w-3 h-3"
                       />
-                      <span className="text-sm capitalize">{amenity.replace('-', ' ')}</span>
+                      <span className="capitalize">{amenity.replace('-', ' ')}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              {/* Rooms */}
-              <div className="space-y-4 border-t pt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="bg-indigo-100 p-2 rounded-lg">
-                    <BedDouble className="w-5 h-5 text-indigo-600" />
+              <button type="button" onClick={addRoom} className="btn-primary">
+                <Plus className="w-4 h-4" />
+                Add Room
+              </button>
+            </div>
+
+            {form.rooms.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-medium">Added Rooms ({form.rooms.length})</h4>
+                {form.rooms.map((room, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-white border rounded">
+                    <div>
+                      <p className="font-medium">{room.roomType}</p>
+                      <p className="text-sm text-gray-600">
+                        {room.bedType} • {room.capacity} guests • {room.pricePerNight} {room.currency}/night
+                      </p>
+                      {room.amenities.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {room.amenities.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => removeRoom(idx)} className="text-red-500">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Rooms</h3>
-                </div>
-                
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl border-2 border-purple-200 space-y-4">
-                  <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <Plus className="w-5 h-5 text-purple-600" />
-                    Add Room Type
-                  </h4>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Images */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-700 border-b pb-2">Images</h3>
+            <div>
+              <label className="block text-sm font-medium mb-1">Upload Images</label>
+              <input name="images" type="file" multiple accept="image/*" onChange={handleChange} className="input" />
+              <p className="text-xs text-gray-500 mt-1">Upload photos of the hotel and rooms</p>
+            </div>
+          </div>
+
+          {/* Submit */}
+          <div className="flex justify-end pt-4 border-t">
+            <button type="submit" className="btn-primary px-8" disabled={loading}>
+              {loading ? 'Submitting...' : 'Submit for Approval'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* My Hotels List */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">My Hotels</h2>
+          <span className="text-sm text-gray-600">{myHotels.length} total</span>
+        </div>
+        {myHotels.length === 0 ? (
+          <p className="text-gray-600">No hotels yet. Create one above.</p>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {myHotels.map(h => (
+              <div key={h._id} className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                {h.images?.[0]?.url ? (
+                  <img src={h.images[0].url} alt={h.name} className="w-full h-40 object-cover" />
+                ) : (
+                  <div className="w-full h-40 bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center text-gray-400">
+                    <HotelIcon className="w-12 h-12 text-purple-300" />
+                  </div>
+                )}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-semibold text-gray-800 line-clamp-2">{h.name}</h3>
+                    {statusBadge(h.approvalStatus)}
+                  </div>
                   
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Room Type *</label>
-                      <input
-                        value={newRoom.roomType}
-                        onChange={(e) => setNewRoom(prev => ({ ...prev, roomType: e.target.value }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition bg-white"
-                        placeholder="e.g., Deluxe Double"
-                      />
+                  <p className="text-sm text-gray-600 line-clamp-2">{h.description}</p>
+                  
+                  {h.priceRange && (
+                    <div className="text-sm font-medium text-green-600">
+                      {h.priceRange.min} - {h.priceRange.max} {h.priceRange.currency}/night
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Bed Type *</label>
-                      <select
-                        value={newRoom.bedType}
-                        onChange={(e) => setNewRoom(prev => ({ ...prev, bedType: e.target.value }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition bg-white"
-                      >
-                        <option value="">Select bed type</option>
-                        <option value="single">Single</option>
-                        <option value="double">Double</option>
-                        <option value="queen">Queen</option>
-                        <option value="king">King</option>
-                        <option value="twin">Twin</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Capacity (Guests) *</label>
-                      <input
-                        type="number"
-                        value={newRoom.capacity}
-                        onChange={(e) => setNewRoom(prev => ({ ...prev, capacity: e.target.value }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition bg-white"
-                        placeholder="2"
-                        min="1"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Price per Night *</label>
-                      <input
-                        type="number"
-                        value={newRoom.pricePerNight}
-                        onChange={(e) => setNewRoom(prev => ({ ...prev, pricePerNight: e.target.value }))}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition bg-white"
-                        placeholder="2500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Room Amenities</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {roomAmenities.map(amenity => (
-                        <label key={amenity} className="flex items-center gap-2 cursor-pointer text-sm hover:bg-white p-2 rounded transition">
-                          <input
-                            type="checkbox"
-                            checked={newRoom.amenities.includes(amenity)}
-                            onChange={() => toggleRoomAmenity(amenity)}
-                            className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                          />
-                          <span className="capitalize">{amenity.replace('-', ' ')}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <button 
-                    type="button" 
-                    onClick={addRoom} 
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Add Room to Hotel
-                  </button>
-                </div>
-
-                {form.rooms.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                      Added Rooms ({form.rooms.length})
-                    </h4>
-                    <div className="space-y-2">
-                      {form.rooms.map((room, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-4 bg-white border-2 border-purple-100 rounded-lg hover:border-purple-300 transition-all">
-                          <div className="flex-1">
-                            <p className="font-semibold text-gray-800">{room.roomType}</p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              🛏️ {room.bedType} • 👥 {room.capacity} guests • 💰 {room.pricePerNight} {room.currency}/night
-                            </p>
-                            {room.amenities.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {room.amenities.map((amenity, i) => (
-                                  <span key={i} className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded-full">
-                                    {amenity}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <button 
-                            type="button" 
-                            onClick={() => removeRoom(idx)} 
-                            className="ml-4 text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-all"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Images */}
-              <div className="space-y-4 border-t pt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="bg-red-100 p-2 rounded-lg">
-                    <Camera className="w-5 h-5 text-red-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Hotel Images</h3>
-                </div>
-                
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border-2 border-dashed border-blue-300">
-                  <label className="cursor-pointer block">
-                    <input 
-                      name="images" 
-                      type="file" 
-                      multiple 
-                      accept="image/*" 
-                      onChange={handleChange} 
-                      className="hidden" 
-                      id="imageUpload"
-                    />
-                    <div className="text-center">
-                      <Upload className="w-12 h-12 text-blue-500 mx-auto mb-3" />
-                      <p className="text-lg font-semibold text-gray-700 mb-1">Upload Hotel Images</p>
-                      <p className="text-sm text-gray-500">Click to browse or drag and drop</p>
-                      <p className="text-xs text-gray-400 mt-2">Supports: JPG, PNG, WebP (Max 5MB each)</p>
-                    </div>
-                  </label>
-                </div>
-
-                {imagePreview.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                      <ImageIcon className="w-5 h-5 text-blue-500" />
-                      Image Preview ({imagePreview.length})
-                    </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {imagePreview.map((preview, idx) => (
-                        <div key={idx} className="relative group">
-                          <img 
-                            src={preview} 
-                            alt={`Preview ${idx + 1}`} 
-                            className="w-full h-32 object-cover rounded-lg border-2 border-gray-200 group-hover:border-purple-400 transition-all"
-                          />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg transition-all flex items-center justify-center">
-                            <Eye className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-all" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Submit Button */}
-              <div className="flex justify-end gap-4 pt-6 border-t">
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('list');
-                    setEditingId(null);
-                  }}
-                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-all"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      {editingId ? 'Update Hotel' : 'Submit for Approval'}
-                    </>
                   )}
-                </button>
+                  
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t">
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => viewHotel(h)} 
+                        className="btn-sm bg-blue-500 hover:bg-blue-600 text-white flex items-center gap-1"
+                      >
+                        <Eye className="w-3 h-3" />
+                        View
+                      </button>
+                      <button 
+                        onClick={() => editHotel(h)} 
+                        className="btn-sm bg-green-500 hover:bg-green-600 text-white flex items-center gap-1"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => deleteHotel(h._id)} 
+                        className="btn-danger btn-sm flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </form>
+            ))}
           </div>
         )}
       </div>

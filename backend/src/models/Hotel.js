@@ -13,7 +13,7 @@ const hotelSchema = new mongoose.Schema({
   locationId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Location',
-    required: true,
+    required: false,
   },
   address: {
     street: String,
@@ -21,9 +21,16 @@ const hotelSchema = new mongoose.Schema({
     country: String,
     zipCode: String,
   },
-  coordinates: {
-    latitude: Number,
-    longitude: Number,
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point',
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude] - GeoJSON format
+      required: true,
+    },
   },
   rating: {
     average: {
@@ -99,5 +106,6 @@ const hotelSchema = new mongoose.Schema({
 hotelSchema.index({ approvalStatus: 1, locationId: 1 });
 hotelSchema.index({ 'rating.average': -1 });
 hotelSchema.index({ views: -1 });
+hotelSchema.index({ 'location': '2dsphere' }); // Geospatial index for nearby search
 
 export const Hotel = mongoose.model('Hotel', hotelSchema);

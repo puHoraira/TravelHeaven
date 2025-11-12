@@ -10,8 +10,20 @@ export const createHotel = async (req, res) => {
   try {
     if (!ensureGuideApproved(req, res)) return;
 
+    // Parse JSON fields from FormData
+    const bodyData = { ...req.body };
+    ['location', 'address', 'contactInfo', 'priceRange', 'amenities', 'rooms'].forEach(field => {
+      if (bodyData[field] && typeof bodyData[field] === 'string') {
+        try {
+          bodyData[field] = JSON.parse(bodyData[field]);
+        } catch (e) {
+          console.error(`Failed to parse ${field}:`, e);
+        }
+      }
+    });
+
     const hotelData = {
-      ...req.body,
+      ...bodyData,
       guideId: req.user._id,
       approvalStatus: 'pending',
       rejectionReason: null,
@@ -240,11 +252,17 @@ export const getMyHotels = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
 
+    console.log('🔍 getMyHotels called by user:', req.user._id);
+    console.log('Query params:', { page, limit });
+
     const result = await hotelRepo.findByGuide(req.user._id, {
       page: parseInt(page),
       limit: parseInt(limit),
       populate: ['locationId'],
     });
+
+    console.log('📊 Found hotels:', result.data.length);
+    console.log('Hotels:', result.data.map(h => ({ id: h._id, name: h.name, guideId: h.guideId })));
 
     res.json({
       success: true,
@@ -252,6 +270,7 @@ export const getMyHotels = async (req, res) => {
       pagination: result.pagination,
     });
   } catch (error) {
+    console.error('❌ Error in getMyHotels:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get hotels',
@@ -379,3 +398,134 @@ export const deleteRoomFromHotel = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to delete room', error: error.message });
   }
 };
+
+/**
+ * Find nearby hotels using GPS coordinates
+ */
+export const findNearbyHotels = async (req, res) => {
+  try {
+    const { lat, lng, maxDistance = 5, locationName } = req.query;
+
+    let hotels = [];
+
+    // GPS-based search - EXACTLY like Transport
+    if (lat && lng) {
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lng);
+      const maxDistanceKm = parseFloat(maxDistance);
+
+      console.log('🏨 Finding hotels near:', { latitude, longitude, maxDistanceKm });
+
+      // Find ALL approved hotels with location coordinates (checking both field names)
+      const Hotel = (await import('../models/Hotel.js')).Hotel;
+      const allHotels = await Hotel.find({
+        approvalStatus: 'approved',
+        $or: [
+          { 'location.coordinates': { $exists: true } },
+          { 'coordinates.coordinates': { $exists: true } }
+        ]
+      })
+      .populate('locationId')
+      .populate('guideId', 'name email')
+      .lean();
+
+      console.log(`📦 Found ${allHotels.length} approved hotels`);
+      console.log('First hotel sample:', allHotels[0] ? JSON.stringify({
+        name: allHotels[0].name,
+        hasLocation: !!allHotels[0].location,
+        hasCoordinates: !!allHotels[0].coordinates,
+        locationCoords: allHotels[0].location?.coordinates,
+        coordsCoords: allHotels[0].coordinates?.coordinates
+      }, null, 2) : 'No hotels found');
+
+      // Calculate distance for each hotel and filter
+      hotels = allHotels
+        .map(hotel => {
+          // Check both possible field names
+          const coords = hotel.location?.coordinates || hotel.coordinates?.coordinates;
+          
+          if (coords && coords.length === 2) {
+            const [hotelLon, hotelLat] = coords;
+            const distance = calculateDistance(
+              latitude,
+              longitude,
+              hotelLat,
+              hotelLon
+            );
+            
+            console.log(`🏨 Hotel ${hotel.name}:`, {
+              distance: distance.toFixed(2),
+              withinThreshold: distance <= maxDistanceKm
+            });
+            
+            return {
+              ...hotel,
+              distance: parseFloat(distance.toFixed(2)),
+              distanceKm: parseFloat(distance.toFixed(2))
+            };
+          }
+          return null;
+        })
+        .filter(h => h && h.distance <= maxDistanceKm)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 20);
+
+      console.log(`✅ Found ${hotels.length} hotels within ${maxDistanceKm}km`);
+    }
+    // Name-based fallback search
+    else if (locationName) {
+      console.log('🏷️ Searching hotels by location name:', locationName);
+      
+      hotels = await hotelRepo.findAll({
+        approvalStatus: 'approved',
+        $or: [
+          { 'address.city': { $regex: locationName, $options: 'i' } },
+          { 'address.street': { $regex: locationName, $options: 'i' } }
+        ]
+      }, {
+        populate: ['locationId', 'guideId']
+      });
+    }
+
+    res.json({
+      success: true,
+      data: hotels,
+      count: hotels.length
+    });
+  } catch (error) {
+    console.error('Error finding nearby hotels:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to find hotels',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Track hotel view for analytics
+ */
+export const trackHotelView = async (req, res) => {
+  try {
+    // Increment view count logic can be added here
+    res.json({ success: true, message: 'View tracked' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to track view' });
+  }
+};
+
+// Helper function to calculate distance between two points (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function toRad(degrees) {
+  return degrees * (Math.PI / 180);
+}

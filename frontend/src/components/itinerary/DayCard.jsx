@@ -1,5 +1,6 @@
 import { MapPin, Clock, FileText, Trash2, Edit, Plus } from 'lucide-react';
 import TransportSearchWidget from '../TransportSearchWidget';
+import HotelSearchWidget from '../HotelSearchWidget';
 
 /**
  * DayCard Component - Displays a single day in an itinerary
@@ -197,6 +198,34 @@ export default function DayCard({ day, dayNumber, onRemoveStop, onEditDay, onAdd
                 />
               );
             })()}
+          </div>
+        )}
+
+        {/* Hotel Suggestions - Show for each stop */}
+        {day.stops && day.stops.length > 0 && (
+          <div className="mt-4 pt-4 border-t">
+            <h4 className="font-medium text-gray-700 mb-3">Accommodation Options</h4>
+            <div className="space-y-3">
+              {day.stops.map((stop, idx) => {
+                const coords = stop?.locationId?.coordinates 
+                  ? [stop.locationId.coordinates.latitude, stop.locationId.coordinates.longitude]
+                  : stop?.customCoordinates 
+                  ? [stop.customCoordinates.latitude, stop.customCoordinates.longitude]
+                  : null;
+                
+                const locationName = stop?.locationId?.name || stop?.customName || stop?.name;
+
+                return (
+                  <div key={idx}>
+                    <p className="text-sm text-gray-600 mb-2">Near {locationName}</p>
+                    <HotelSearchWidget 
+                      locationName={locationName}
+                      coords={coords}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

@@ -10,6 +10,8 @@ import {
   addRoomToHotel,
   updateRoomInHotel,
   deleteRoomFromHotel,
+  findNearbyHotels,
+  trackHotelView,
 } from '../controllers/hotel.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
@@ -21,7 +23,7 @@ const router = express.Router();
 const hotelValidation = [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('description').trim().notEmpty().withMessage('Description is required'),
-  body('locationId').notEmpty().withMessage('Location ID is required'),
+  // locationId is optional, no validation needed
   body('rating').optional().isFloat({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
 ];
 
@@ -38,7 +40,9 @@ router.post(
 
 router.get('/', getHotels);
 router.get('/my-hotels', authenticate, authorize('guide'), getMyHotels);
+router.get('/find-nearby', findNearbyHotels);
 router.get('/:id', getHotelById);
+router.post('/:id/track-view', trackHotelView);
 
 router.put(
   '/:id',

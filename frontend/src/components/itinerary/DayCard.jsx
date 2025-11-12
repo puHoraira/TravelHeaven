@@ -1,4 +1,5 @@
 import { MapPin, Clock, FileText, Trash2, Edit, Plus } from 'lucide-react';
+import TransportSearchWidget from '../TransportSearchWidget';
 
 /**
  * DayCard Component - Displays a single day in an itinerary
@@ -153,6 +154,49 @@ export default function DayCard({ day, dayNumber, onRemoveStop, onEditDay, onAdd
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Transport Suggestions */}
+        {day.stops && day.stops.length >= 2 && (
+          <div className="mt-4 pt-4 border-t">
+            {(() => {
+              const firstStop = day.stops[0];
+              const lastStop = day.stops[day.stops.length - 1];
+              
+              // Try to get coordinates from locationId.coordinates or customCoordinates
+              const fromCoords = firstStop?.locationId?.coordinates 
+                ? [firstStop.locationId.coordinates.latitude, firstStop.locationId.coordinates.longitude]
+                : firstStop?.customCoordinates 
+                ? [firstStop.customCoordinates.latitude, firstStop.customCoordinates.longitude]
+                : null;
+                
+              const toCoords = lastStop?.locationId?.coordinates
+                ? [lastStop.locationId.coordinates.latitude, lastStop.locationId.coordinates.longitude]
+                : lastStop?.customCoordinates
+                ? [lastStop.customCoordinates.latitude, lastStop.customCoordinates.longitude]
+                : null;
+              
+              console.log('🗺️ DayCard passing coordinates:', {
+                from: firstStop?.locationId?.name || firstStop?.customName,
+                fromCoords,
+                fromLocation: firstStop?.locationId?.coordinates,
+                fromCustom: firstStop?.customCoordinates,
+                to: lastStop?.locationId?.name || lastStop?.customName,
+                toCoords,
+                toLocation: lastStop?.locationId?.coordinates,
+                toCustom: lastStop?.customCoordinates
+              });
+              
+              return (
+                <TransportSearchWidget 
+                  from={firstStop?.locationId?.name || firstStop?.customName || day.stops[0]?.name}
+                  to={lastStop?.locationId?.name || lastStop?.customName || day.stops[day.stops.length - 1]?.name}
+                  fromCoords={fromCoords}
+                  toCoords={toCoords}
+                />
+              );
+            })()}
           </div>
         )}
       </div>

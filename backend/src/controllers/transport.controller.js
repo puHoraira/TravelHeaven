@@ -1,5 +1,6 @@
 import { TransportRepository } from '../patterns/Repository.js';
 import { ensureGuideApproved } from '../utils/guide.js';
+import * as transportService from '../services/transport.service.js';
 
 const transportRepo = new TransportRepository();
 
@@ -17,6 +18,58 @@ export const createTransport = async (req, res) => {
       rejectionReason: null,
       resubmittedAt: null,
     };
+    
+    // Parse JSON strings from FormData
+    if (transportData.route && typeof transportData.route === 'string') {
+      try {
+        transportData.route = JSON.parse(transportData.route);
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid route data format',
+        });
+      }
+    }
+    
+    if (transportData.operator && typeof transportData.operator === 'string') {
+      try {
+        transportData.operator = JSON.parse(transportData.operator);
+      } catch (e) {
+        // Operator is optional, ignore parse errors
+      }
+    }
+    
+    if (transportData.pricing && typeof transportData.pricing === 'string') {
+      try {
+        transportData.pricing = JSON.parse(transportData.pricing);
+      } catch (e) {
+        // Pricing is optional, ignore parse errors
+      }
+    }
+    
+    if (transportData.schedule && typeof transportData.schedule === 'string') {
+      try {
+        transportData.schedule = JSON.parse(transportData.schedule);
+      } catch (e) {
+        // Schedule is optional, ignore parse errors
+      }
+    }
+    
+    if (transportData.booking && typeof transportData.booking === 'string') {
+      try {
+        transportData.booking = JSON.parse(transportData.booking);
+      } catch (e) {
+        // Booking is optional, ignore parse errors
+      }
+    }
+    
+    if (transportData.facilities && typeof transportData.facilities === 'string') {
+      try {
+        transportData.facilities = JSON.parse(transportData.facilities);
+      } catch (e) {
+        // Facilities is optional, ignore parse errors
+      }
+    }
 
     // Handle uploaded images
     if (req.files && req.files.length > 0) {
@@ -34,6 +87,7 @@ export const createTransport = async (req, res) => {
       data: transport,
     });
   } catch (error) {
+    console.error('Create transport error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to create transport',
@@ -230,6 +284,206 @@ export const getMyTransport = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get transport',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Find routes between two locations (for itinerary planning)
+ */
+export const findRoutes = async (req, res) => {
+  try {
+    console.log('🗺️ findRoutes called with query:', req.query);
+    
+    const { fromLat, fromLng, toLat, toLng, fromName, toName, type, maxDistance } = req.query;
+
+    let result;
+
+    if (fromLat && fromLng && toLat && toLng) {
+      console.log('📍 Using GPS-based search:', {
+        from: `(${fromLat}, ${fromLng})`,
+        to: `(${toLat}, ${toLng})`,
+        type,
+        maxDistance
+      });
+
+      const options = {
+        transportType: type,
+        maxDistance: maxDistance ? parseFloat(maxDistance) : undefined,
+      };
+
+      result = await transportService.findAllTransportOptions(
+        parseFloat(fromLat),
+        parseFloat(fromLng),
+        parseFloat(toLat),
+        parseFloat(toLng),
+        options
+      );
+
+      console.log('📊 GPS search result:', {
+        directRoutes: result.directRoutes?.length || 0,
+        nearbyRoutes: result.nearbyRoutes?.length || 0,
+        totalOptions: result.totalOptions || 0
+      });
+
+      res.json({
+        success: true,
+        data: result,
+        searchType: 'coordinates',
+      });
+    } else if (fromName && toName) {
+      console.log('🏷️ Using name-based search:', { fromName, toName, type });
+
+      const options = {
+        transportType: type,
+        limit: 20,
+      };
+
+      const transports = await transportService.findTransportByLocationNames(
+        fromName,
+        toName,
+        options
+      );
+
+      res.json({
+        success: true,
+        data: transports,
+        searchType: 'location-names',
+        count: transports.length,
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide either coordinates (fromLat, fromLng, toLat, toLng) or location names (fromName, toName)',
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to find routes',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get popular routes
+ */
+export const getPopularRoutes = async (req, res) => {
+  try {
+    const { limit = 10, type } = req.query;
+
+    const routes = await transportService.getPopularRoutes({
+      limit: parseInt(limit),
+      type,
+    });
+
+    res.json({
+      success: true,
+      data: routes,
+      count: routes.length,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get popular routes',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Search by operator
+ */
+export const searchByOperator = async (req, res) => {
+  try {
+    const { operator, type, limit = 20 } = req.query;
+
+    if (!operator) {
+      return res.status(400).json({
+        success: false,
+        message: 'Operator name is required',
+      });
+    }
+
+    const transports = await transportService.searchByOperator(operator, {
+      type,
+      limit: parseInt(limit),
+    });
+
+    res.json({
+      success: true,
+      data: transports,
+      count: transports.length,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to search by operator',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Increment view count
+ */
+export const incrementViewCount = async (req, res) => {
+  try {
+    const transport = await transportRepo.findById(req.params.id);
+
+    if (!transport) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transport not found',
+      });
+    }
+
+    await transport.incrementView();
+
+    res.json({
+      success: true,
+      message: 'View count updated',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update view count',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Record booking
+ */
+export const recordBooking = async (req, res) => {
+  try {
+    const transport = await transportRepo.findById(req.params.id);
+
+    if (!transport) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transport not found',
+      });
+    }
+
+    transport.bookingCount += 1;
+    await transport.save();
+
+    res.json({
+      success: true,
+      message: 'Booking recorded',
+      data: {
+        bookingInfo: transport.booking,
+        contactInfo: transport.contactInfo,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record booking',
       error: error.message,
     });
   }

@@ -1,0 +1,336 @@
+/* Hotel Detail Page Styling */
+.space-y-6 > .flex.items-center h1 {
+  background: linear-gradient(135deg, #b91c1c, #dc2626, #ef4444);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: titleSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Cover Image */
+.overflow-hidden.rounded-lg img {
+  transition: transform 0.4s ease;
+  border: 2px solid rgba(220, 38, 38, 0.2);
+  animation: imageZoomIn 0.6s ease 0.2s backwards;
+}
+
+.overflow-hidden.rounded-lg:hover img {
+  transform: scale(1.05);
+  border-color: rgba(220, 38, 38, 0.4);
+}
+
+/* Cards */
+.space-y-6 .card {
+  background: linear-gradient(145deg, 
+    rgba(255, 255, 255, 0.95), 
+    rgba(255, 255, 255, 0.98)
+  ) !important;
+  backdrop-filter: blur(40px) !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.2);
+  box-shadow: 
+    0 8px 24px rgba(220, 38, 38, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  transition: all 0.3s ease;
+  animation: cardFadeIn 0.5s ease backwards;
+}
+
+.space-y-6 .card:nth-child(1) { animation-delay: 0.1s; }
+.space-y-6 .card:nth-child(2) { animation-delay: 0.2s; }
+.space-y-6 .card:nth-child(3) { animation-delay: 0.3s; }
+
+.space-y-6 .card:hover {
+  box-shadow: 
+    0 12px 32px rgba(220, 38, 38, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+}
+
+/* Section Headers */
+.space-y-6 .card h2 {
+  color: #1f2937;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.space-y-6 .card h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #dc2626, transparent);
+  border-radius: 2px;
+}
+
+/* Icons */
+.space-y-6 .lucide-star {
+  filter: drop-shadow(0 0 8px rgba(234, 179, 8, 0.5));
+  animation: starPulse 2s ease-in-out infinite;
+}
+
+.space-y-6 .lucide-map-pin,
+.space-y-6 .lucide-phone,
+.space-y-6 .lucide-mail,
+.space-y-6 .lucide-globe,
+.space-y-6 .lucide-dollar-sign {
+  color: #dc2626;
+  transition: all 0.3s ease;
+}
+
+.space-y-6 a:hover .lucide-globe {
+  transform: scale(1.1);
+  color: #b91c1c;
+}
+
+/* Buttons */
+.btn-primary,
+.space-y-6 button.btn-primary {
+  background: linear-gradient(135deg, #7f1d1d, #991b1b, #b91c1c) !important;
+  color: white !important;
+  border: 1px solid rgba(127, 29, 29, 0.5);
+  box-shadow: 
+    0 4px 12px rgba(127, 29, 29, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.btn-primary:hover,
+.space-y-6 button.btn-primary:hover {
+  background: linear-gradient(135deg, #991b1b, #b91c1c, #dc2626) !important;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 20px rgba(127, 29, 29, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(220, 38, 38, 0.2);
+  color: #dc2626;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(220, 38, 38, 0.4);
+  transform: translateX(-4px);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #991b1b, #dc2626) !important;
+  color: white !important;
+  border: 1px solid rgba(185, 28, 28, 0.5);
+  transition: all 0.3s ease;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #b91c1c, #ef4444) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(185, 28, 28, 0.4);
+}
+
+/* Room Cards */
+.rounded-lg.border {
+  background: linear-gradient(145deg, 
+    rgba(254, 226, 226, 0.3), 
+    rgba(254, 202, 202, 0.2)
+  ) !important;
+  border: 1.5px solid rgba(220, 38, 38, 0.2) !important;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  animation: roomSlideIn 0.5s ease backwards;
+}
+
+.rounded-lg.border:nth-child(odd) { animation-delay: 0.1s; }
+.rounded-lg.border:nth-child(even) { animation-delay: 0.2s; }
+
+.rounded-lg.border:hover {
+  border-color: rgba(220, 38, 38, 0.4) !important;
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.2);
+  transform: translateY(-4px);
+}
+
+.rounded-lg.border h3 {
+  color: #b91c1c;
+}
+
+.rounded-lg.border img {
+  border: 2px solid rgba(220, 38, 38, 0.2);
+  transition: all 0.3s ease;
+}
+
+.rounded-lg.border:hover img {
+  transform: scale(1.05);
+  border-color: rgba(220, 38, 38, 0.4);
+}
+
+/* Amenity Badges */
+.bg-blue-50 {
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.9), rgba(254, 202, 202, 1)) !important;
+}
+
+.text-blue-700 {
+  color: #dc2626 !important;
+}
+
+/* Form Inputs */
+.input,
+.space-y-6 input.input,
+.space-y-6 textarea.input,
+.space-y-6 select.input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(220, 38, 38, 0.3);
+  color: #1f2937;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 2px 8px rgba(220, 38, 38, 0.1),
+    inset 2px 0 0 0 #dc2626;
+}
+
+.input:focus,
+.space-y-6 input.input:focus,
+.space-y-6 textarea.input:focus,
+.space-y-6 select.input:focus {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(220, 38, 38, 0.6);
+  box-shadow: 
+    0 4px 16px rgba(220, 38, 38, 0.25),
+    0 0 0 3px rgba(220, 38, 38, 0.1),
+    inset 4px 0 0 0 #b91c1c;
+  outline: none;
+  transform: translateY(-2px);
+}
+
+/* Add Room Form */
+.rounded.border.p-4.bg-gray-50 {
+  background: linear-gradient(145deg, 
+    rgba(254, 226, 226, 0.4), 
+    rgba(254, 202, 202, 0.3)
+  ) !important;
+  border: 1.5px solid rgba(220, 38, 38, 0.25) !important;
+  backdrop-filter: blur(20px);
+  animation: formSlideDown 0.4s ease;
+}
+
+/* Right Sidebar Cards - Match Left Side Height */
+.space-y-6 > div:last-child > .space-y-6 {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.space-y-6 > div:last-child > .space-y-6 > .card {
+  flex: 1;
+  min-height: 200px;
+}
+
+/* Location and Contact Cards - Equal Heights */
+.md\:col-span-2 ~ div .card {
+  display: flex;
+  flex-direction: column;
+  min-height: 250px;
+}
+
+.md\:col-span-2 ~ div .card h2 {
+  margin-bottom: 1rem;
+}
+
+.md\:col-span-2 ~ div .card .space-y-3 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0.75rem;
+}
+
+/* Animations */
+@keyframes titleSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes imageZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes roomSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes formSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 1000px;
+  }
+}
+
+@keyframes starPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(234, 179, 8, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(234, 179, 8, 0.8));
+  }
+}
+
+/* Rating Stars */
+.space-y-6 .inline-flex.items-center.gap-1 {
+  transition: transform 0.3s ease;
+}
+
+.space-y-6 .inline-flex.items-center.gap-1:hover {
+  transform: scale(1.05);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .rounded-lg.border {
+    padding: 0.75rem;
+  }
+}

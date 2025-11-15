@@ -1,0 +1,349 @@
+/* Hero Section - Red Theme with Animation */
+.hero-section-red {
+  background: linear-gradient(135deg, rgba(185, 28, 28, 0.95), rgba(220, 38, 38, 0.98)) !important;
+  backdrop-filter: blur(20px) !important;
+  animation: heroFadeIn 0.8s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-section-red::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 70%
+  );
+  animation: shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hero-section-red h1,
+.hero-section-red p {
+  position: relative;
+  z-index: 1;
+}
+
+/* Quick Actions Section - More Red Background */
+.quick-actions-section {
+  animation: slideUp 0.6s ease-out 0.3s backwards;
+  background: linear-gradient(145deg, 
+    rgba(185, 28, 28, 0.4), 
+    rgba(220, 38, 38, 0.45)
+  ) !important;
+  backdrop-filter: blur(25px) !important;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  box-shadow: 0 8px 20px rgba(185, 28, 28, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-actions-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+.quick-actions-section:hover::before {
+  left: 100%;
+}
+
+.quick-actions-section:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(185, 28, 28, 0.4);
+  border-color: rgba(220, 38, 38, 0.6);
+}
+
+/* Quick Actions Title */
+.quick-actions-section h2 {
+  color: #1f2937;
+  transition: color 0.3s ease;
+}
+
+.quick-actions-section:hover h2 {
+  color: #b91c1c;
+}
+
+.quick-actions-section .btn-primary {
+  background: linear-gradient(135deg, #b91c1c, #dc2626) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.4);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-actions-section .btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+}
+
+.quick-actions-section .btn-primary:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.quick-actions-section .btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(185, 28, 28, 0.6);
+}
+
+.quick-actions-section .btn-primary:active {
+  transform: translateY(-1px);
+}
+
+/* Stats Cards - More Red Background with Advanced Animations */
+.stats-card {
+  background: linear-gradient(145deg, 
+    rgba(239, 68, 68, 0.4), 
+    rgba(220, 38, 38, 0.5)
+  ) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.25);
+  animation: cardPopIn 0.5s ease-out backwards;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+
+.stats-card:hover::before {
+  transform: translateX(100%) translateY(100%) rotate(45deg);
+}
+
+.stats-card:hover {
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 12px 24px rgba(185, 28, 28, 0.35);
+  border-color: rgba(220, 38, 38, 0.6);
+  background: linear-gradient(145deg, 
+    rgba(239, 68, 68, 0.5), 
+    rgba(220, 38, 38, 0.6)
+  ) !important;
+}
+
+.stats-card:nth-child(1) { animation-delay: 0.1s; }
+.stats-card:nth-child(2) { animation-delay: 0.2s; }
+.stats-card:nth-child(3) { animation-delay: 0.3s; }
+.stats-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* Icon Animation Inside Cards */
+.stats-card .w-12.h-12 {
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover .w-12.h-12 {
+  transform: scale(1.15) rotate(5deg);
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.2);
+}
+
+/* Text Animation Inside Cards */
+.stats-card h3 {
+  transition: color 0.3s ease;
+}
+
+.stats-card:hover h3 {
+  color: #b91c1c;
+}
+
+.stats-card p {
+  transition: color 0.3s ease;
+}
+
+.stats-card:hover p {
+  color: #1f2937;
+}
+
+/* Info Card Animation - More Dark Red Theme */
+.info-card {
+  background: linear-gradient(145deg, 
+    rgba(185, 28, 28, 0.4), 
+    rgba(220, 38, 38, 0.45)
+  ) !important;
+  backdrop-filter: blur(25px) !important;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  box-shadow: 0 8px 20px rgba(185, 28, 28, 0.3);
+  animation: slideUp 0.6s ease-out 0.5s backwards;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.info-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+.info-card:hover::before {
+  left: 100%;
+}
+
+.info-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(185, 28, 28, 0.4);
+  border-color: rgba(220, 38, 38, 0.6);
+  background: linear-gradient(145deg, 
+    rgba(255, 255, 255, 0.95), 
+    rgba(255, 255, 255, 0.98)
+  ) !important;
+}
+
+/* Info Card Title Animation */
+.info-card h2 {
+  color: #1f2937;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.info-card:hover h2 {
+  color: #b91c1c;
+  transform: translateX(4px);
+}
+
+/* Info Card Text Color */
+.info-card p,
+.info-card ul li {
+  color: #1f2937;
+  transition: color 0.3s ease;
+}
+
+.info-card:hover p,
+.info-card:hover ul li {
+  color: #374151;
+}
+
+/* Sparkles Icon Animation */
+.info-card .lucide-sparkles {
+  transition: all 0.4s ease;
+  filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.5));
+  color: #dc2626;
+}
+
+.info-card:hover .lucide-sparkles {
+  transform: rotate(15deg) scale(1.1);
+  filter: drop-shadow(0 0 12px rgba(220, 38, 38, 0.8));
+  color: #b91c1c;
+}
+
+/* List Items Animation */
+.info-card ul li {
+  transition: all 0.3s ease;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.info-card ul li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: #dc2626;
+  font-weight: bold;
+  transition: transform 0.3s ease;
+}
+
+.info-card:hover ul li::before {
+  transform: translateX(4px);
+  color: #b91c1c;
+}
+
+.info-card ul li:hover {
+  color: #b91c1c;
+  transform: translateX(8px);
+}
+
+/* Animations */
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

@@ -1,14 +1,16 @@
-
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { 
-  ArrowLeft, Calendar, MapPin, Plus, X, Save 
+import {
+  ArrowLeft, Calendar, MapPin, Plus,
+  Save,
+  X
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import api from '../../lib/api';
+import { Link, useNavigate } from 'react-router-dom';
 import MapView from '../../components/itinerary/MapView';
 import LocationSearchInput from '../../components/LocationSearchInput';
+import api from '../../lib/api';
+import './CreateItinerary.css';
 
 /**
  * CreateItinerary Page - Form to create new itinerary
@@ -325,15 +327,15 @@ export default function CreateItinerary() {
   return (
     <div className="max-w-6xl mx-auto">
       {/* Back Button */}
-      <Link to="/itineraries" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-4">
+      <Link to="/itineraries" className="back-link inline-flex items-center gap-2 mb-4">
         <ArrowLeft size={20} />
         Back to My Itineraries
       </Link>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Header */}
-        <div className="card">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Create New Itinerary</h1>
+        <div className="card create-itinerary-card">
+          <h1 className="create-itinerary-title text-3xl font-bold mb-6">Create New Itinerary</h1>
           
           <div className="grid md:grid-cols-2 gap-4">
             <div>
@@ -432,26 +434,28 @@ export default function CreateItinerary() {
 
         {/* Map Preview */}
         {allStops.length > 0 && (
-          <div className="card">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <MapPin className="text-blue-600" />
+          <div className="card create-itinerary-card">
+            <h2 className="section-header-red text-xl font-bold mb-4 flex items-center gap-2">
+              <MapPin />
               Trip Preview
             </h2>
-            <MapView stops={allStops} showRoute={true} height={400} />
+            <div className="map-container">
+              <MapView stops={allStops} showRoute={true} height={400} />
+            </div>
           </div>
         )}
 
         {/* Days Planning */}
         {days.length > 0 && (
-          <div className="card">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar className="text-blue-600" />
+          <div className="card create-itinerary-card">
+            <h2 className="section-header-red text-xl font-bold mb-4 flex items-center gap-2">
+              <Calendar />
               Plan Your Days ({days.length} days)
             </h2>
 
             <div className="space-y-6">
               {days.map((day, dayIndex) => (
-                <div key={dayIndex} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div key={dayIndex} className="day-card border rounded-lg p-4">
                   <h3 className="font-semibold text-gray-900 mb-3">
                     Day {dayIndex + 1} - {new Date(day.date).toLocaleDateString('en-US', { 
                       weekday: 'long', 
@@ -463,9 +467,9 @@ export default function CreateItinerary() {
                   {/* Stops for this day */}
                   <div className="space-y-3 mb-3">
                     {day.stops.map((stop, stopIndex) => (
-                      <div key={stopIndex} className="bg-white rounded-lg p-3 shadow-sm">
+                      <div key={stopIndex} className="stop-card rounded-lg p-3 shadow-sm">
                         <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                          <div className="stop-number w-8 h-8 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
                             {stopIndex + 1}
                           </div>
                           
@@ -616,7 +620,7 @@ export default function CreateItinerary() {
                           <button
                             type="button"
                             onClick={() => removeStop(dayIndex, stopIndex)}
-                            className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
+                            className="remove-button hover:text-red-700 p-1 flex-shrink-0"
                           >
                             <X size={20} />
                           </button>
@@ -631,49 +635,55 @@ export default function CreateItinerary() {
                       type="button"
                       onClick={() => addStopToDay(dayIndex, 'location')}
                       className="btn-secondary btn-sm flex items-center gap-1"
+                      style={{ color: '#dc2626 !important' }}
                     >
-                      <Plus size={14} />
-                      Add Location
+                      <Plus size={14} style={{ color: '#dc2626' }} />
+                      <span style={{ color: '#dc2626' }}>Add Location</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => addStopToDay(dayIndex, 'hotel')}
                       className="btn-secondary btn-sm flex items-center gap-1"
+                      style={{ color: '#dc2626 !important' }}
                     >
-                      <Plus size={14} />
-                      Add Hotel
+                      <Plus size={14} style={{ color: '#dc2626' }} />
+                      <span style={{ color: '#dc2626' }}>Add Hotel</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => addStopToDay(dayIndex, 'transport')}
                       className="btn-secondary btn-sm flex items-center gap-1"
+                      style={{ color: '#dc2626 !important' }}
                     >
-                      <Plus size={14} />
-                      Add Transport
+                      <Plus size={14} style={{ color: '#dc2626' }} />
+                      <span style={{ color: '#dc2626' }}>Add Transport</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => addStopToDay(dayIndex, 'custom')}
                       className="btn-secondary btn-sm flex items-center gap-1"
+                      style={{ color: '#dc2626 !important' }}
                     >
-                      <Plus size={14} />
-                      Add Custom Stop
+                      <Plus size={14} style={{ color: '#dc2626' }} />
+                      <span style={{ color: '#dc2626' }}>Add Custom Stop</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => suggestHotelForDay(dayIndex)}
                       className="btn-secondary btn-sm flex items-center gap-1"
+                      style={{ color: '#dc2626 !important' }}
                     >
-                      <Plus size={14} />
-                      Suggest Hotel
+                      <Plus size={14} style={{ color: '#dc2626' }} />
+                      <span style={{ color: '#dc2626' }}>Suggest Hotel</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => suggestTransportForDay(dayIndex)}
                       className="btn-secondary btn-sm flex items-center gap-1"
+                      style={{ color: '#dc2626 !important' }}
                     >
-                      <Plus size={14} />
-                      Suggest Transport
+                      <Plus size={14} style={{ color: '#dc2626' }} />
+                      <span style={{ color: '#dc2626' }}>Suggest Transport</span>
                     </button>
                   </div>
                 </div>
@@ -701,8 +711,8 @@ export default function CreateItinerary() {
       {/* Location Search Modal */}
       {showLocationSearch && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
-            <div className="p-6 border-b flex justify-between items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-2xl">
+          <div className="location-modal bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+            <div className="modal-header p-6 border-b flex justify-between items-center text-white rounded-t-2xl">
               <div>
                 <h3 className="text-xl font-bold">Search Location</h3>
                 <p className="text-blue-100 text-sm mt-1">Find and select your destination</p>
@@ -721,7 +731,7 @@ export default function CreateItinerary() {
             
             <div className="p-6">
               {/* Helpful Info Banner */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <div className="info-banner-blue rounded-lg p-4 mb-4">
                 <p className="text-blue-900 font-semibold mb-2">💡 How to add a location:</p>
                 <ol className="text-blue-800 space-y-1 ml-4 list-decimal text-sm">
                   <li>Type any place name (e.g., "Paris", "Eiffel Tower", "Central Park")</li>
@@ -749,7 +759,7 @@ export default function CreateItinerary() {
                 (() => {
                   const stop = days[currentEditingStop.dayIndex]?.stops[currentEditingStop.stopIndex];
                   return stop?.coordinates?.lat && stop?.coordinates?.lng ? (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="info-banner-green rounded-lg p-4">
                       <p className="text-green-900 font-semibold mb-2">✓ Location Selected Successfully!</p>
                       <p className="text-sm text-gray-900"><strong>{stop.name}</strong></p>
                       {stop.customDescription && (

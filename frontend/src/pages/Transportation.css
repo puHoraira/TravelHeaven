@@ -1,0 +1,503 @@
+/* Transportation Grid - Horizontal Scroll Carousel */
+.transport-grid {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  padding: 1rem 0.5rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(220, 38, 38, 0.5) rgba(220, 38, 38, 0.1);
+}
+
+.transport-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.transport-grid::-webkit-scrollbar-track {
+  background: rgba(220, 38, 38, 0.1);
+  border-radius: 10px;
+}
+
+.transport-grid::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #b91c1c, #dc2626);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.transport-grid::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, #dc2626, #ef4444);
+}
+
+/* Transport Card - Carousel Item */
+.transport-grid > .card {
+  background: linear-gradient(145deg, 
+    rgba(255, 255, 255, 0.95), 
+    rgba(255, 255, 255, 0.98)
+  ) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.3);
+  border-radius: 20px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.15);
+  
+  width: 340px;
+  min-width: 340px;
+  max-width: 340px;
+  
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  scroll-snap-align: center;
+  will-change: transform;
+  animation: cardSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+/* Staggered Animation */
+.transport-grid > .card:nth-child(1) { animation-delay: 0.1s; }
+.transport-grid > .card:nth-child(2) { animation-delay: 0.2s; }
+.transport-grid > .card:nth-child(3) { animation-delay: 0.3s; }
+.transport-grid > .card:nth-child(4) { animation-delay: 0.4s; }
+.transport-grid > .card:nth-child(5) { animation-delay: 0.5s; }
+.transport-grid > .card:nth-child(6) { animation-delay: 0.6s; }
+
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.transport-grid > .card:hover {
+  transform: translateY(-12px) scale(1.05);
+  box-shadow: 0 20px 50px rgba(220, 38, 38, 0.35);
+  border-color: rgba(239, 68, 68, 0.6);
+  z-index: 10;
+}
+
+/* Transport Icon Background */
+.transport-grid > .card .bg-blue-50 {
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.9), rgba(254, 202, 202, 1)) !important;
+  transition: all 0.3s ease;
+}
+
+.transport-grid > .card:hover .bg-blue-50 {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+/* Card Title */
+.transport-grid > .card h3 {
+  transition: color 0.3s ease;
+}
+
+.transport-grid > .card:hover h3 {
+  color: #dc2626;
+}
+
+/* Icons */
+.transport-grid > .card .lucide {
+  color: #dc2626;
+  transition: all 0.3s ease;
+}
+
+.transport-grid > .card:hover .lucide-star {
+  transform: scale(1.15) rotate(15deg);
+}
+
+.transport-grid > .card .lucide-map-pin {
+  transition: transform 0.3s ease;
+}
+
+.transport-grid > .card:hover .lucide-map-pin {
+  transform: scale(1.1);
+}
+
+/* Route Info Box */
+.transport-grid > .card .bg-gradient-to-r {
+  background: linear-gradient(145deg, 
+    rgba(254, 226, 226, 0.6), 
+    rgba(254, 202, 202, 0.5)
+  ) !important;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  transition: all 0.3s ease;
+}
+
+.transport-grid > .card:hover .bg-gradient-to-r {
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
+}
+
+/* Pricing Box */
+.transport-grid > .card .bg-green-50 {
+  background: linear-gradient(145deg, 
+    rgba(220, 252, 231, 0.6), 
+    rgba(187, 247, 208, 0.5)
+  ) !important;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+/* Warning Box */
+.transport-grid > .card .bg-orange-50 {
+  background: linear-gradient(145deg, 
+    rgba(255, 237, 213, 0.8), 
+    rgba(254, 215, 170, 0.7)
+  ) !important;
+}
+
+/* Facility Badges */
+.transport-grid > .card .bg-blue-50.text-blue-700 {
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.9), rgba(254, 202, 202, 1)) !important;
+  color: #dc2626 !important;
+  transition: all 0.3s ease;
+}
+
+.transport-grid > .card:hover .bg-blue-50.text-blue-700 {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+}
+
+/* Rating Badge */
+.transport-grid > .card .bg-yellow-50 {
+  transition: all 0.3s ease;
+}
+
+.transport-grid > .card:hover .bg-yellow-50 {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.3);
+}
+
+/* Page Header */
+.space-y-6 h1 {
+  background: linear-gradient(135deg, #b91c1c, #dc2626, #ef4444);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800;
+  animation: headingSlide 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  display: inline-block;
+}
+
+.space-y-6 h1::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #b91c1c, #dc2626, transparent);
+  border-radius: 2px;
+  animation: underlineExpand 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s backwards;
+}
+
+.space-y-6 > p {
+  color: #4b5563;
+  animation: textFadeIn 0.6s ease 0.3s backwards;
+  position: relative;
+  padding-left: 1rem;
+}
+
+.space-y-6 > p::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 60%;
+  background: linear-gradient(180deg, #dc2626, #ef4444);
+  border-radius: 2px;
+  animation: barSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s backwards;
+}
+
+/* Search Dialog */
+.transport-search {
+  background: linear-gradient(145deg, 
+    rgba(255, 255, 255, 0.95), 
+    rgba(255, 255, 255, 0.98)
+  ) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.25);
+  box-shadow: 
+    0 8px 24px rgba(220, 38, 38, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  animation: filtersFadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.transport-search::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.08), transparent);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+.transport-search:hover::before {
+  left: 100%;
+}
+
+/* Input Fields */
+.transport-search input.input,
+.transport-search select.input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(220, 38, 38, 0.3);
+  color: #1f2937;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 2px 8px rgba(220, 38, 38, 0.1),
+    inset 2px 0 0 0 #dc2626;
+}
+
+.transport-search input.input:hover,
+.transport-search select.input:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(220, 38, 38, 0.4);
+  box-shadow: 
+    0 3px 10px rgba(220, 38, 38, 0.15),
+    inset 2.5px 0 0 0 #dc2626;
+}
+
+.transport-search input.input:focus,
+.transport-search select.input:focus {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(220, 38, 38, 0.6);
+  box-shadow: 
+    0 4px 16px rgba(220, 38, 38, 0.25),
+    0 0 0 3px rgba(220, 38, 38, 0.1),
+    inset 4px 0 0 0 #b91c1c;
+  outline: none;
+  transform: translateY(-2px);
+}
+
+/* Dropdown Options */
+.transport-search select.input option {
+  background: white;
+  color: #1f2937;
+  padding: 0.5rem;
+}
+
+.transport-search select.input option:hover,
+.transport-search select.input option:focus,
+.transport-search select.input option:checked {
+  background: rgba(254, 226, 226, 0.8) !important;
+  color: #dc2626 !important;
+}
+
+.transport-search select.input:focus option:checked {
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.9), rgba(254, 202, 202, 1)) !important;
+  color: #b91c1c !important;
+  font-weight: 600;
+}
+
+.transport-search .lucide-map-pin {
+  color: #dc2626;
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #7f1d1d, #991b1b, #b91c1c) !important;
+  color: white !important;
+  border: 1px solid rgba(127, 29, 29, 0.5);
+  box-shadow: 
+    0 4px 12px rgba(127, 29, 29, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #991b1b, #b91c1c, #dc2626) !important;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 20px rgba(127, 29, 29, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* View Toggle Buttons */
+.space-y-6 button.bg-blue-600 {
+  background: linear-gradient(135deg, #b91c1c, #dc2626) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.space-y-6 button.bg-gray-100 {
+  background: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(220, 38, 38, 0.2);
+  color: #dc2626 !important;
+}
+
+/* Popular Routes Card - Match Search Height */
+.popular-routes {
+  background: linear-gradient(145deg, 
+    rgba(255, 255, 255, 0.95), 
+    rgba(255, 255, 255, 0.98)
+  ) !important;
+  backdrop-filter: blur(40px) !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.2);
+  box-shadow: 
+    0 8px 24px rgba(220, 38, 38, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  animation: cardFadeIn 0.6s ease 0.3s backwards;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.popular-routes h2 {
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.popular-routes h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #dc2626, transparent);
+  border-radius: 2px;
+}
+
+.popular-routes .grid {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(220, 38, 38, 0.5) rgba(220, 38, 38, 0.1);
+}
+
+.popular-routes .grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.popular-routes .grid::-webkit-scrollbar-track {
+  background: rgba(220, 38, 38, 0.1);
+  border-radius: 10px;
+}
+
+.popular-routes .grid::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #b91c1c, #dc2626);
+  border-radius: 10px;
+}
+
+.popular-routes .bg-gray-50 {
+  background: linear-gradient(145deg, 
+    rgba(254, 226, 226, 0.3), 
+    rgba(254, 202, 202, 0.2)
+  ) !important;
+  border: 1px solid rgba(220, 38, 38, 0.1);
+  transition: all 0.3s ease;
+}
+
+.popular-routes .bg-gray-50:hover {
+  background: linear-gradient(145deg, 
+    rgba(254, 226, 226, 0.4), 
+    rgba(254, 202, 202, 0.3)
+  ) !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+  transform: translateX(4px);
+}
+
+.popular-routes .lucide-trending-up {
+  color: #dc2626 !important;
+}
+
+/* Spinner */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(185, 28, 28, 0.2);
+  border-top-color: #b91c1c;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Animations */
+@keyframes headingSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes underlineExpand {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes textFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes barSlideIn {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: 60%;
+    opacity: 1;
+  }
+}
+
+@keyframes filtersFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+  .transport-grid > .card {
+    width: 300px;
+    min-width: 300px;
+    max-width: 300px;
+  }
+}

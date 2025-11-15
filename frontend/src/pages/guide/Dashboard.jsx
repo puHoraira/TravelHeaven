@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Briefcase, Bus, CheckCircle, Clock, Hotel, MapPin, ShieldAlert, Star, XCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Briefcase, MapPin, Hotel, Bus, CheckCircle, Clock, XCircle, Star, ShieldAlert } from 'lucide-react';
-import { useAuthStore } from '../../store/authStore';
+import { Link } from 'react-router-dom';
 import api from '../../lib/api';
+import { useAuthStore } from '../../store/authStore';
+import './Dashboard.css';
 
 const GuideDashboard = () => {
   const { user } = useAuthStore();
@@ -105,17 +106,21 @@ const GuideDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Guide Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-purple-800 rounded-lg p-8 text-white">
+      <div className="dashboard-header rounded-lg p-8 text-white">
         <div className="flex items-center gap-4 mb-4">
           <Briefcase className="w-12 h-12" />
           <div>
-            <h1 className="text-4xl font-bold">Guide Dashboard</h1>
-            <p className="text-purple-100 text-lg">Share Your Expertise with Travelers</p>
+            <h1 className="dashboard-title text-4xl font-bold">Guide Dashboard</h1>
+            <p className="text-white text-opacity-90 text-lg">Share Your Expertise with Travelers</p>
           </div>
         </div>
       </div>
 
-      <div className={`flex items-start gap-3 rounded-lg p-4 ${statusCopy.tone}`}>
+      <div className={`flex items-start gap-3 rounded-lg p-4 ${
+        isApproved ? 'status-alert-approved' :
+        verificationStatus === 'rejected' ? 'status-alert-rejected' :
+        'status-alert-pending'
+      }`}>
         <ShieldAlert className="w-6 h-6 flex-shrink-0 mt-0.5" />
         <div>
           <h2 className="text-lg font-semibold">{statusCopy.title}</h2>
@@ -125,7 +130,7 @@ const GuideDashboard = () => {
 
       {/* Submission Stats */}
       <div className="grid md:grid-cols-4 gap-4">
-        <div className="card bg-gradient-to-br from-orange-50 to-orange-100">
+        <div className="metric-card card">
           <div className="flex items-center gap-3 mb-2">
             <Clock className="w-8 h-8 text-orange-600" />
             <h3 className="font-bold">Pending</h3>
@@ -142,7 +147,7 @@ const GuideDashboard = () => {
           )}
         </div>
 
-        <div className="card bg-gradient-to-br from-green-50 to-green-100">
+        <div className="metric-card card">
           <div className="flex items-center gap-3 mb-2">
             <CheckCircle className="w-8 h-8 text-green-600" />
             <h3 className="font-bold">Approved</h3>
@@ -153,7 +158,7 @@ const GuideDashboard = () => {
           <p className="text-sm text-gray-600">Live submissions</p>
         </div>
 
-        <div className="card bg-gradient-to-br from-red-50 to-red-100">
+        <div className="metric-card card">
           <div className="flex items-center gap-3 mb-2">
             <XCircle className="w-8 h-8 text-red-600" />
             <h3 className="font-bold">Rejected</h3>
@@ -164,7 +169,7 @@ const GuideDashboard = () => {
           <p className="text-sm text-gray-600">Needs revision</p>
         </div>
 
-        <div className="card bg-gradient-to-br from-blue-50 to-blue-100">
+        <div className="metric-card card">
           <div className="flex items-center gap-3 mb-2">
             <Star className="w-8 h-8 text-blue-600" />
             <h3 className="font-bold">Rating</h3>
@@ -179,12 +184,12 @@ const GuideDashboard = () => {
       </div>
 
       {/* Content Management */}
-      <div className="card">
-        <h2 className="text-xl font-bold mb-4">Your Content</h2>
+      <div className="content-card card">
+        <h2 className="section-header text-xl font-bold mb-4">Your Content</h2>
         <div className="grid md:grid-cols-3 gap-4">
-          <Link to="/guide/locations" className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+          <Link to="/guide/locations" className="content-card p-4 rounded-lg">
             <div className="flex items-center gap-3 mb-2">
-              <MapPin className="w-6 h-6 text-blue-600" />
+              <MapPin className="w-6 h-6 icon-red" />
               <h3 className="font-semibold">My Locations</h3>
             </div>
             <p className="text-2xl font-bold text-blue-600">
@@ -196,9 +201,9 @@ const GuideDashboard = () => {
             <p className="text-sm text-gray-600 mt-1">Manage your locations</p>
           </Link>
 
-          <Link to="/guide/hotels" className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+          <Link to="/guide/hotels" className="content-card p-4 rounded-lg">
             <div className="flex items-center gap-3 mb-2">
-              <Hotel className="w-6 h-6 text-green-600" />
+              <Hotel className="w-6 h-6 icon-red" />
               <h3 className="font-semibold">My Hotels</h3>
             </div>
             <p className="text-2xl font-bold text-green-600">
@@ -210,9 +215,9 @@ const GuideDashboard = () => {
             <p className="text-sm text-gray-600 mt-1">Manage your hotels</p>
           </Link>
 
-          <Link to="/guide/transport" className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+          <Link to="/guide/transport" className="content-card p-4 rounded-lg">
             <div className="flex items-center gap-3 mb-2">
-              <Bus className="w-6 h-6 text-purple-600" />
+              <Bus className="w-6 h-6 icon-red" />
               <h3 className="font-semibold">My Transport</h3>
             </div>
             <p className="text-2xl font-bold text-purple-600">
@@ -227,9 +232,9 @@ const GuideDashboard = () => {
       </div>
 
       {/* Guide Capabilities */}
-      <div className="card bg-gradient-to-r from-gray-50 to-gray-100">
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <Briefcase className="w-6 h-6 text-purple-600" />
+      <div className="content-card card">
+        <h2 className="section-header text-xl font-bold mb-4 flex items-center gap-2">
+          <Briefcase className="w-6 h-6 icon-red" />
           What You Can Do
         </h2>
         <div className="grid md:grid-cols-2 gap-4">
@@ -255,8 +260,8 @@ const GuideDashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="card">
-        <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
+      <div className="content-card card">
+        <h2 className="section-header text-xl font-bold mb-4">Quick Actions</h2>
         <div className="grid md:grid-cols-3 gap-4">
           <ActionLink to="/guide/locations">Add New Location</ActionLink>
           <ActionLink to="/guide/hotels">Add New Hotel</ActionLink>

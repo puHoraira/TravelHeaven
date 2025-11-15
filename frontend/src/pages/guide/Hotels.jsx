@@ -1,14 +1,39 @@
+import {
+  BedDouble,
+  Building2,
+  Camera,
+  CheckCircle,
+  Clock,
+  Crown,
+  DollarSign,
+  Edit2,
+  ExternalLink,
+  Eye,
+  Filter,
+  Globe,
+  Hotel as HotelIcon,
+  Image as ImageIcon,
+  Info,
+  Mail,
+  MapPin,
+  MapPinned,
+  Navigation,
+  Phone,
+  Plus,
+  Save,
+  Search,
+  Sparkles,
+  Star,
+  Trash2,
+  Upload,
+  X,
+  XCircle
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { 
-  MapPin, Plus, Trash2, X, Eye, Edit2, Hotel as HotelIcon, Camera, Info, Navigation,
-  Building2, DollarSign, Star, Phone, ExternalLink, Mail, Globe, Wifi, Car, Coffee,
-  Tv, Wind, Users, BedDouble, Search, Filter, TrendingUp, Clock, CheckCircle, 
-  XCircle, AlertCircle, Image as ImageIcon, Upload, Save, Sparkles, Award,
-  Shield, ThumbsUp, Calendar, MapPinned, Percent, Gift, Crown, Zap
-} from 'lucide-react';
-import api from '../../lib/api';
 import LocationSearchInput from '../../components/LocationSearchInput';
+import api from '../../lib/api';
+import './Hotels.css';
 
 const GuideHotel = () => {
   const [myHotels, setMyHotels] = useState([]);
@@ -380,7 +405,7 @@ const GuideHotel = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       {/* Header with Stats */}
-      <div className="bg-gradient-to-r from-purple-600 via-purple-700 to-pink-600 text-white shadow-xl">
+      <div className="hotels-header text-white shadow-xl">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
@@ -388,79 +413,86 @@ const GuideHotel = () => {
                 <HotelIcon className="w-10 h-10" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold flex items-center gap-3">
+                <h1 className="text-3xl font-bold" style={{ color: 'white' }}>
                   Hotel Management
-                  <Sparkles className="w-6 h-6 text-yellow-300 animate-pulse" />
                 </h1>
-                <p className="text-purple-100 mt-1">Manage your premium properties</p>
+                <p className="text-white text-opacity-90 mt-1">Manage your premium properties</p>
               </div>
             </div>
             <button 
               onClick={() => setActiveTab('create')}
-              className="bg-white text-purple-600 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
+              className="px-6 py-3 rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg flex items-center gap-2"
+              style={{ backgroundColor: 'white', color: '#dc2626', border: 'none' }}
             >
               <Plus className="w-5 h-5" />
               Add New Hotel
             </button>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-            <div className="bg-white bg-opacity-20 backdrop-blur-md rounded-xl p-4 border border-white border-opacity-30">
-              <div className="flex items-center gap-2 mb-2">
-                <Building2 className="w-5 h-5 text-yellow-300" />
-                <p className="text-xs text-purple-100">Total Hotels</p>
-              </div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-            </div>
-            <div className="bg-white bg-opacity-20 backdrop-blur-md rounded-xl p-4 border border-white border-opacity-30">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="w-5 h-5 text-green-300" />
-                <p className="text-xs text-purple-100">Approved</p>
-              </div>
-              <p className="text-2xl font-bold">{stats.approved}</p>
-            </div>
-            <div className="bg-white bg-opacity-20 backdrop-blur-md rounded-xl p-4 border border-white border-opacity-30">
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="w-5 h-5 text-yellow-300" />
-                <p className="text-xs text-purple-100">Pending</p>
-              </div>
-              <p className="text-2xl font-bold">{stats.pending}</p>
-            </div>
-            <div className="bg-white bg-opacity-20 backdrop-blur-md rounded-xl p-4 border border-white border-opacity-30">
-              <div className="flex items-center gap-2 mb-2">
-                <XCircle className="w-5 h-5 text-red-300" />
-                <p className="text-xs text-purple-100">Rejected</p>
-              </div>
-              <p className="text-2xl font-bold">{stats.rejected}</p>
-            </div>
-            <div className="bg-white bg-opacity-20 backdrop-blur-md rounded-xl p-4 border border-white border-opacity-30">
-              <div className="flex items-center gap-2 mb-2">
-                <Eye className="w-5 h-5 text-blue-300" />
-                <p className="text-xs text-purple-100">Total Views</p>
-              </div>
-              <p className="text-2xl font-bold">{stats.totalViews}</p>
-            </div>
-            <div className="bg-white bg-opacity-20 backdrop-blur-md rounded-xl p-4 border border-white border-opacity-30">
-              <div className="flex items-center gap-2 mb-2">
-                <Star className="w-5 h-5 text-yellow-300" />
-                <p className="text-xs text-purple-100">Avg Rating</p>
-              </div>
-              <p className="text-2xl font-bold">{stats.averageRating}</p>
+          {/* Auto-Scrolling Stats Cards - Netflix Style */}
+          <div className="stats-carousel-container">
+            <div className="stats-carousel">
+              {/* Duplicate stats for infinite scroll effect */}
+              {[...Array(2)].map((_, setIndex) => (
+                <div key={setIndex} className="flex gap-4">
+                  <div className="stat-card rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Building2 className="w-5 h-5 text-red-600" />
+                      <p className="text-xs text-gray-600">Total Hotels</p>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                  </div>
+                  <div className="stat-card rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <p className="text-xs text-gray-600">Approved</p>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.approved}</p>
+                  </div>
+                  <div className="stat-card rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-5 h-5 text-yellow-600" />
+                      <p className="text-xs text-gray-600">Pending</p>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
+                  </div>
+                  <div className="stat-card rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <XCircle className="w-5 h-5 text-red-600" />
+                      <p className="text-xs text-gray-600">Rejected</p>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.rejected}</p>
+                  </div>
+                  <div className="stat-card rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Eye className="w-5 h-5 text-blue-600" />
+                      <p className="text-xs text-gray-600">Total Views</p>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.totalViews}</p>
+                  </div>
+                  <div className="stat-card rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Star className="w-5 h-5 text-yellow-600" />
+                      <p className="text-xs text-gray-600">Avg Rating</p>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.averageRating}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="max-w-7xl mx-auto px-6 mt-6">
-        <div className="bg-white rounded-xl shadow-lg p-2 flex gap-2">
+      <div className="w-full mt-6">
+        <div className="tab-navigation" style={{ padding: '0.5rem' }}>
           <button
             onClick={() => setActiveTab('list')}
-            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+            className={`rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
               activeTab === 'list' 
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md transform scale-105' 
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'tab-active text-white shadow-md transform scale-105' 
+                : 'text-gray-600 hover:bg-gray-50 bg-white shadow'
             }`}
           >
             <Building2 className="w-5 h-5" />
@@ -468,10 +500,10 @@ const GuideHotel = () => {
           </button>
           <button
             onClick={() => setActiveTab('create')}
-            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+            className={`rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
               activeTab === 'create' 
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md transform scale-105' 
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'tab-active text-white shadow-md transform scale-105' 
+                : 'text-gray-600 hover:bg-gray-50 bg-white shadow'
             }`}
           >
             <Plus className="w-5 h-5" />
@@ -534,7 +566,7 @@ const GuideHotel = () => {
                 )}
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="hotels-grid-scroll grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredHotels.map(h => (
                   <div key={h._id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all transform hover:-translate-y-1 group">
                     {/* Hotel Image */}

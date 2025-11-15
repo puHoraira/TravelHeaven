@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Loader2, X } from 'lucide-react';
+import { Loader2, MapPin, Search, X } from 'lucide-react';
+import { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import './LocationSearchInput.css';
 
 /**
  * LocationSearchInput Component
@@ -174,7 +175,7 @@ export default function LocationSearchInput({ onLocationSelect, placeholder = "S
     <div className="relative">
       {/* Search Input */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+        <Search className="search-icon absolute left-3 top-1/2 transform -translate-y-1/2" size={20} />
         <input
           type="text"
           value={searchQuery}
@@ -185,11 +186,11 @@ export default function LocationSearchInput({ onLocationSelect, placeholder = "S
             }
           }}
           placeholder={placeholder}
-          className="input pl-10 pr-10 w-full border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+          className="location-search-input input pl-10 pr-10 w-full"
         />
         {searching && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            <Loader2 className="text-blue-500 animate-spin" size={20} />
+            <Loader2 className="search-loading animate-spin" size={20} />
           </div>
         )}
         {!searching && searchQuery && (
@@ -199,7 +200,7 @@ export default function LocationSearchInput({ onLocationSelect, placeholder = "S
               setSearchResults([]);
               setShowResults(false);
             }}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-1"
+            className="clear-button absolute right-3 top-1/2 transform -translate-y-1/2 hover:bg-gray-100 rounded-full p-1"
             title="Clear search"
           >
             <X size={18} />
@@ -209,7 +210,7 @@ export default function LocationSearchInput({ onLocationSelect, placeholder = "S
 
       {/* Searching indicator below input */}
       {searching && (
-        <div className="mt-2 text-sm text-blue-600 animate-pulse flex items-center gap-2">
+        <div className="searching-text mt-2 text-sm animate-pulse flex items-center gap-2">
           <Loader2 className="animate-spin" size={16} />
           <span>Searching for "{searchQuery}"...</span>
         </div>
@@ -217,9 +218,9 @@ export default function LocationSearchInput({ onLocationSelect, placeholder = "S
 
       {/* Search Results Dropdown */}
       {showResults && searchResults.length > 0 && (
-        <div className="absolute z-[9999] w-full mt-2 bg-white rounded-lg shadow-2xl border-2 border-blue-300 max-h-80 overflow-y-auto">
-          <div className="sticky top-0 bg-blue-50 px-4 py-2 border-b border-blue-200">
-            <p className="text-xs font-semibold text-blue-900">
+        <div className="search-results-dropdown absolute z-[9999] w-full mt-2 rounded-lg shadow-2xl max-h-80 overflow-y-auto">
+          <div className="results-header sticky top-0 px-4 py-2 border-b">
+            <p className="text-xs font-semibold">
               ✨ {searchResults.length} location{searchResults.length > 1 ? 's' : ''} found - Click to select
             </p>
           </div>
@@ -227,7 +228,7 @@ export default function LocationSearchInput({ onLocationSelect, placeholder = "S
             <button
               key={result.id}
               onClick={() => handleSelectLocation(result)}
-              className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors focus:bg-blue-100 focus:outline-none"
+              className="result-item w-full px-4 py-3 text-left transition-colors focus:outline-none"
             >
               <div className="flex items-start gap-3">
                 <span className="text-2xl flex-shrink-0">{result.icon}</span>
@@ -253,7 +254,7 @@ export default function LocationSearchInput({ onLocationSelect, placeholder = "S
 
       {/* No results message */}
       {showResults && searchResults.length === 0 && searchQuery.length >= 2 && !searching && (
-        <div className="absolute z-[9999] w-full mt-2 bg-white rounded-lg shadow-2xl border-2 border-orange-300 p-4 text-center">
+        <div className="no-results absolute z-[9999] w-full mt-2 rounded-lg p-4 text-center">
           <p className="text-orange-600 font-semibold">⚠️ No locations found</p>
           <p className="text-sm text-gray-500 mt-1">
             Try: "{searchQuery} city" or a nearby landmark

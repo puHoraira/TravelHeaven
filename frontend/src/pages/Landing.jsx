@@ -1,11 +1,12 @@
+import { Briefcase, Bus, Heart, Hotel, MapPin, Shield, Star, TrendingUp, UserCircle, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { MapPin, Hotel, Bus, Users, Star, TrendingUp, Shield, Heart, Briefcase, UserCircle } from 'lucide-react';
+import './Landing.css';
 
 const Landing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Header with Navigation */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
+      <header className="bg-white shadow-sm sticky top-0 z-50 header-nav">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -50,15 +51,15 @@ const Landing = () => {
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+          <h1 className="hero-title text-5xl font-bold text-gray-900 mb-6">
             Your Journey Starts Here
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+          <p className="hero-subtitle text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Discover amazing destinations, plan your perfect trip, and connect with expert travel guides. 
             Travel Heaven makes your travel dreams come true.
           </p>
           
-          <div className="mt-10 flex flex-col items-center gap-4">
+          <div className="hero-cta mt-10 flex flex-col items-center gap-4">
             <p className="text-gray-600 text-lg">
               Join our community to explore destinations, collaborate with guides, and plan unforgettable trips.
             </p>
@@ -73,13 +74,14 @@ const Landing = () => {
       </section>
 
       {/* Features Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+      <section className="features-section max-w-full py-16 overflow-hidden">
+        <h2 className="section-header text-3xl font-bold text-center text-gray-900 mb-12 px-4">
           What Travel Heaven Offers
         </h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+        <div className="features-container">
+          {/* First set of cards */}
+          <div className="feature-card">
+            <div className="feature-icon w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
               <MapPin className="w-6 h-6 text-blue-600" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -90,8 +92,8 @@ const Landing = () => {
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+          <div className="feature-card">
+            <div className="feature-icon w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
               <Hotel className="w-6 h-6 text-green-600" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -102,8 +104,8 @@ const Landing = () => {
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+          <div className="feature-card">
+            <div className="feature-icon w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
               <Bus className="w-6 h-6 text-purple-600" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -114,8 +116,57 @@ const Landing = () => {
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+          <div className="feature-card">
+            <div className="feature-icon w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
+              <Users className="w-6 h-6 text-orange-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Expert Guides
+            </h3>
+            <p className="text-gray-600">
+              Connect with verified travel guides and plan your perfect itinerary.
+            </p>
+          </div>
+
+          {/* Duplicate set for infinite loop effect */}
+          <div className="feature-card">
+            <div className="feature-icon w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+              <MapPin className="w-6 h-6 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Amazing Locations
+            </h3>
+            <p className="text-gray-600">
+              Discover curated travel destinations from experienced guides around the world.
+            </p>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+              <Hotel className="w-6 h-6 text-green-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Best Hotels
+            </h3>
+            <p className="text-gray-600">
+              Find the perfect accommodation with verified reviews and ratings.
+            </p>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+              <Bus className="w-6 h-6 text-purple-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Easy Transportation
+            </h3>
+            <p className="text-gray-600">
+              Access comprehensive transportation options for seamless travel.
+            </p>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-4">
               <Users className="w-6 h-6 text-orange-600" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -131,11 +182,11 @@ const Landing = () => {
       {/* Benefits Section */}
       <section className="bg-blue-600 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">
+          <h2 className="section-header text-3xl font-bold text-center mb-12">
             Why Choose Travel Heaven?
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
+            <div className="benefit-item text-center">
               <Star className="w-12 h-12 mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">Verified Reviews</h3>
               <p className="text-blue-100">
@@ -143,7 +194,7 @@ const Landing = () => {
               </p>
             </div>
 
-            <div className="text-center">
+            <div className="benefit-item text-center">
               <TrendingUp className="w-12 h-12 mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">Trip Planning</h3>
               <p className="text-blue-100">
@@ -151,7 +202,7 @@ const Landing = () => {
               </p>
             </div>
 
-            <div className="text-center">
+            <div className="benefit-item text-center">
               <Shield className="w-12 h-12 mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">Trusted Platform</h3>
               <p className="text-blue-100">
@@ -164,12 +215,12 @@ const Landing = () => {
 
       {/* How It Works Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+        <h2 className="section-header text-3xl font-bold text-center text-gray-900 mb-12">
           How It Works
         </h2>
         <div className="grid md:grid-cols-3 gap-8">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+          <div className="how-it-works-step text-center">
+            <div className="step-number w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
               1
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -180,8 +231,8 @@ const Landing = () => {
             </p>
           </div>
 
-          <div className="text-center">
-            <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+          <div className="how-it-works-step text-center">
+            <div className="step-number w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
               2
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -192,8 +243,8 @@ const Landing = () => {
             </p>
           </div>
 
-          <div className="text-center">
-            <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+          <div className="how-it-works-step text-center">
+            <div className="step-number w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
               3
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -218,7 +269,7 @@ const Landing = () => {
           </p>
           <Link
             to="/register"
-            className="inline-block px-8 py-3 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-medium text-lg shadow-lg"
+            className="cta-button inline-block px-8 py-3 rounded-lg font-medium text-lg shadow-lg"
           >
             Create Account
           </Link>

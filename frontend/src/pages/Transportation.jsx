@@ -1,30 +1,30 @@
-import { useState, useCallback, useEffect } from 'react';
-import { 
-  MapPin, 
-  Navigation, 
-  Search, 
-  Bus, 
-  Train, 
-  Car, 
-  Plane,
-  Ship,
+import {
   AlertCircle,
-  ExternalLink,
-  Phone,
-  Star,
-  Clock,
-  DollarSign,
-  Users,
-  Wifi,
-  Coffee,
-  Zap,
-  Wind,
+  Bus,
+  Car,
   CheckCircle,
+  Clock,
+  Coffee,
+  DollarSign,
+  ExternalLink,
   Info,
-  TrendingUp
+  MapPin,
+  Navigation,
+  Phone,
+  Plane,
+  Search,
+  Ship,
+  Star,
+  Train,
+  TrendingUp,
+  Wifi,
+  Wind,
+  Zap
 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
+import './Transportation.css';
 
 const TransportIcon = ({ type }) => {
   const icons = {
@@ -74,13 +74,13 @@ const TransportSearchDialog = ({ onSearch }) => {
   };
 
   return (
-    <div className="card space-y-4">
+    <div className="card transport-search space-y-4">
       <div className="flex items-center gap-2">
         <Navigation className="h-5 w-5 text-blue-600" />
         <h2 className="text-xl font-bold">Find Transport Routes</h2>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             From Location
@@ -356,7 +356,7 @@ const PopularRoutes = () => {
   if (popular.length === 0) return null;
 
   return (
-    <div className="card">
+    <div className="card popular-routes">
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="h-5 w-5 text-orange-500" />
         <h2 className="text-xl font-bold">Popular Routes</h2>
@@ -440,8 +440,15 @@ const EnhancedTransportation = () => {
         </p>
       </div>
 
-      {/* Search */}
-      <TransportSearchDialog onSearch={handleSearch} />
+      {/* Search and Popular Routes Side by Side */}
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <TransportSearchDialog onSearch={handleSearch} />
+        </div>
+        <div className="lg:col-span-1">
+          <PopularRoutes />
+        </div>
+      </div>
 
       {/* View Toggle */}
       {searchResults && (
@@ -469,38 +476,33 @@ const EnhancedTransportation = () => {
         </div>
       )}
 
-      {/* Popular Routes Sidebar */}
-      <div className="grid lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="spinner" />
-              <p className="mt-4 text-gray-600">Loading transportation...</p>
-            </div>
-          ) : displayTransports && displayTransports.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              {displayTransports.map((transport) => (
-                <TransportCard
-                  key={transport._id}
-                  transport={transport}
-                  onBook={handleBookClick}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="card text-center py-12">
-              <p className="text-gray-600">
-                {view === 'search'
-                  ? 'No routes found for your search. Try different locations.'
-                  : 'No transportation options available yet.'}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="lg:col-span-1">
-          <PopularRoutes />
-        </div>
+      {/* Transport Results */}
+      <div>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="spinner" />
+            <p className="mt-4 text-gray-600">Loading transportation...</p>
+          </div>
+        ) : displayTransports && displayTransports.length > 0 ? (
+          <div className="transport-grid">
+            {displayTransports.map((transport) => (
+              <TransportCard
+                key={transport._id}
+                transport={transport}
+                onBook={handleBookClick}
+                className="transport-card"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="card text-center py-12">
+            <p className="text-gray-600">
+              {view === 'search'
+                ? 'No routes found for your search. Try different locations.'
+                : 'No transportation options available yet.'}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

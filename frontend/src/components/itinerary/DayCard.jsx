@@ -1,6 +1,7 @@
-import { MapPin, Clock, FileText, Trash2, Edit, Plus } from 'lucide-react';
-import TransportSearchWidget from '../TransportSearchWidget';
+import { Clock, Edit, FileText, MapPin, Plus, Trash2 } from 'lucide-react';
 import HotelSearchWidget from '../HotelSearchWidget';
+import TransportSearchWidget from '../TransportSearchWidget';
+import './DayCard.css';
 
 /**
  * DayCard Component - Displays a single day in an itinerary
@@ -11,7 +12,7 @@ import HotelSearchWidget from '../HotelSearchWidget';
  * @param {Function} onRemoveStop - Callback when stop is removed
  * @param {boolean} editable - Whether the day can be edited
  */
-export default function DayCard({ day, dayNumber, onRemoveStop, onEditDay, onAddStop, editable = false }) {
+export default function DayCard({ day, dayNumber, onRemoveStop, onEditDay, onAddStop, editable = false, isActive }) {
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -32,114 +33,114 @@ export default function DayCard({ day, dayNumber, onRemoveStop, onEditDay, onAdd
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+    <div className={`day-card card bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden ${isActive ? 'day-card-active' : ''}`}>
       {/* Day Header */}
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4">
-        <div className="flex items-start justify-between">
+      <div className="day-card-header flex items-center justify-between p-4 rounded-t-lg text-white">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="day-number-badge text-2xl font-bold px-3 py-1 rounded-full flex-shrink-0">
+            {dayNumber}
+          </span>
           <div className="min-w-0">
-            {/* Day number + title */}
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/20">
-                Day {dayNumber}
-              </span>
-              <h3 className="text-xl font-bold truncate">
-                {day?.title || `Day ${dayNumber}`}
-              </h3>
-            </div>
+            <h3 className="day-card-title text-xl font-bold truncate">
+              {day.title || `Day ${dayNumber}`}
+            </h3>
             {/* Description (separate line) */}
             {day?.description && (
-              <p className="text-blue-100 text-sm mt-1 line-clamp-1">
+              <p className="text-white text-opacity-90 text-sm mt-1 line-clamp-1">
                 {day.description}
               </p>
             )}
             {day.date && (
-              <p className="text-blue-100 text-sm mt-1">{formatDate(day.date)}</p>
+              <p className="text-white text-opacity-90 text-sm">
+                {new Date(day.date).toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}
+              </p>
             )}
           </div>
-          {editable && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onEditDay?.(dayNumber - 1)}
-                className="p-1.5 hover:bg-white/20 rounded"
-                title="Edit day"
-              >
-                <Edit size={18} />
-              </button>
-              <button
-                onClick={() => onAddStop?.(dayNumber - 1)}
-                className="p-1.5 hover:bg-white/20 rounded"
-                title="Add stop"
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-          )}
         </div>
+        
+        {editable && (
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={() => onEditDay?.(dayNumber - 1)}
+              className="btn-secondary btn-sm flex items-center gap-1 p-1.5 hover:bg-white/20 rounded"
+              title="Edit day"
+            >
+              <Edit size={18} />
+              <span className="text-sm">Edit</span>
+            </button>
+            <button
+              onClick={() => onAddStop?.(dayNumber - 1)}
+              className="btn-secondary btn-sm flex items-center gap-1 p-1.5 hover:bg-white/20 rounded"
+              title="Add stop"
+            >
+              <Plus size={18} />
+              <span className="text-sm">Add Stop</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Stops List */}
-      <div className="p-4">
+      {/* Stops */}
+      <div className="p-4 space-y-3">
         {day.stops && day.stops.length > 0 ? (
-          <div className="space-y-3">
-            {day.stops.map((stop, index) => (
-              <div
-                key={stop._id || index}
-                className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                {/* Stop Number Badge */}
-                <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                  {index + 1}
-                </div>
-
-                {/* Stop Details */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="font-semibold text-gray-900">{stop.name || 'Unnamed Stop'}</h4>
-                    {editable && onRemoveStop && (
-                      <button
-                        onClick={() => onRemoveStop(dayNumber - 1, index)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                        title="Remove stop"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Stop Type Badge */}
-                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${getStopTypeColor(stop.type)}`}>
-                    {stop.type}
-                  </span>
-
-                  {/* Stop Time */}
-                  {stop.time && (
-                    <div className="flex items-center gap-1 text-sm text-gray-600 mt-2">
-                      <Clock size={14} />
-                      <span>{stop.time}</span>
-                    </div>
-                  )}
-
-                  {/* Stop Location */}
-                  {stop.coordinates && (
-                    <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
-                      <MapPin size={14} />
-                      <span>
-                        {stop.coordinates.lat.toFixed(4)}, {stop.coordinates.lng.toFixed(4)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Stop Notes */}
-                  {stop.notes && (
-                    <div className="flex items-start gap-1 text-sm text-gray-700 mt-2 bg-white p-2 rounded">
-                      <FileText size={14} className="mt-0.5 flex-shrink-0" />
-                      <span>{stop.notes}</span>
-                    </div>
-                  )}
-                </div>
+          day.stops.map((stop, index) => (
+            <div key={stop._id || index} className="stop-item flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                {index + 1}
               </div>
-            ))}
-          </div>
+              
+              {/* Stop Details */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="font-semibold text-gray-900">{stop.name || 'Unnamed Stop'}</h4>
+                  {editable && onRemoveStop && (
+                    <button
+                      onClick={() => onRemoveStop(dayNumber - 1, index)}
+                      className="text-red-500 hover:text-red-700 p-1"
+                      title="Remove stop"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Stop Type Badge */}
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${getStopTypeColor(stop.type)}`}>
+                  {stop.type}
+                </span>
+
+                {/* Stop Time */}
+                {stop.time && (
+                  <div className="flex items-center gap-1 text-sm text-gray-600 mt-2">
+                    <Clock size={14} />
+                    <span>{stop.time}</span>
+                  </div>
+                )}
+
+                {/* Stop Location */}
+                {stop.coordinates && (
+                  <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
+                    <MapPin size={14} />
+                    <span>
+                      {stop.coordinates.lat.toFixed(4)}, {stop.coordinates.lng.toFixed(4)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Stop Notes */}
+                {stop.notes && (
+                  <div className="flex items-start gap-1 text-sm text-gray-700 mt-2 bg-white p-2 rounded">
+                    <FileText size={14} className="mt-0.5 flex-shrink-0" />
+                    <span>{stop.notes}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
         ) : (
           <div className="text-center py-8 text-gray-500">
             <MapPin size={48} className="mx-auto mb-2 opacity-30" />
@@ -165,7 +166,6 @@ export default function DayCard({ day, dayNumber, onRemoveStop, onEditDay, onAdd
               const firstStop = day.stops[0];
               const lastStop = day.stops[day.stops.length - 1];
               
-              // Try to get coordinates from locationId.coordinates or customCoordinates
               const fromCoords = firstStop?.locationId?.coordinates 
                 ? [firstStop.locationId.coordinates.latitude, firstStop.locationId.coordinates.longitude]
                 : firstStop?.customCoordinates 
@@ -178,7 +178,7 @@ export default function DayCard({ day, dayNumber, onRemoveStop, onEditDay, onAdd
                 ? [lastStop.customCoordinates.latitude, lastStop.customCoordinates.longitude]
                 : null;
               
-              console.log('🗺️ DayCard passing coordinates:', {
+              console.log('🗺 DayCard passing coordinates:', {
                 from: firstStop?.locationId?.name || firstStop?.customName,
                 fromCoords,
                 fromLocation: firstStop?.locationId?.coordinates,
@@ -201,7 +201,7 @@ export default function DayCard({ day, dayNumber, onRemoveStop, onEditDay, onAdd
           </div>
         )}
 
-        {/* Hotel Suggestions - Show for each stop */}
+        {/* Hotel Suggestions */}
         {day.stops && day.stops.length > 0 && (
           <div className="mt-4 pt-4 border-t">
             <h4 className="font-medium text-gray-700 mb-3">Accommodation Options</h4>

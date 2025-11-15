@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import {
   BadgeCheck,
   CalendarCheck,
@@ -11,8 +10,10 @@ import {
   User as UserIcon,
   Users,
 } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
+import './Profile.css';
 
 const formatStatValue = (value) => {
   if (value === null || value === undefined) return '0';
@@ -85,47 +86,57 @@ const Profile = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary-600 to-blue-500 text-white shadow-lg">
-        <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -bottom-16 left-10 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative p-8 lg:p-12 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
-          <div className="flex items-start gap-6">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/20 backdrop-blur text-3xl font-semibold">
-              {initials || 'T'}
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <h1 className="text-3xl lg:text-4xl font-bold">{displayName}</h1>
-                {secondaryName && (
-                  <span className="text-xl font-medium text-white/80">{secondaryName}</span>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-3 text-white/80">
-                <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-sm font-medium">
-                  <Shield size={14} />
-                  {user.role}
-                </span>
-                {user.profile?.location && (
-                  <span className="inline-flex items-center gap-2">
-                    <Compass size={16} />
-                    {user.profile.location}
+      <section className="profile-header rounded-2xl overflow-hidden shadow-lg">
+        {/* Cover Photo */}
+        <div className="profile-cover">
+          <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-16 left-10 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+          
+          {/* Avatar positioned absolutely */}
+          <div className="profile-avatar flex items-center justify-center rounded-2xl font-bold">
+            {initials || 'T'}
+          </div>
+        </div>
+
+        {/* Profile Info Section (White Background) */}
+        <div className="profile-info-section">
+          <div className="profile-details">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-3xl lg:text-4xl font-bold text-gray-900">{displayName}</h1>
+                  {secondaryName && (
+                    <span className="text-xl font-medium text-gray-600">{secondaryName}</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-3 text-gray-600">
+                  <span className="role-badge inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium">
+                    <Shield size={14} />
+                    {user.role}
                   </span>
-                )}
-                {user.guideInfo?.verificationStatus && (
-                  <span className="inline-flex items-center gap-2">
-                    <BadgeCheck size={16} />
-                    {user.guideInfo.verificationStatus}
-                  </span>
-                )}
+                  {user.profile?.location && (
+                    <span className="inline-flex items-center gap-2">
+                      <Compass size={16} />
+                      {user.profile.location}
+                    </span>
+                  )}
+                  {user.guideInfo?.verificationStatus && (
+                    <span className="inline-flex items-center gap-2">
+                      <BadgeCheck size={16} />
+                      {user.guideInfo.verificationStatus}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          {/* Action Buttons */}
+          <div className="profile-actions flex flex-wrap gap-3">
             <button
               type="button"
               onClick={handleEditProfile}
-              className="btn btn-secondary flex items-center gap-2 bg-white/15 text-white hover:bg-white/25"
+              className="btn btn-secondary flex items-center gap-2"
             >
               <PenSquare size={16} />
               Edit Profile
@@ -152,13 +163,13 @@ const Profile = () => {
 
       <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
         {stats.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div key={label} className="stats-card rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">{label}</p>
                 <p className="mt-2 text-3xl font-semibold text-gray-900">{formatStatValue(value)}</p>
               </div>
-              <div className="rounded-full bg-primary-50 p-3 text-primary-600">
+              <div className="stats-icon rounded-full p-3">
                 <Icon size={24} />
               </div>
             </div>
@@ -167,13 +178,13 @@ const Profile = () => {
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
-        <div className="card">
+        <div className="info-card card">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">Personal Information</h2>
             <button
               type="button"
               onClick={handleEditProfile}
-              className="text-sm font-medium text-primary-600 hover:text-primary-700"
+              className="update-link text-sm font-medium"
             >
               Update
             </button>
@@ -184,7 +195,7 @@ const Profile = () => {
             ) : (
               personalDetails.map(({ label, value, icon: Icon }) => (
                 <div key={label} className="flex items-start gap-3">
-                  <div className="mt-0.5 rounded-lg bg-primary-50 p-2 text-primary-600">
+                  <div className="detail-icon mt-0.5 rounded-lg p-2">
                     <Icon size={16} />
                   </div>
                   <div>
@@ -197,19 +208,19 @@ const Profile = () => {
           </dl>
         </div>
 
-        <div className="card">
+        <div className="info-card card">
           <h2 className="mb-6 text-xl font-semibold text-gray-900">Account Highlights</h2>
           <ul className="space-y-4">
             <li className="flex items-center gap-3 text-gray-600">
-              <span className="h-2 w-2 rounded-full bg-primary-500" />
+              <span className="highlight-bullet h-2 w-2 rounded-full" />
               Keep your profile up to date so guides and admins can reach you quickly.
             </li>
             <li className="flex items-center gap-3 text-gray-600">
-              <span className="h-2 w-2 rounded-full bg-primary-500" />
+              <span className="highlight-bullet h-2 w-2 rounded-full" />
               Explore public itineraries and subscribe to stay inspired for your next trip.
             </li>
             <li className="flex items-center gap-3 text-gray-600">
-              <span className="h-2 w-2 rounded-full bg-primary-500" />
+              <span className="highlight-bullet h-2 w-2 rounded-full" />
               Access role-specific dashboards using the quick action buttons above.
             </li>
           </ul>
@@ -217,7 +228,7 @@ const Profile = () => {
       </section>
 
       {guideDetails.length > 0 && (
-        <section className="card">
+        <section className="guide-info-card card">
           <h2 className="mb-6 text-xl font-semibold text-gray-900">Guide Information</h2>
           <dl className="grid gap-4 md:grid-cols-2">
             {guideDetails.map(({ label, value }) => (

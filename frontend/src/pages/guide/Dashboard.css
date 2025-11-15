@@ -1,0 +1,177 @@
+/* Page Title */
+.dashboard-title {
+  background: linear-gradient(135deg, #b91c1c, #dc2626, #ef4444);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  position: relative;
+  display: inline-block;
+  animation: titleSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes titleSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Header Gradient - Red Theme */
+.dashboard-header {
+  background: linear-gradient(135deg, #7f1d1d, #991b1b, #b91c1c, #dc2626) !important;
+  animation: fadeIn 0.6s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Status Alert Cards */
+.status-alert-approved {
+  background: linear-gradient(145deg, rgba(220, 252, 231, 0.6), rgba(187, 247, 208, 0.5)) !important;
+  border: 1.5px solid rgba(34, 197, 94, 0.3);
+  animation: cardSlideIn 0.6s ease;
+}
+
+.status-alert-rejected {
+  background: linear-gradient(145deg, rgba(254, 226, 226, 0.6), rgba(254, 202, 202, 0.5)) !important;
+  border: 1.5px solid rgba(220, 38, 38, 0.3);
+  animation: cardSlideIn 0.6s ease;
+}
+
+.status-alert-pending {
+  background: linear-gradient(145deg, rgba(254, 243, 199, 0.6), rgba(253, 230, 138, 0.5)) !important;
+  border: 1.5px solid rgba(234, 179, 8, 0.3);
+  animation: cardSlideIn 0.6s ease;
+}
+
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Metric Cards */
+.metric-card {
+  background: linear-gradient(145deg, 
+    rgba(255, 255, 255, 0.95), 
+    rgba(255, 255, 255, 0.98)
+  ) !important;
+  backdrop-filter: blur(40px) !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.2);
+  box-shadow: 
+    0 8px 24px rgba(220, 38, 38, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  transition: all 0.3s ease;
+  animation: cardFadeIn 0.6s ease backwards;
+}
+
+.metric-card:nth-child(1) { animation-delay: 0.1s; }
+.metric-card:nth-child(2) { animation-delay: 0.2s; }
+.metric-card:nth-child(3) { animation-delay: 0.3s; }
+.metric-card:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.metric-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 50px rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Content Cards */
+.content-card {
+  background: linear-gradient(145deg, 
+    rgba(255, 255, 255, 0.95), 
+    rgba(255, 255, 255, 0.98)
+  ) !important;
+  backdrop-filter: blur(40px) !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.2);
+  box-shadow: 
+    0 8px 24px rgba(220, 38, 38, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  transition: all 0.3s ease;
+}
+
+.content-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(220, 38, 38, 0.25);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #7f1d1d, #991b1b, #b91c1c) !important;
+  color: white !important;
+  border: 1px solid rgba(127, 29, 29, 0.5);
+  box-shadow: 
+    0 4px 12px rgba(127, 29, 29, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #991b1b, #b91c1c, #dc2626) !important;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 20px rgba(127, 29, 29, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(220, 38, 38, 0.3);
+  color: #dc2626 !important;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(220, 38, 38, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+/* Section Headers */
+.section-header {
+  color: #1f2937;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.section-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #dc2626, transparent);
+  border-radius: 2px;
+}
+
+/* Icons */
+.icon-red {
+  color: #dc2626 !important;
+}

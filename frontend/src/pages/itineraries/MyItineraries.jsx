@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Calendar, MapPin, Users, Globe, Lock, TrendingUp } from 'lucide-react';
+import { Calendar, Globe, Lock, MapPin, Plus, TrendingUp, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 import api from '../../lib/api';
+import './MyItineraries.css';
 
 /**
  * MyItineraries Page - Display user's created and collaborated itineraries
@@ -61,7 +62,7 @@ export default function MyItineraries() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="spinner"></div>
       </div>
     );
   }
@@ -71,8 +72,8 @@ export default function MyItineraries() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">My Itineraries</h1>
-          <p className="text-gray-600 mt-1">Plan and manage your travel adventures</p>
+          <h1 className="my-itineraries-title text-3xl font-bold">My Itineraries</h1>
+          <p className="page-subtitle text-gray-600 mt-1">Plan and manage your travel adventures</p>
         </div>
         <Link
           to="/itineraries/create"
@@ -85,7 +86,7 @@ export default function MyItineraries() {
 
       {/* Itineraries Grid */}
       {itineraries.length === 0 ? (
-        <div className="card text-center py-12">
+        <div className="empty-state-card card text-center py-12">
           <Calendar size={64} className="mx-auto mb-4 text-gray-400" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No itineraries yet</h3>
           <p className="text-gray-600 mb-6">Start planning your next adventure!</p>
@@ -95,7 +96,7 @@ export default function MyItineraries() {
           </Link>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="itineraries-grid-scroll">
           {itineraries.map((itinerary) => {
             const totalStops = itinerary.days?.reduce((sum, day) => sum + (day.stops?.length || 0), 0) || 0;
             
@@ -103,11 +104,11 @@ export default function MyItineraries() {
               <Link
                 key={itinerary._id}
                 to={`/itineraries/${itinerary._id}`}
-                className="card hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                className="itinerary-card card"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-xl font-bold text-gray-900 flex-1 line-clamp-2">
+                  <h3 className="text-xl font-bold flex-1 line-clamp-2">
                     {itinerary.title}
                   </h3>
                   {itinerary.isPublic ? (
@@ -154,16 +155,20 @@ export default function MyItineraries() {
 
                 {/* Status Badge */}
                 <div className="flex items-center justify-between">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusBadge(itinerary.status)}`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
+                    itinerary.status === 'planning' ? 'status-badge-planning' :
+                    itinerary.status === 'active' ? 'status-badge-active' :
+                    'status-badge-completed'
+                  }`}>
                     {itinerary.status}
                   </span>
                   
                   {/* Completeness Progress */}
                   {itinerary.completeness !== undefined && (
                     <div className="flex items-center gap-2">
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
+                      <div className="progress-bar-bg w-24 rounded-full h-2">
                         <div
-                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          className="progress-bar-fill h-2 rounded-full transition-all"
                           style={{ width: `${itinerary.completeness}%` }}
                         />
                       </div>

@@ -1,18 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
-import toast from 'react-hot-toast';
 import {
-  Search,
-  MapPin,
-  Star,
-  DollarSign,
-  RefreshCcw,
   Building2,
-  Phone,
+  DollarSign,
   Globe,
   Mail,
+  MapPin,
+  Phone,
+  RefreshCcw,
+  Search,
+  Star,
 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
+import './Hotels.css';
 
 const formatPriceRange = (priceRange) => {
   if (!priceRange) return 'Pricing unavailable';
@@ -100,7 +101,7 @@ const Hotels = () => {
         </p>
       </div>
 
-      <div className="card">
+      <div className="card hotels-filters">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="relative md:col-span-2">
             <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
@@ -155,7 +156,7 @@ const Hotels = () => {
         </div>
       ) : (
         <>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="hotels-grid">
             {filteredHotels.map((hotel) => {
               const coverImage = hotel.images?.[0]?.url;
               const city = hotel.address?.city || hotel.locationId?.city;
@@ -168,7 +169,7 @@ const Hotels = () => {
                 : 'border-amber-100 bg-amber-50 text-amber-700';
 
               return (
-                <div key={hotel._id} className="card flex h-full flex-col gap-4">
+                <div key={hotel._id} className="hotel-card card flex h-full flex-col gap-4">
                   {coverImage && (
                     <Link to={`/hotels/${hotel._id}`}>
                       <img
@@ -273,7 +274,7 @@ const Hotels = () => {
                     key={page}
                     type="button"
                     onClick={() => fetchHotels(page)}
-                    className={`rounded px-4 py-2 text-sm ${
+                    className={`pagination-button rounded px-4 py-2 text-sm ${
                       pagination.page === page
                         ? 'bg-blue-600 text-white'
                         : 'bg-white text-gray-700 hover:bg-gray-100'

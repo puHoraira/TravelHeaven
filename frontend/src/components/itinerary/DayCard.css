@@ -1,0 +1,81 @@
+/* Day Card - Red Theme */
+.day-card {
+  background: linear-gradient(145deg, 
+    rgba(255, 255, 255, 0.95), 
+    rgba(255, 255, 255, 0.98)
+  ) !important;
+  backdrop-filter: blur(40px) !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.2);
+  box-shadow: 
+    0 8px 24px rgba(220, 38, 38, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  transition: all 0.3s ease;
+}
+
+.day-card:hover {
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 12px 32px rgba(220, 38, 38, 0.25);
+}
+
+/* Active Day Card - White Outline */
+.day-card.day-card-active {
+  outline: 4px solid rgba(255, 255, 255, 0.9) !important;
+  outline-offset: 2px;
+  border-radius: 1rem;
+  box-shadow: 
+    0 12px 32px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 1) !important;
+}
+
+/* Day Card Header */
+.day-card-header {
+  background: linear-gradient(135deg, #7f1d1d, #991b1b, #b91c1c, #dc2626) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.day-card-title {
+  color: white !important;
+}
+
+/* Day Number Badge */
+.day-number-badge {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white !important;
+}
+
+/* Stop Items */
+.stop-item {
+  background: linear-gradient(145deg, 
+    rgba(254, 226, 226, 0.15), 
+    rgba(254, 202, 202, 0.1)
+  ) !important;
+  border: 1px solid rgba(220, 38, 38, 0.1);
+  transition: all 0.3s ease;
+}
+
+.stop-item:hover {
+  background: linear-gradient(145deg, 
+    rgba(254, 226, 226, 0.25), 
+    rgba(254, 202, 202, 0.15)
+  ) !important;
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+/* Stop Type Icons */
+.stop-icon {
+  color: #dc2626 !important;
+}
+
+/* Edit/Add Buttons */
+.day-card .btn-secondary {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white !important;
+}
+
+.day-card .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.5);
+}

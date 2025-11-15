@@ -1,9 +1,10 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, DollarSign, Globe, Mail, MapPin, Phone, Star } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { MapPin, Star, DollarSign, Phone, Mail, Globe, ArrowLeft } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
+import './HotelDetail.css';
 
 const formatAddress = (hotel) => {
   const a = hotel.address || hotel.locationId || {};

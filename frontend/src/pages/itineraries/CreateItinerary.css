@@ -1,0 +1,277 @@
+/* Main Cards - Red Theme */
+.create-itinerary-card {
+  background: linear-gradient(145deg, 
+    rgba(255, 255, 255, 0.95), 
+    rgba(255, 255, 255, 0.98)
+  ) !important;
+  backdrop-filter: blur(40px) !important;
+  border: 1.5px solid rgba(239, 68, 68, 0.2);
+  box-shadow: 
+    0 8px 24px rgba(220, 38, 38, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  transition: all 0.3s ease;
+  animation: cardFadeIn 0.6s ease backwards;
+}
+
+.create-itinerary-card:nth-child(1) { animation-delay: 0.1s; }
+.create-itinerary-card:nth-child(2) { animation-delay: 0.2s; }
+.create-itinerary-card:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Page Title */
+.create-itinerary-title {
+  background: linear-gradient(135deg, #b91c1c, #dc2626, #ef4444);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  position: relative;
+  display: inline-block;
+  animation: titleSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.create-itinerary-title::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 100px;
+  height: 3px;
+  background: linear-gradient(90deg, #dc2626, transparent);
+  border-radius: 2px;
+}
+
+@keyframes titleSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Section Headers */
+.section-header-red {
+  color: #1f2937;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.section-header-red::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #dc2626, transparent);
+  border-radius: 2px;
+}
+
+.section-header-red svg {
+  color: #dc2626 !important;
+}
+
+/* Input Fields - Red Theme */
+.create-itinerary-card input.input,
+.create-itinerary-card select.input,
+.create-itinerary-card textarea.input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(220, 38, 38, 0.3);
+  color: #1f2937;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 2px 8px rgba(220, 38, 38, 0.1),
+    inset 2px 0 0 0 #dc2626;
+}
+
+.create-itinerary-card input.input:focus,
+.create-itinerary-card select.input:focus,
+.create-itinerary-card textarea.input:focus {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(220, 38, 38, 0.6);
+  box-shadow: 
+    0 4px 16px rgba(220, 38, 38, 0.25),
+    0 0 0 3px rgba(220, 38, 38, 0.1),
+    inset 4px 0 0 0 #b91c1c;
+  outline: none;
+  transform: translateY(-2px);
+}
+
+/* Day Cards */
+.day-card {
+  background: linear-gradient(145deg, 
+    rgba(249, 250, 251, 0.95), 
+    rgba(255, 255, 255, 0.98)
+  ) !important;
+  border: 1.5px solid rgba(220, 38, 38, 0.2);
+  transition: all 0.3s ease;
+}
+
+.day-card:hover {
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.2);
+  border-color: rgba(220, 38, 38, 0.4);
+}
+
+/* Stop Cards */
+.stop-card {
+  background: white !important;
+  border: 1.5px solid rgba(220, 38, 38, 0.15);
+  transition: all 0.3s ease;
+}
+
+.stop-card:hover {
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+/* Stop Number Badge */
+.stop-number {
+  background: linear-gradient(135deg, #b91c1c, #dc2626) !important;
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.4);
+  transition: all 0.3s ease;
+}
+
+.stop-card:hover .stop-number {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(185, 28, 28, 0.6);
+}
+
+/* Buttons - Red Theme */
+.btn-primary {
+  background: linear-gradient(135deg, #7f1d1d, #991b1b, #b91c1c) !important;
+  color: white !important;
+  border: 1px solid rgba(127, 29, 29, 0.5);
+  box-shadow: 
+    0 4px 12px rgba(127, 29, 29, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  border-radius: 1.5rem !important;
+  padding: 0.75rem 2rem !important;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #991b1b, #b91c1c, #dc2626) !important;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 20px rgba(127, 29, 29, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* All Secondary Buttons including Add buttons */
+.btn-secondary,
+button.btn-secondary,
+.day-card button,
+.day-card .btn-secondary {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(220, 38, 38, 0.3) !important;
+  color: #dc2626 !important;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border-radius: 1.5rem !important;
+  padding: 0.75rem 2rem !important;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2) !important;
+}
+
+.btn-secondary:hover,
+button.btn-secondary:hover,
+.day-card button:hover,
+.day-card .btn-secondary:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(220, 38, 38, 0.5) !important;
+  color: #dc2626 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3) !important;
+}
+
+/* Small Button Variants */
+.btn-sm {
+  padding: 0.5rem 1rem !important;
+  font-size: 0.875rem !important;
+  border-radius: 1rem !important;
+}
+
+/* Back Link */
+.back-link {
+  color: #dc2626 !important;
+  transition: all 0.3s ease;
+}
+
+.back-link:hover {
+  color: #b91c1c !important;
+  transform: translateX(-4px);
+}
+
+/* Modal */
+.location-modal {
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-header {
+  background: linear-gradient(135deg, #b91c1c, #dc2626, #ef4444) !important;
+}
+
+/* Info Banners */
+.info-banner-blue {
+  background: linear-gradient(145deg, 
+    rgba(219, 234, 254, 0.6), 
+    rgba(191, 219, 254, 0.5)
+  ) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.info-banner-green {
+  background: linear-gradient(145deg, 
+    rgba(220, 252, 231, 0.6), 
+    rgba(187, 247, 208, 0.5)
+  ) !important;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+/* Remove Button */
+.remove-button {
+  color: #dc2626;
+  transition: all 0.3s ease;
+}
+
+.remove-button:hover {
+  color: #b91c1c;
+  transform: scale(1.1);
+}
+
+/* Map Container */
+.map-container {
+  border: 2px solid rgba(220, 38, 38, 0.2);
+  border-radius: 1rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.map-container:hover {
+  border-color: rgba(220, 38, 38, 0.4);
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.2);
+}

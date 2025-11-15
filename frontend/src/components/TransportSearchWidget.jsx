@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { 
-  Search, 
-  MapPin, 
-  Bus, 
-  AlertCircle, 
-  ExternalLink, 
-  Phone, 
+import {
+  AlertCircle,
+  Bus,
+  ExternalLink,
   Loader2,
-  Navigation
+  MapPin,
+  Navigation,
+  Phone,
+  Search
 } from 'lucide-react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 
@@ -20,6 +20,7 @@ const TransportSearchWidget = ({ from, to, fromCoords, toCoords, onSelectTranspo
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [isClicked, setIsClicked] = useState(false);
 
   const searchTransport = async () => {
     if (!from || !to) {
@@ -120,19 +121,28 @@ const TransportSearchWidget = ({ from, to, fromCoords, toCoords, onSelectTranspo
         
         {!expanded && (
           <button
-            onClick={searchTransport}
+            onClick={() => {
+              setIsClicked(true);
+              searchTransport();
+              setTimeout(() => setIsClicked(false), 300);
+            }}
             disabled={loading || !from || !to}
-            className="btn btn-sm bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+            className="btn btn-sm flex items-center gap-2"
+            style={{ 
+              backgroundColor: 'white',
+              color: '#dc2626',
+              border: '1.5px solid rgba(220, 38, 38, 0.3)'
+            }}
           >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Searching...
+                <Loader2 className="h-4 w-4 animate-spin" style={{ color: '#dc2626' }} />
+                <span style={{ color: '#dc2626' }}>Searching...</span>
               </>
             ) : (
               <>
-                <Search className="h-4 w-4" />
-                Search
+                <Search className="h-4 w-4" style={{ color: '#dc2626' }} />
+                <span style={{ color: '#dc2626' }}>Search</span>
               </>
             )}
           </button>
@@ -247,7 +257,8 @@ const TransportSearchWidget = ({ from, to, fromCoords, toCoords, onSelectTranspo
           
           <button
             onClick={() => setExpanded(false)}
-            className="text-sm text-blue-600 hover:underline w-full text-center pt-2"
+            className="text-sm hover:underline w-full text-center pt-2"
+            style={{ color: '#dc2626' }}
           >
             Hide Results
           </button>

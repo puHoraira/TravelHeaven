@@ -1,32 +1,33 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
-  Edit,
-  Users,
+  BookmarkCheck,
+  BookmarkPlus,
   Calendar,
-  MapPin,
+  Edit,
   Globe,
+  History,
+  Lightbulb,
+  Loader2,
   Lock,
-  Trash2,
+  MapPin,
+  MessageCircle,
   Plus,
   Save,
-  BookmarkPlus,
-  BookmarkCheck,
-  Loader2,
-  MessageCircle,
-  Lightbulb,
-  History,
   Send,
+  Trash2,
+  Users,
 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import AddDayModal from '../../components/itinerary/AddDayModal';
+import BudgetTracker from '../../components/itinerary/BudgetTracker';
+import CollaboratorsList from '../../components/itinerary/CollaboratorsList';
+import DayCard from '../../components/itinerary/DayCard';
+import MapView from '../../components/itinerary/MapView';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
-import MapView from '../../components/itinerary/MapView';
-import DayCard from '../../components/itinerary/DayCard';
-import CollaboratorsList from '../../components/itinerary/CollaboratorsList';
-import BudgetTracker from '../../components/itinerary/BudgetTracker';
-import AddDayModal from '../../components/itinerary/AddDayModal';
+import './ViewItinerary.css';
 
 /**
  * ViewItinerary Page - Display and edit itinerary details with interactive journey map
@@ -422,7 +423,7 @@ export default function ViewItinerary() {
   return (
     <div className="max-w-7xl mx-auto">
       {/* Back Button */}
-      <Link to="/itineraries" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-4">
+      <Link to="/itineraries" className="back-link inline-flex items-center gap-2 mb-4">
         <ArrowLeft size={20} />
         Back to My Itineraries
       </Link>
@@ -431,7 +432,7 @@ export default function ViewItinerary() {
         {/* Main Content - 2 columns */}
         <div className="lg:col-span-2 space-y-6">
           {/* Header Card */}
-          <div className="card">
+          <div className="view-itinerary-card card">
             {editing ? (
               <div className="space-y-4">
                 <div>
@@ -483,9 +484,9 @@ export default function ViewItinerary() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h1 className="text-3xl font-bold text-gray-900">{itinerary.title}</h1>
+                      <h1 className="itinerary-title text-3xl font-bold">{itinerary.title}</h1>
                       {itinerary.isPublic ? (
-                        <Globe className="text-blue-600" title="Public" />
+                        <Globe className="icon-red" title="Public" />
                       ) : (
                         <Lock className="text-gray-400" title="Private" />
                       )}
@@ -500,7 +501,7 @@ export default function ViewItinerary() {
                       {itinerary.isPublic && !isOwner && (
                         <button
                           onClick={handleToggleSubscribe}
-                          className={`btn-secondary flex items-center gap-2 ${isSubscribed ? 'text-blue-600 hover:bg-blue-50' : ''}`}
+                          className={`btn-secondary flex items-center gap-2 ${isSubscribed ? 'btn-subscribed' : ''}`}
                           disabled={subscribeLoading}
                         >
                           {isSubscribed ? <BookmarkCheck size={16} /> : <BookmarkPlus size={16} />}
@@ -555,9 +556,9 @@ export default function ViewItinerary() {
                     </div>
                   )}
                   <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                    itinerary.status === 'active' ? 'bg-green-100 text-green-800' :
-                    itinerary.status === 'completed' ? 'bg-gray-100 text-gray-800' :
-                    'bg-blue-100 text-blue-800'
+                    itinerary.status === 'active' ? 'status-badge-active' :
+                    itinerary.status === 'completed' ? 'status-badge-completed' :
+                    'status-badge-planning'
                   }`}>
                     {itinerary.status}
                   </span>
@@ -566,10 +567,10 @@ export default function ViewItinerary() {
             )}
           </div>
 
-          {/* Days - move above map to avoid overlay/layout confusion */}
+          {/* Days */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">Day by Day</h2>
+              <h2 className="section-header-red text-2xl font-bold">Day by Day</h2>
               {canEdit && (
                 <button 
                   onClick={() => setShowAddDayModal(true)}
@@ -588,14 +589,12 @@ export default function ViewItinerary() {
                     key={day._id || index}
                     ref={(el) => (dayRefs.current[index] = el)}
                     onClick={() => setActiveDay(index)}
-                    className={`transition-all duration-300 ${
-                      activeDay === index ? 'ring-4 ring-blue-400 rounded-xl' : ''
-                    }`}
                   >
                     <DayCard
                       day={day}
                       dayNumber={index + 1}
                       editable={canEdit}
+                      isActive={activeDay === index}
                       onEditDay={(i) => openEditDay(i)}
                       onAddStop={(i) => openEditDay(i, { addStop: true })}
                     />
@@ -611,13 +610,13 @@ export default function ViewItinerary() {
             )}
           </div>
 
-          {/* Map View - Interactive Journey Map (moved below) */}
-          <div className="card">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <MapPin className="text-blue-600" />
+          {/* Map View */}
+          <div className="view-itinerary-card card">
+            <h2 className="section-header-red text-xl font-bold mb-4 flex items-center gap-2">
+              <MapPin />
               Your Journey on Map
             </h2>
-            <div className="relative z-0">
+            <div className="map-container relative z-0">
               <MapView 
                 days={itinerary.days || []} 
                 activeDay={activeDay}
@@ -652,7 +651,7 @@ export default function ViewItinerary() {
           </div>
         </div>
 
-        {/* Sidebar - 1 column */}
+        {/* Sidebar */}
         <div className="space-y-6">
           {/* Budget Tracker */}
           {itinerary.budget && (
@@ -670,7 +669,7 @@ export default function ViewItinerary() {
             onRemove={handleRemoveCollaborator}
           />
 
-          <div className="card">
+          <div className="view-itinerary-card card">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Collaboration Activity</h3>
               {activityLog.length > 0 && (
@@ -742,9 +741,9 @@ export default function ViewItinerary() {
                         : 'text-purple-500';
                   const badgeClass =
                     entry.type === 'suggestion'
-                      ? 'bg-amber-50 text-amber-700'
+                      ? 'activity-badge-suggestion'
                       : entry.type === 'comment'
-                        ? 'bg-blue-50 text-blue-700'
+                        ? 'activity-badge-comment'
                         : 'bg-purple-50 text-purple-700';
 
                   const icon =
@@ -757,7 +756,7 @@ export default function ViewItinerary() {
                     );
 
                   return (
-                    <div key={entryKey} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                    <div key={entryKey} className="activity-item rounded-lg p-3">
                       <div className="flex items-center justify-between text-xs text-gray-500">
                         <div className="inline-flex items-center gap-2">
                           {icon}
@@ -780,9 +779,9 @@ export default function ViewItinerary() {
 
           {/* Completeness Score */}
           {itinerary.completeness !== undefined && (
-            <div className="card">
+            <div className="view-itinerary-card card">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Trip Completeness</h3>
-              <div className="text-center">
+              <div className="text-center completeness-circle">
                 <div className="relative inline-flex items-center justify-center w-32 h-32 mb-4">
                   <svg className="w-32 h-32 transform -rotate-90">
                     <circle
@@ -803,7 +802,7 @@ export default function ViewItinerary() {
                       fill="none"
                       strokeDasharray={`${2 * Math.PI * 56}`}
                       strokeDashoffset={`${2 * Math.PI * 56 * (1 - itinerary.completeness / 100)}`}
-                      className="text-blue-600 transition-all duration-1000"
+                      className="text-red-600 transition-all duration-1000"
                     />
                   </svg>
                   <span className="absolute text-3xl font-bold text-gray-900">

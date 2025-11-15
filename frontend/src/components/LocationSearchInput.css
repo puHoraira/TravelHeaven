@@ -1,0 +1,113 @@
+/* Search Input - Red Theme */
+.location-search-input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(220, 38, 38, 0.3) !important;
+  color: #1f2937;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 2px 8px rgba(220, 38, 38, 0.1),
+    inset 2px 0 0 0 #dc2626;
+}
+
+.location-search-input:focus {
+  background: rgba(255, 255, 255, 1) !important;
+  border-color: rgba(220, 38, 38, 0.6) !important;
+  box-shadow: 
+    0 4px 16px rgba(220, 38, 38, 0.25),
+    0 0 0 3px rgba(220, 38, 38, 0.1),
+    inset 4px 0 0 0 #b91c1c !important;
+  outline: none !important;
+  transform: translateY(-2px);
+}
+
+/* Search Icon */
+.search-icon {
+  color: #dc2626 !important;
+  transition: all 0.3s ease;
+}
+
+.location-search-input:focus ~ .search-icon {
+  color: #b91c1c !important;
+  transform: scale(1.1);
+}
+
+/* Loading Spinner */
+.search-loading {
+  color: #dc2626 !important;
+}
+
+/* Searching Indicator Text */
+.searching-text {
+  color: #6b7280 !important;
+}
+
+/* Results Dropdown */
+.search-results-dropdown {
+  background: white;
+  border: 2px solid rgba(220, 38, 38, 0.3) !important;
+  box-shadow: 0 12px 32px rgba(220, 38, 38, 0.2) !important;
+  animation: resultsSlideDown 0.3s ease;
+}
+
+@keyframes resultsSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Results Header */
+.results-header {
+  background: linear-gradient(145deg, 
+    rgba(254, 226, 226, 0.6), 
+    rgba(254, 202, 202, 0.5)
+  ) !important;
+  border-bottom: 1px solid rgba(220, 38, 38, 0.2);
+  color: #b91c1c !important;
+}
+
+/* Result Item */
+.result-item {
+  transition: all 0.3s ease;
+  border-bottom: 1px solid rgba(220, 38, 38, 0.1);
+}
+
+.result-item:hover {
+  background: linear-gradient(145deg, 
+    rgba(254, 226, 226, 0.3), 
+    rgba(254, 202, 202, 0.2)
+  ) !important;
+  transform: translateX(4px);
+}
+
+.result-item:focus {
+  background: linear-gradient(145deg, 
+    rgba(254, 226, 226, 0.5), 
+    rgba(254, 202, 202, 0.4)
+  ) !important;
+  outline: 2px solid rgba(220, 38, 38, 0.3);
+}
+
+/* No Results */
+.no-results {
+  background: white;
+  border: 2px solid rgba(234, 88, 12, 0.3);
+  box-shadow: 0 8px 20px rgba(234, 88, 12, 0.15);
+}
+
+/* Clear Button */
+.clear-button {
+  color: #dc2626;
+  transition: all 0.3s ease;
+}
+
+.clear-button:hover {
+  color: #b91c1c;
+  background: rgba(254, 226, 226, 0.5) !important;
+  transform: scale(1.1);
+}

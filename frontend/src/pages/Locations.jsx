@@ -1,8 +1,9 @@
+import { Calendar, Clock, Compass, DollarSign, Eye, Image as ImageIcon, Info, MapPin, MapPinned, RefreshCcw, Search, Star, User, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Search, MapPin, Star, Compass, RefreshCcw, User, X, Image as ImageIcon, Info, MapPinned, Calendar, Clock, DollarSign, Eye } from 'lucide-react';
-import api from '../lib/api';
 import ReviewSection from '../components/ReviewSection';
+import api from '../lib/api';
+import './Locations.css';
 
 const Locations = () => {
   const [locations, setLocations] = useState([]);
@@ -551,7 +552,7 @@ const Locations = () => {
         </p>
       </div>
 
-      <div className="card">
+      <div className="card filters-card">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="relative md:col-span-2">
             <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
@@ -607,7 +608,7 @@ const Locations = () => {
         </div>
       ) : (
         <>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="locations-grid">
             {filteredLocations.map((location) => {
               const coverImage = location.images?.[0]?.url;
               const guideName = location.guideId?.profile
@@ -623,7 +624,7 @@ const Locations = () => {
               return (
                 <div 
                   key={location._id} 
-                  className="card flex h-full flex-col gap-4 cursor-pointer hover:shadow-xl transition-shadow"
+                  className="location-card card flex h-full flex-col gap-4 cursor-pointer hover:shadow-xl transition-shadow"
                   onClick={() => handleViewDetails(location)}
                 >
                   {coverImage && (
@@ -692,7 +693,7 @@ const Locations = () => {
                     key={page}
                     type="button"
                     onClick={() => fetchLocations(page)}
-                    className={`rounded px-4 py-2 text-sm ${
+                    className={`pagination-button rounded px-4 py-2 text-sm ${
                       pagination.page === page
                         ? 'bg-blue-600 text-white'
                         : 'bg-white text-gray-700 hover:bg-gray-100'

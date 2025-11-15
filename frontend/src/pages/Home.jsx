@@ -1,5 +1,6 @@
+import { Bus, Hotel, MapPin, Sparkles, Users } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { MapPin, Hotel, Bus, Users, Sparkles } from 'lucide-react';
+import './Home.css';
 
 const Home = () => {
   const { user } = useAuthStore();
@@ -7,7 +8,7 @@ const Home = () => {
   return (
     <div className="space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-800 rounded-lg p-8 text-white">
+      <div className="hero-section-red bg-gradient-to-r from-primary-600 to-primary-800 rounded-lg p-8 text-white">
         <h1 className="text-4xl font-bold mb-4">
           Welcome to Travel Heaven, {user?.profile?.firstName || user?.username}!
         </h1>
@@ -20,7 +21,7 @@ const Home = () => {
 
       {/* Stats/Features */}
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card hover:shadow-lg transition-shadow">
+        <div className="stats-card card hover:shadow-lg transition-shadow">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <MapPin className="w-6 h-6 text-blue-600" />
@@ -32,7 +33,7 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="card hover:shadow-lg transition-shadow">
+        <div className="stats-card card hover:shadow-lg transition-shadow">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
               <Hotel className="w-6 h-6 text-green-600" />
@@ -44,7 +45,7 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="card hover:shadow-lg transition-shadow">
+        <div className="stats-card card hover:shadow-lg transition-shadow">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
               <Bus className="w-6 h-6 text-purple-600" />
@@ -56,7 +57,7 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="card hover:shadow-lg transition-shadow">
+        <div className="stats-card card hover:shadow-lg transition-shadow">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
               <Users className="w-6 h-6 text-orange-600" />
@@ -70,7 +71,7 @@ const Home = () => {
       </div>
 
       {/* Role-specific information */}
-      <div className="card">
+      <div className="info-card card">
         <div className="flex items-start gap-4">
           <Sparkles className="w-8 h-8 text-primary-600 flex-shrink-0" />
           <div>
@@ -120,7 +121,7 @@ const Home = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="card">
+      <div className="quick-actions-section card">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid md:grid-cols-3 gap-4">
           {user?.role === 'guide' && (

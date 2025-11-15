@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { DollarSign, Languages, MapPin, Search, Star } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
-import { Search, Star, MapPin, DollarSign, Languages } from 'lucide-react';
-import toast from 'react-hot-toast';
+import './Guides.css';
 
 const Guides = () => {
   const [guides, setGuides] = useState([]);
@@ -42,7 +43,7 @@ const Guides = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="card">
+      <div className="card guides-filters">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -78,12 +79,12 @@ const Guides = () => {
         </div>
       ) : (
         <>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="guides-grid">
             {guides.map((guide) => (
               <Link
                 key={guide._id}
                 to={`/guides/${guide._id}`}
-                className="card hover:shadow-lg transition-shadow"
+                className="guide-card card hover:shadow-lg transition-shadow"
               >
                 <div className="flex items-start gap-4">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -176,7 +177,7 @@ const Guides = () => {
                 <button
                   key={page}
                   onClick={() => fetchGuides(page)}
-                  className={`px-4 py-2 rounded ${
+                  className={`pagination-button px-4 py-2 rounded ${
                     pagination.page === page
                       ? 'bg-blue-600 text-white'
                       : 'bg-white text-gray-700 hover:bg-gray-100'

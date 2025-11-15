@@ -14,6 +14,7 @@ import reviewRoutes from './routes/review.routes.js';
 import guideRoutes from './routes/guide.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import expenseRoutes from './routes/expense.route.js';
+import aiRoutes from './routes/ai.routes.js';
 
 
 
@@ -43,6 +44,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/guides', guideRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/itineraries/:itineraryId/expenses', expenseRoutes);
+app.use('/api/ai', aiRoutes);
 
 
 // Health check

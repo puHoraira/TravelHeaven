@@ -163,7 +163,19 @@ const transportSchema = new mongoose.Schema({
 
   facilities: [{
     type: String,
-    enum: ['ac', 'wifi', 'toilet', 'tv', 'charging-port', 'blanket', 'snacks', 'water', 'music', 'reclining-seat'],
+    enum: [
+      'ac',
+      'wifi',
+      'toilet',
+      'tv',
+      'charging', // added to match frontend value
+      'charging-port',
+      'blanket',
+      'snacks',
+      'water',
+      'music',
+      'reclining-seat',
+    ],
   }],
 
   capacity: {

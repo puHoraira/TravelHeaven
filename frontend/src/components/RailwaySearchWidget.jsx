@@ -2,12 +2,14 @@ import {
   AlertCircle,
   Calendar,
   Clock,
+  Edit2,
   ExternalLink,
   Loader2,
   MapPin,
   Search,
   Train,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
@@ -27,6 +29,9 @@ const RailwaySearchWidget = ({ from, to, date, onSelectTrain }) => {
   const [deviceKey, setDeviceKey] = useState('');
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [journeyDate, setJourneyDate] = useState(date || '');
+  const [isEditingStations, setIsEditingStations] = useState(false);
+  const [editedFrom, setEditedFrom] = useState(from || '');
+  const [editedTo, setEditedTo] = useState(to || '');
   const [seatClasses] = useState([
     { value: 'S_CHAIR', label: 'Shulov Chair' },
     { value: 'SNIGDHA', label: 'Snigdha' },
@@ -36,8 +41,17 @@ const RailwaySearchWidget = ({ from, to, date, onSelectTrain }) => {
     { value: 'SHOVAN', label: 'Shovan' }
   ]);
 
+  // Update edited values when props change
+  useEffect(() => {
+    setEditedFrom(from || '');
+    setEditedTo(to || '');
+  }, [from, to]);
+
   const searchTrains = async () => {
-    if (!from || !to) {
+    const searchFrom = editedFrom || from;
+    const searchTo = editedTo || to;
+
+    if (!searchFrom || !searchTo) {
       toast.error('From and To locations are required');
       return;
     }
@@ -52,8 +66,8 @@ const RailwaySearchWidget = ({ from, to, date, onSelectTrain }) => {
 
     try {
       const params = {
-        fromCity: from,
-        toCity: to,
+        fromCity: searchFrom,
+        toCity: searchTo,
         date: journeyDate,
         seatClass: selectedSeatClass
       };
@@ -195,13 +209,80 @@ const RailwaySearchWidget = ({ from, to, date, onSelectTrain }) => {
           </p>
         ) : (
           <>
-            <div className="flex items-center gap-2 text-sm text-green-700">
-              <MapPin className="h-4 w-4" />
-              <span>{from}</span>
-              <span>→</span>
-              <MapPin className="h-4 w-4" />
-              <span>{to}</span>
-            </div>
+            {/* Station Names with Edit Feature */}
+            {isEditingStations ? (
+              <div className="space-y-2 bg-white p-3 rounded-lg border border-green-300">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-green-900">Edit Station Names</span>
+                  <button
+                    onClick={() => {
+                      setIsEditingStations(false);
+                      setEditedFrom(from);
+                      setEditedTo(to);
+                    }}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-1">From Station</label>
+                    <input
+                      type="text"
+                      value={editedFrom}
+                      onChange={(e) => setEditedFrom(e.target.value)}
+                      placeholder="e.g., Rangpur, Dhaka, Chittagong"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Original: {from}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-1">To Station</label>
+                    <input
+                      type="text"
+                      value={editedTo}
+                      onChange={(e) => setEditedTo(e.target.value)}
+                      placeholder="e.g., Rangpur, Dhaka, Chittagong"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Original: {to}</p>
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      setIsEditingStations(false);
+                      searchTrains();
+                    }}
+                    className="w-full btn btn-sm flex items-center justify-center gap-2"
+                    style={{ backgroundColor: '#16a34a', color: 'white' }}
+                  >
+                    <Search className="h-4 w-4" />
+                    Search with Updated Names
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-green-200">
+                <div className="flex items-center gap-2 text-sm text-green-700">
+                  <MapPin className="h-4 w-4" />
+                  <span className="font-medium">{editedFrom || from}</span>
+                  <span>→</span>
+                  <MapPin className="h-4 w-4" />
+                  <span className="font-medium">{editedTo || to}</span>
+                </div>
+                <button
+                  onClick={() => setIsEditingStations(true)}
+                  className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 hover:bg-green-50 px-2 py-1 rounded"
+                  title="Edit station names for search"
+                >
+                  <Edit2 className="h-3 w-3" />
+                  <span>Edit</span>
+                </button>
+              </div>
+            )}
             
             {/* Date Picker */}
             <div className="flex items-center gap-2 text-sm">

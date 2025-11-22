@@ -1,0 +1,11 @@
+# Railway API Configuration Example
+# Copy this file to .env.railway and add your actual tokens
+
+# Bearer Token (from Authorization header)
+RAILWAY_BEARER_TOKEN=Bearer
+# Device ID (from x-device-id header)
+RAILWAY_DEVICE_ID=device
+
+# Device Key (from x-device-key header)
+RAILWAY_DEVICE_KEY=key
+

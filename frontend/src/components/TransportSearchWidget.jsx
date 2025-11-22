@@ -6,7 +6,11 @@ import {
   MapPin,
   Navigation,
   Phone,
-  Search
+  Search,
+  X,
+  Mail,
+  Clock,
+  DollarSign
 } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
@@ -21,6 +25,9 @@ const TransportSearchWidget = ({ from, to, fromCoords, toCoords, onSelectTranspo
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [isClicked, setIsClicked] = useState(false);
+  const [selectedTransport, setSelectedTransport] = useState(null);
+  const [transportDetails, setTransportDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   const searchTransport = async () => {
     if (!from || !to) {
@@ -111,6 +118,25 @@ const TransportSearchWidget = ({ from, to, fromCoords, toCoords, onSelectTranspo
     }
   };
 
+  const handleViewTransport = async (transportId) => {
+    setSelectedTransport(transportId);
+    setLoadingDetails(true);
+    try {
+      const { data } = await api.get(`/transportation/${transportId}`);
+      setTransportDetails(data);
+    } catch (error) {
+      console.error('Failed to load transport details:', error);
+      toast.error('Failed to load transport details');
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const closeModal = () => {
+    setSelectedTransport(null);
+    setTransportDetails(null);
+  };
+
   return (
     <div className="border border-blue-200 rounded-lg bg-blue-50 p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -184,8 +210,17 @@ const TransportSearchWidget = ({ from, to, fromCoords, toCoords, onSelectTranspo
                   return (
                     <div
                       key={transport._id}
-                      className="bg-white rounded-lg p-3 border hover:shadow-md transition-shadow"
+                      onClick={() => handleViewTransport(transport._id)}
+                      className="bg-white rounded-lg p-3 border hover:shadow-md transition-shadow cursor-pointer"
                     >
+                      {/* Reversed Route Indicator */}
+                      {transport.isReversed && (
+                        <div className="mb-2 bg-blue-100 border border-blue-300 rounded px-2 py-1 text-xs text-blue-700 flex items-center gap-1">
+                          <span>🔄</span>
+                          <span>Return route (originally {transport.originalRoute})</span>
+                        </div>
+                      )}
+
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <Bus className="h-4 w-4 text-gray-600" />
@@ -230,7 +265,10 @@ const TransportSearchWidget = ({ from, to, fromCoords, toCoords, onSelectTranspo
                             href={transport.booking.onlineUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            onClick={() => handleBook(transport._id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleBook(transport._id);
+                            }}
                             className="flex-1 btn btn-sm bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1"
                           >
                             <ExternalLink className="h-3 w-3" />
@@ -241,6 +279,7 @@ const TransportSearchWidget = ({ from, to, fromCoords, toCoords, onSelectTranspo
                         {transport.booking?.phoneNumbers && transport.booking.phoneNumbers[0] && (
                           <a
                             href={`tel:${transport.booking.phoneNumbers[0]}`}
+                            onClick={(e) => e.stopPropagation()}
                             className="flex-1 btn btn-sm bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-1"
                           >
                             <Phone className="h-3 w-3" />
@@ -262,6 +301,189 @@ const TransportSearchWidget = ({ from, to, fromCoords, toCoords, onSelectTranspo
           >
             Hide Results
           </button>
+        </div>
+      )}
+
+      {/* Transport Details Modal */}
+      {selectedTransport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={closeModal}>
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {loadingDetails ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : transportDetails ? (
+              <div>
+                {/* Modal Header */}
+                <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+                  <div className="flex items-center gap-3">
+                    <Bus className="h-6 w-6 text-blue-600" />
+                    <h2 className="text-2xl font-bold text-gray-900">{transportDetails.name}</h2>
+                  </div>
+                  <button
+                    onClick={closeModal}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                {/* Transport Details */}
+                <div className="px-6 pb-6 space-y-6">
+                  {/* Type & Operator */}
+                  <div className="flex items-center gap-4">
+                    <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                      {transportDetails.type}
+                    </div>
+                    {transportDetails.operator?.name && (
+                      <span className="text-gray-600">Operated by {transportDetails.operator.name}</span>
+                    )}
+                  </div>
+
+                  {/* Route Information */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-lg mb-3">Route</h3>
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <MapPin className="w-5 h-5 text-blue-600" />
+                      <span className="font-medium">{transportDetails.route?.from?.name || 'Start'}</span>
+                      <span>→</span>
+                      <MapPin className="w-5 h-5 text-blue-600" />
+                      <span className="font-medium">{transportDetails.route?.to?.name || 'Destination'}</span>
+                    </div>
+                    {transportDetails.route?.stops && transportDetails.route.stops.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-sm text-gray-600 mb-2">Stops along the way:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {transportDetails.route.stops.map((stop, idx) => (
+                            <span key={idx} className="text-xs bg-white px-2 py-1 rounded border">
+                              {stop.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Pricing */}
+                  {transportDetails.pricing && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-green-600" />
+                        <span className="text-xl font-bold text-green-700">
+                          {transportDetails.pricing.currency} {transportDetails.pricing.amount}
+                        </span>
+                        <span className="text-gray-600">per person</span>
+                      </div>
+                      {transportDetails.pricing.notes && (
+                        <p className="text-sm text-gray-600 mt-2">{transportDetails.pricing.notes}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Schedule */}
+                  {transportDetails.schedule && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                        <Clock className="w-5 h-5" />
+                        Schedule
+                      </h3>
+                      <div className="space-y-2">
+                        {transportDetails.schedule.departures && transportDetails.schedule.departures.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">Departure Times:</p>
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {transportDetails.schedule.departures.map((time, idx) => (
+                                <span key={idx} className="bg-gray-100 px-3 py-1 rounded text-sm">
+                                  {time}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {transportDetails.schedule.frequency && (
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Frequency:</span> {transportDetails.schedule.frequency}
+                          </p>
+                        )}
+                        {transportDetails.schedule.duration && (
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Duration:</span> {transportDetails.schedule.duration}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Amenities */}
+                  {transportDetails.amenities && transportDetails.amenities.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-3">Amenities</h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        {transportDetails.amenities.map((amenity, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm">
+                            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                            <span>{amenity}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Contact & Booking */}
+                  {transportDetails.booking && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-3">Booking Information</h3>
+                      <div className="space-y-3">
+                        {transportDetails.booking.onlineUrl && (
+                          <a
+                            href={transportDetails.booking.onlineUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            <span>Book Online</span>
+                          </a>
+                        )}
+                        {transportDetails.booking.phoneNumbers && transportDetails.booking.phoneNumbers.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-700 mb-1">Phone Numbers:</p>
+                            {transportDetails.booking.phoneNumbers.map((phone, idx) => (
+                              <a
+                                key={idx}
+                                href={`tel:${phone}`}
+                                className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
+                              >
+                                <Phone className="w-4 h-4" />
+                                <span>{phone}</span>
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        {transportDetails.booking.email && (
+                          <a
+                            href={`mailto:${transportDetails.booking.email}`}
+                            className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
+                          >
+                            <Mail className="w-4 h-4" />
+                            <span>{transportDetails.booking.email}</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Additional Notes */}
+                  {transportDetails.notes && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2">Additional Information</h3>
+                      <p className="text-gray-700">{transportDetails.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       )}
     </div>

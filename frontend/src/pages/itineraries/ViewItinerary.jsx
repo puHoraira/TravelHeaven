@@ -25,6 +25,7 @@ import BudgetTracker from '../../components/itinerary/BudgetTracker';
 import CollaboratorsList from '../../components/itinerary/CollaboratorsList';
 import DayCard from '../../components/itinerary/DayCard';
 import MapView from '../../components/itinerary/MapView';
+import RailwaySearchWidget from '../../components/RailwaySearchWidget';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import './ViewItinerary.css';
@@ -598,6 +599,21 @@ export default function ViewItinerary() {
                       onEditDay={(i) => openEditDay(i)}
                       onAddStop={(i) => openEditDay(i, { addStop: true })}
                     />
+                    
+                    {/* Railway Search Widget */}
+                    {day.stops && day.stops.length > 0 && (
+                      <div className="mt-4">
+                        <RailwaySearchWidget
+                          from={day.stops[0]?.name || ''}
+                          to={day.stops.length > 1 ? day.stops[day.stops.length - 1]?.name : day.stops[0]?.name}
+                          date={day.date}
+                          onSelectTrain={(train) => {
+                            toast.success(`Selected: ${train.tripNumber}`);
+                            console.log('Selected train:', train);
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

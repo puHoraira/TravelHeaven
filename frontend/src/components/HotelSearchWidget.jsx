@@ -10,7 +10,9 @@ import {
   Navigation,
   Star,
   DollarSign,
-  Users
+  Users,
+  X,
+  Mail
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
@@ -23,6 +25,9 @@ const HotelSearchWidget = ({ locationName, coords, onSelectHotel }) => {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [selectedHotel, setSelectedHotel] = useState(null);
+  const [hotelDetails, setHotelDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   const searchHotels = async () => {
     if (!locationName && !coords) {
@@ -86,6 +91,25 @@ const HotelSearchWidget = ({ locationName, coords, onSelectHotel }) => {
     } catch (error) {
       console.error('Failed to track hotel selection:', error);
     }
+  };
+
+  const handleViewHotel = async (hotelId) => {
+    setSelectedHotel(hotelId);
+    setLoadingDetails(true);
+    try {
+      const { data } = await api.get(`/hotels/${hotelId}`);
+      setHotelDetails(data);
+    } catch (error) {
+      console.error('Failed to load hotel details:', error);
+      toast.error('Failed to load hotel details');
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const closeModal = () => {
+    setSelectedHotel(null);
+    setHotelDetails(null);
   };
 
   return (
@@ -152,7 +176,8 @@ const HotelSearchWidget = ({ locationName, coords, onSelectHotel }) => {
                   return (
                     <div
                       key={hotel._id}
-                      className="bg-white p-3 rounded-lg border border-purple-100 hover:border-purple-300 transition-all hover:shadow-md"
+                      onClick={() => handleViewHotel(hotel._id)}
+                      className="bg-white p-3 rounded-lg border border-purple-100 hover:border-purple-300 transition-all hover:shadow-md cursor-pointer"
                     >
                       <div className="flex gap-3">
                         {/* Hotel Image */}
@@ -233,7 +258,10 @@ const HotelSearchWidget = ({ locationName, coords, onSelectHotel }) => {
                           {/* Actions */}
                           <div className="flex gap-2 mt-3">
                             <button
-                              onClick={() => handleSelect(hotel._id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelect(hotel._id);
+                              }}
                               className="btn-sm bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1"
                             >
                               Select Hotel
@@ -242,6 +270,7 @@ const HotelSearchWidget = ({ locationName, coords, onSelectHotel }) => {
                             {hotel.contactInfo?.phone && (
                               <a
                                 href={`tel:${hotel.contactInfo.phone}`}
+                                onClick={(e) => e.stopPropagation()}
                                 className="btn-sm border border-purple-300 text-purple-700 hover:bg-purple-50 flex items-center gap-1"
                               >
                                 <Phone className="h-3 w-3" />
@@ -254,6 +283,7 @@ const HotelSearchWidget = ({ locationName, coords, onSelectHotel }) => {
                                 href={hotel.contactInfo.website}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
                                 className="btn-sm border border-purple-300 text-purple-700 hover:bg-purple-50 flex items-center gap-1"
                               >
                                 <ExternalLink className="h-3 w-3" />
@@ -277,6 +307,157 @@ const HotelSearchWidget = ({ locationName, coords, onSelectHotel }) => {
               </button>
             </>
           )}
+        </div>
+      )}
+
+      {/* Hotel Details Modal */}
+      {selectedHotel && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={closeModal}>
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {loadingDetails ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+              </div>
+            ) : hotelDetails ? (
+              <div>
+                {/* Modal Header */}
+                <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+                  <h2 className="text-2xl font-bold text-gray-900">{hotelDetails.name}</h2>
+                  <button
+                    onClick={closeModal}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+
+                {/* Hotel Images */}
+                {hotelDetails.images && hotelDetails.images.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 p-6">
+                    {hotelDetails.images.map((img, idx) => (
+                      <img
+                        key={idx}
+                        src={img.url}
+                        alt={img.caption || hotelDetails.name}
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Hotel Details */}
+                <div className="px-6 pb-6 space-y-6">
+                  {/* Rating & Location */}
+                  <div className="flex items-center gap-4">
+                    {hotelDetails.rating?.average > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                        <span className="font-semibold text-lg">{hotelDetails.rating.average.toFixed(1)}</span>
+                        <span className="text-gray-500">({hotelDetails.rating.count} reviews)</span>
+                      </div>
+                    )}
+                    {hotelDetails.address && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <MapPin className="w-4 h-4" />
+                        <span>{hotelDetails.address.city}, {hotelDetails.address.country}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Price Range */}
+                  {hotelDetails.priceRange && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-green-600" />
+                        <span className="text-xl font-bold text-green-700">
+                          {hotelDetails.priceRange.min} - {hotelDetails.priceRange.max} {hotelDetails.priceRange.currency}
+                        </span>
+                        <span className="text-gray-600">/night</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Description */}
+                  {hotelDetails.description && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2">About</h3>
+                      <p className="text-gray-700">{hotelDetails.description}</p>
+                    </div>
+                  )}
+
+                  {/* Amenities */}
+                  {hotelDetails.amenities && hotelDetails.amenities.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-3">Amenities</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {hotelDetails.amenities.map((amenity, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm">
+                            <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                            <span>{amenity}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Rooms */}
+                  {hotelDetails.rooms && hotelDetails.rooms.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-3">Available Rooms</h3>
+                      <div className="space-y-3">
+                        {hotelDetails.rooms.map((room, idx) => (
+                          <div key={idx} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-semibold">{room.roomType}</h4>
+                                <p className="text-sm text-gray-600">{room.bedType} • Up to {room.capacity} guests</p>
+                                {room.amenities && room.amenities.length > 0 && (
+                                  <p className="text-xs text-gray-500 mt-1">{room.amenities.join(', ')}</p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-lg text-green-600">
+                                  {room.currency} {room.pricePerNight}
+                                </p>
+                                <p className="text-xs text-gray-500">/night</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Contact Information */}
+                  {hotelDetails.contactInfo && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-3">Contact</h3>
+                      <div className="space-y-2">
+                        {hotelDetails.contactInfo.phone && (
+                          <a href={`tel:${hotelDetails.contactInfo.phone}`} className="flex items-center gap-2 text-purple-600 hover:text-purple-700">
+                            <Phone className="w-4 h-4" />
+                            <span>{hotelDetails.contactInfo.phone}</span>
+                          </a>
+                        )}
+                        {hotelDetails.contactInfo.email && (
+                          <a href={`mailto:${hotelDetails.contactInfo.email}`} className="flex items-center gap-2 text-purple-600 hover:text-purple-700">
+                            <Mail className="w-4 h-4" />
+                            <span>{hotelDetails.contactInfo.email}</span>
+                          </a>
+                        )}
+                        {hotelDetails.contactInfo.website && (
+                          <a href={hotelDetails.contactInfo.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-purple-600 hover:text-purple-700">
+                            <ExternalLink className="w-4 h-4" />
+                            <span>Visit Website</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       )}
     </div>

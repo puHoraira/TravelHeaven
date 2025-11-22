@@ -51,32 +51,67 @@ export async function findDirectRoutes(fromLat, fromLng, toLat, toLng, options =
         const [fromLon, fromLat_t] = transport.route.from.location.coordinates;
         const [toLon, toLat_t] = transport.route.to.location.coordinates;
 
+        // Check forward direction (A → B)
         const distanceFromOrigin = calculateDistance(fromLat, fromLng, fromLat_t, fromLon);
         const distanceFromDestination = calculateDistance(toLat, toLng, toLat_t, toLon);
-        const matchScore = distanceFromOrigin + distanceFromDestination;
+        const matchScoreForward = distanceFromOrigin + distanceFromDestination;
+        const isForwardMatch = distanceFromOrigin <= maxDistance && distanceFromDestination <= maxDistance;
 
-        const matched = {
-          ...transport,
-          distanceFromOrigin: parseFloat(distanceFromOrigin.toFixed(2)),
-          distanceFromDestination: parseFloat(distanceFromDestination.toFixed(2)),
-          matchScore: parseFloat(matchScore.toFixed(2)),
-          matchType: 'direct',
-        };
+        // Check reverse direction (B → A)
+        const distanceFromOriginReverse = calculateDistance(fromLat, fromLng, toLat_t, toLon);
+        const distanceFromDestinationReverse = calculateDistance(toLat, toLng, fromLat_t, fromLon);
+        const matchScoreReverse = distanceFromOriginReverse + distanceFromDestinationReverse;
+        const isReverseMatch = distanceFromOriginReverse <= maxDistance && distanceFromDestinationReverse <= maxDistance;
 
-        console.log(`🚌 Transport ${transport.type} (${transport.route.from.name} → ${transport.route.to.name}):`, {
-          distanceFromOrigin: matched.distanceFromOrigin,
-          distanceFromDestination: matched.distanceFromDestination,
-          withinThreshold: matched.distanceFromOrigin <= maxDistance && matched.distanceFromDestination <= maxDistance,
-          maxDistance
-        });
+        if (isForwardMatch) {
+          console.log(`🚌 Transport ${transport.type} (${transport.route.from.name} → ${transport.route.to.name}) [FORWARD]:`, {
+            distanceFromOrigin,
+            distanceFromDestination,
+            withinThreshold: true,
+            maxDistance
+          });
+          
+          return {
+            ...transport,
+            distanceFromOrigin: parseFloat(distanceFromOrigin.toFixed(2)),
+            distanceFromDestination: parseFloat(distanceFromDestination.toFixed(2)),
+            matchScore: parseFloat(matchScoreForward.toFixed(2)),
+            matchType: 'direct',
+            isReversed: false,
+          };
+        } else if (isReverseMatch) {
+          console.log(`🔄 Transport ${transport.type} (${transport.route.from.name} → ${transport.route.to.name}) [REVERSED]:`, {
+            distanceFromOrigin: distanceFromOriginReverse,
+            distanceFromDestination: distanceFromDestinationReverse,
+            withinThreshold: true,
+            maxDistance
+          });
+          
+          // Create reversed transport object
+          return {
+            ...transport,
+            route: {
+              ...transport.route,
+              from: transport.route.to,
+              to: transport.route.from,
+              stops: transport.route.stops ? [...transport.route.stops].reverse() : [],
+            },
+            distanceFromOrigin: parseFloat(distanceFromOriginReverse.toFixed(2)),
+            distanceFromDestination: parseFloat(distanceFromDestinationReverse.toFixed(2)),
+            matchScore: parseFloat(matchScoreReverse.toFixed(2)),
+            matchType: 'direct',
+            isReversed: true,
+            originalRoute: `${transport.route.from.name} → ${transport.route.to.name}`,
+          };
+        }
 
-        return matched;
+        return null;
       })
-      .filter(t => t.distanceFromOrigin <= maxDistance && t.distanceFromDestination <= maxDistance)
+      .filter(t => t !== null)
       .sort((a, b) => a.matchScore - b.matchScore)
       .slice(0, limit);
 
-    console.log(`✅ Matched ${matchedRoutes.length} direct routes`);
+    console.log(`✅ Matched ${matchedRoutes.length} direct routes (including reversed)`);
     return matchedRoutes;
   } catch (error) {
     console.error('Error finding direct routes:', error);
@@ -166,7 +201,7 @@ export async function findRoutesWithNearbyStops(fromLat, fromLng, toLat, toLng, 
         }
       });
 
-      // If both stops found within distance and origin before destination
+      // Check forward direction: If both stops found within distance and origin before destination
       if (
         nearestOriginStop &&
         nearestDestinationStop &&
@@ -183,6 +218,35 @@ export async function findRoutesWithNearbyStops(fromLat, fromLng, toLat, toLng, 
           matchScore: parseFloat((minOriginDistance + minDestinationDistance).toFixed(2)),
           matchType: 'nearby-stops',
           walkingRequired: true,
+          isReversed: false,
+        });
+      } 
+      // Check reverse direction: destination comes before origin (reversed route)
+      else if (
+        nearestOriginStop &&
+        nearestDestinationStop &&
+        minOriginDistance <= maxDistance &&
+        minDestinationDistance <= maxDistance &&
+        nearestDestinationStop.stopOrder < nearestOriginStop.stopOrder
+      ) {
+        // Create reversed transport
+        matchedRoutes.push({
+          ...transport,
+          route: {
+            ...transport.route,
+            from: transport.route.to,
+            to: transport.route.from,
+            stops: transport.route.stops ? [...transport.route.stops].reverse() : [],
+          },
+          nearestOriginStop: nearestDestinationStop,
+          nearestDestinationStop: nearestOriginStop,
+          distanceFromOrigin: parseFloat(minDestinationDistance.toFixed(2)),
+          distanceFromDestination: parseFloat(minOriginDistance.toFixed(2)),
+          matchScore: parseFloat((minOriginDistance + minDestinationDistance).toFixed(2)),
+          matchType: 'nearby-stops',
+          walkingRequired: true,
+          isReversed: true,
+          originalRoute: `${transport.route.from.name} → ${transport.route.to.name}`,
         });
       }
     }
@@ -233,9 +297,15 @@ export async function findTransportByLocationNames(fromLocation, toLocation, opt
     const query = {
       approvalStatus: 'approved',
       $or: [
+        // Forward direction: A → B
         {
           'route.from.name': new RegExp(fromLocation, 'i'),
           'route.to.name': new RegExp(toLocation, 'i'),
+        },
+        // Reverse direction: B → A (use the same route backwards)
+        {
+          'route.from.name': new RegExp(toLocation, 'i'),
+          'route.to.name': new RegExp(fromLocation, 'i'),
         },
       ],
     };
@@ -251,7 +321,37 @@ export async function findTransportByLocationNames(fromLocation, toLocation, opt
       .limit(options.limit || 20)
       .lean();
 
-    return transports;
+    // Map transports and mark reversed ones
+    return transports.map(transport => {
+      const fromNameLower = transport.route.from.name.toLowerCase();
+      const toNameLower = transport.route.to.name.toLowerCase();
+      const searchFromLower = fromLocation.toLowerCase();
+      const searchToLower = toLocation.toLowerCase();
+
+      // Check if this is a reverse match
+      const isReversed = fromNameLower.includes(searchToLower) && toNameLower.includes(searchFromLower);
+
+      if (isReversed) {
+        // Return reversed transport
+        return {
+          ...transport,
+          route: {
+            ...transport.route,
+            from: transport.route.to,
+            to: transport.route.from,
+            stops: transport.route.stops ? [...transport.route.stops].reverse() : [],
+          },
+          isReversed: true,
+          originalRoute: `${transport.route.from.name} → ${transport.route.to.name}`,
+        };
+      }
+
+      // Return original transport
+      return {
+        ...transport,
+        isReversed: false,
+      };
+    });
   } catch (error) {
     console.error('Error finding transport by location names:', error);
     throw error;

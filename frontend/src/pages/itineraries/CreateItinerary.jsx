@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import MapView from '../../components/itinerary/MapView';
 import LocationSearchInput from '../../components/LocationSearchInput';
+import RailwaySearchWidget from '../../components/RailwaySearchWidget';
 import api from '../../lib/api';
 import './CreateItinerary.css';
 
@@ -686,6 +687,22 @@ export default function CreateItinerary() {
                       <span style={{ color: '#dc2626' }}>Suggest Transport</span>
                     </button>
                   </div>
+
+                  {/* Railway Search Widget */}
+                  {day.stops.length > 0 && (
+                    <div className="mt-4">
+                      <RailwaySearchWidget
+                        from={day.stops.length > 0 ? day.stops[0]?.name : ''}
+                        to={day.stops.length > 1 ? day.stops[day.stops.length - 1]?.name : ''}
+                        date={day.date}
+                        onSelectTrain={(train) => {
+                          toast.success(`Selected: ${train.tripNumber}`);
+                          // Optionally add train info to day notes or as a stop
+                          console.log('Selected train:', train);
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -15,6 +15,7 @@ import guideRoutes from './routes/guide.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import expenseRoutes from './routes/expense.route.js';
 import aiRoutes from './routes/ai.routes.js';
+import railwayRoutes from './routes/railway.routes.js';
 
 
 
@@ -45,6 +46,7 @@ app.use('/api/guides', guideRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/itineraries/:itineraryId/expenses', expenseRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/railway', railwayRoutes);
 
 
 // Health check

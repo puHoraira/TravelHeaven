@@ -38,9 +38,9 @@ const BDRailway = () => {
   const [deviceKey, setDeviceKey] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [filterClass, setFilterClass] = useState('all');
+  const [showRoutes, setShowRoutes] = useState(false);
   const [trainRoutes, setTrainRoutes] = useState(null);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
-  const [showRoutes, setShowRoutes] = useState(false);
 
   const seatClasses = [
     { value: 'S_CHAIR', label: 'Shulov Chair' },
@@ -139,6 +139,28 @@ const BDRailway = () => {
     });
   };
 
+  const fetchTrainRoutes = async (trainNumber) => {
+    try {
+      setLoadingRoutes(true);
+      const today = new Date().toISOString().split('T')[0];
+      
+      const response = await api.post('/railway/routes', {
+        trainNumber,
+        date: today
+      });
+
+      if (response.data && response.data.data) {
+        setTrainRoutes(response.data.data);
+        setShowRoutes(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch train routes:', error);
+      toast.error('Failed to load route details');
+    } finally {
+      setLoadingRoutes(false);
+    }
+  };
+
   const swapCities = () => {
     setSearchParams({
       ...searchParams,
@@ -149,47 +171,6 @@ const BDRailway = () => {
 
   const handleBookTrain = (train, seatType) => {
     window.open('https://eticket.railway.gov.bd/', '_blank');
-  };
-
-  const fetchTrainRoutes = async () => {
-    setLoadingRoutes(true);
-    try {
-      const payload = {};
-      
-      // Only send tokens if user has provided them in the UI
-      if (bearerToken && bearerToken.trim()) {
-        payload.bearerToken = bearerToken.trim();
-      }
-      if (deviceId && deviceId.trim()) {
-        payload.deviceId = deviceId.trim();
-      }
-      if (deviceKey && deviceKey.trim()) {
-        payload.deviceKey = deviceKey.trim();
-      }
-
-      console.log('🚂 Fetching train routes');
-
-      const { data } = await api.post('/railway/routes', payload);
-
-      console.log('📦 Train Routes Response:', data);
-
-      setTrainRoutes(data.data);
-      setShowRoutes(true);
-      toast.success('Train routes loaded successfully');
-    } catch (error) {
-      console.error('Train routes error:', error);
-      const errorMsg = error?.response?.data?.message || error?.message || 'Failed to fetch train routes';
-      
-      if (error?.response?.status === 400 && errorMsg.includes('authentication')) {
-        toast.error('Authentication tokens not configured. Please contact administrator.', {
-          duration: 6000
-        });
-      } else {
-        toast.error(errorMsg);
-      }
-    } finally {
-      setLoadingRoutes(false);
-    }
   };
 
   const filteredTrains = filterClass === 'all' 
@@ -378,23 +359,6 @@ const BDRailway = () => {
               <Train size={20} />
               Popular Routes
             </h3>
-            <button
-              onClick={fetchTrainRoutes}
-              disabled={loadingRoutes}
-              className="btn-view-all"
-            >
-              {loadingRoutes ? (
-                <>
-                  <Loader2 className="animate-spin" size={16} />
-                  Loading...
-                </>
-              ) : (
-                <>
-                  <List size={16} />
-                  View All Routes
-                </>
-              )}
-            </button>
           </div>
           <div className="routes-grid">
             {popularRoutes.map((route, idx) => (

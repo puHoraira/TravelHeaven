@@ -1,15 +1,93 @@
-import { Bus, Hotel, MapPin, Sparkles, Users, Compass } from 'lucide-react';
+import { 
+  Bus, Hotel, MapPin, Sparkles, Users, Compass, Train, 
+  TrendingUp, Globe, Star, Award, Calendar, Clock, 
+  Navigation, Shield, Heart, Zap, ChevronRight, Map,
+  Camera
+} from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import './Home.css';
 
 const Home = () => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [aiResult, setAiResult] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [stats] = useState({
+    locations: 150,
+    hotels: 89,
+    trains: 155,
+    guides: 45
+  });
+
+  const features = [
+    {
+      icon: MapPin,
+      title: '150+ Destinations',
+      description: 'Explore amazing places across Bangladesh',
+      color: 'blue',
+      link: '/locations'
+    },
+    {
+      icon: Hotel,
+      title: '89+ Hotels',
+      description: 'Find perfect accommodation for your stay',
+      color: 'green',
+      link: '/hotels'
+    },
+    {
+      icon: Train,
+      title: '155+ Trains',
+      description: 'Book train tickets with complete route details',
+      color: 'purple',
+      link: '/trains'
+    },
+    {
+      icon: Users,
+      title: '45+ Expert Guides',
+      description: 'Get local insights from verified guides',
+      color: 'orange',
+      link: '/guides'
+    }
+  ];
+
+  const services = [
+    {
+      icon: Compass,
+      title: 'Smart Trip Planning',
+      description: 'AI-powered route recommendations for your journey',
+      features: ['Real-time routes', 'Cost estimates', 'Travel time']
+    },
+    {
+      icon: Shield,
+      title: 'Verified Information',
+      description: 'All hotels and guides are verified by our team',
+      features: ['Trusted reviews', 'Quality assured', 'Secure bookings']
+    },
+    {
+      icon: Zap,
+      title: 'Instant Booking',
+      description: 'Book hotels, trains, and transport in seconds',
+      features: ['Quick checkout', 'Multiple options', 'Best prices']
+    },
+    {
+      icon: Heart,
+      title: 'Local Experiences',
+      description: 'Discover hidden gems recommended by locals',
+      features: ['Authentic culture', 'Local cuisine', 'Off-beat paths']
+    }
+  ];
+
+  const popularDestinations = [
+    { name: "Cox's Bazar", image: '🏖️', rating: 4.8, visitors: '12K+' },
+    { name: 'Sundarbans', image: '🌿', rating: 4.9, visitors: '8K+' },
+    { name: 'Rangamati', image: '⛰️', rating: 4.7, visitors: '5K+' },
+    { name: 'Sylhet', image: '🌲', rating: 4.6, visitors: '10K+' }
+  ];
 
   const handleAskAI = async () => {
     if (!origin || !destination) {
@@ -39,341 +117,405 @@ const Home = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="home-page">
       {/* Hero Section */}
-      <div className="hero-section-red bg-gradient-to-r from-primary-600 to-primary-800 rounded-lg p-8 text-white">
-        <h1 className="text-4xl font-bold mb-4">
-          Welcome to Travel Heaven, {user?.profile?.firstName || user?.username}!
-        </h1>
-        <p className="text-xl opacity-90">
-          {user?.role === 'admin' && 'Manage approvals and oversee all activities'}
-          {user?.role === 'guide' && 'Share amazing locations with travelers'}
-          {user?.role === 'user' && 'Discover and book your next adventure'}
-        </p>
-      </div>
-
-      {/* Stats/Features */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="stats-card card hover:shadow-lg transition-shadow">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <MapPin className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Locations</h3>
-              <p className="text-sm text-gray-600">Discover destinations</p>
-            </div>
+      <div className="hero-banner">
+        <div className="hero-content">
+          <div className="hero-badge">
+            <Sparkles size={16} />
+            <span>Explore Bangladesh Like Never Before</span>
           </div>
-        </div>
-
-        <div className="stats-card card hover:shadow-lg transition-shadow">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <Hotel className="w-6 h-6 text-green-600" />
+          <h1 className="hero-title">
+            Welcome {user?.profile?.firstName || user?.username}! 👋
+          </h1>
+          <p className="hero-subtitle">
+            {user?.role === 'admin' && 'Manage the platform and oversee all travel operations'}
+            {user?.role === 'guide' && 'Share your expertise and help travelers explore Bangladesh'}
+            {user?.role === 'user' && 'Discover amazing destinations and plan your perfect journey'}
+          </p>
+          <div className="hero-stats">
+            <div className="stat-item">
+              <Globe size={24} />
+              <div>
+                <p className="stat-number">{stats.locations}+</p>
+                <p className="stat-label">Locations</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Hotels</h3>
-              <p className="text-sm text-gray-600">Find accommodation</p>
+            <div className="stat-item">
+              <Hotel size={24} />
+              <div>
+                <p className="stat-number">{stats.hotels}+</p>
+                <p className="stat-label">Hotels</p>
+              </div>
             </div>
-          </div>
-        </div>
-
-        <div className="stats-card card hover:shadow-lg transition-shadow">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Bus className="w-6 h-6 text-purple-600" />
+            <div className="stat-item">
+              <Train size={24} />
+              <div>
+                <p className="stat-number">{stats.trains}+</p>
+                <p className="stat-label">Trains</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Transportation</h3>
-              <p className="text-sm text-gray-600">Travel with ease</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="stats-card card hover:shadow-lg transition-shadow">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Users className="w-6 h-6 text-orange-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Community</h3>
-              <p className="text-sm text-gray-600">Join travelers</p>
+            <div className="stat-item">
+              <Users size={24} />
+              <div>
+                <p className="stat-number">{stats.guides}+</p>
+                <p className="stat-label">Guides</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Role-specific information */}
-      <div className="info-card card">
-        <div className="flex items-start gap-4">
-          <Sparkles className="w-8 h-8 text-primary-600 flex-shrink-0" />
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              {user?.role === 'admin' && 'Admin Dashboard'}
-              {user?.role === 'guide' && 'Guide Dashboard'}
-              {user?.role === 'user' && 'Start Your Journey'}
-            </h2>
-
-            {user?.role === 'admin' && (
-              <div className="space-y-2">
-                <p className="text-gray-600">As an admin, you can:</p>
-                <ul className="list-disc list-inside space-y-1 text-gray-700">
-                  <li>Review and approve guide submissions</li>
-                  <li>Manage locations, hotels, and transportation</li>
-                  <li>View system statistics and reports</li>
-                  <li>Oversee all user activities</li>
-                </ul>
+      {/* Features Grid */}
+      <div className="features-section">
+        <div className="section-header">
+          <h2>What We Offer</h2>
+          <p>Everything you need for the perfect trip</p>
+        </div>
+        <div className="features-grid">
+          {features.map((feature, index) => (
+            <div 
+              key={index} 
+              className={`feature-card feature-${feature.color}`}
+              onClick={() => navigate(feature.link)}
+            >
+              <div className="feature-icon">
+                <feature.icon size={32} />
               </div>
-            )}
-
-            {user?.role === 'guide' && (
-              <div className="space-y-2">
-                <p className="text-gray-600">As a guide, you can:</p>
-                <ul className="list-disc list-inside space-y-1 text-gray-700">
-                  <li>Add new tourist locations with images</li>
-                  <li>List hotels for each location</li>
-                  <li>Add transportation options</li>
-                  <li>Track approval status of your submissions</li>
-                </ul>
+              <h3>{feature.title}</h3>
+              <p>{feature.description}</p>
+              <div className="feature-arrow">
+                <ChevronRight size={20} />
               </div>
-            )}
-
-            {user?.role === 'user' && (
-              <div className="space-y-2">
-                <p className="text-gray-600">As a tourist, you can:</p>
-                <ul className="list-disc list-inside space-y-1 text-gray-700">
-                  <li>Browse approved locations and destinations</li>
-                  <li>Find hotels and accommodations</li>
-                  <li>Check transportation options</li>
-                  <li>Book services for your trip</li>
-                </ul>
-              </div>
-            )}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="quick-actions-section card">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid md:grid-cols-3 gap-4">
-          {user?.role === 'guide' && (
+      {/* Popular Destinations */}
+      <div className="destinations-section">
+        <div className="section-header">
+          <h2>Popular Destinations</h2>
+          <p>Most loved places by travelers</p>
+        </div>
+        <div className="destinations-grid">
+          {popularDestinations.map((dest, index) => (
+            <div key={index} className="destination-card" onClick={() => navigate('/locations')}>
+              <div className="destination-image">
+                <span className="destination-emoji">{dest.image}</span>
+              </div>
+              <div className="destination-info">
+                <h4>{dest.name}</h4>
+                <div className="destination-meta">
+                  <span className="rating">
+                    <Star size={14} fill="currentColor" />
+                    {dest.rating}
+                  </span>
+                  <span className="visitors">
+                    <Users size={14} />
+                    {dest.visitors}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Services Section */}
+      <div className="services-section">
+        <div className="section-header">
+          <h2>Why Choose Travel Heaven?</h2>
+          <p>Your complete travel companion</p>
+        </div>
+        <div className="services-grid">
+          {services.map((service, index) => (
+            <div key={index} className="service-card">
+              <div className="service-icon">
+                <service.icon size={40} />
+              </div>
+              <h3>{service.title}</h3>
+              <p>{service.description}</p>
+              <ul className="service-features">
+                {service.features.map((feat, i) => (
+                  <li key={i}>
+                    <span>✓</span> {feat}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Role-specific Quick Actions */}
+      <div className="quick-actions-section">
+        <div className="section-header">
+          <h2>Quick Actions</h2>
+          <p>Get started in seconds</p>
+        </div>
+        <div className="actions-grid">
+          {user?.role === 'user' && (
             <>
-              <a href="/guide/locations" className="btn btn-primary text-center">
-                Add Location
-              </a>
-              <a href="/guide/hotels" className="btn btn-primary text-center">
-                Add Hotel
-              </a>
-              <a href="/guide/transport" className="btn btn-primary text-center">
-                Add Transport
-              </a>
+              <div className="action-card" onClick={() => navigate('/locations')}>
+                <MapPin size={32} />
+                <h3>Explore Locations</h3>
+                <p>Browse 150+ verified destinations</p>
+              </div>
+              <div className="action-card" onClick={() => navigate('/hotels')}>
+                <Hotel size={32} />
+                <h3>Find Hotels</h3>
+                <p>Book from 89+ accommodations</p>
+              </div>
+              <div className="action-card" onClick={() => navigate('/trains')}>
+                <Train size={32} />
+                <h3>Train Routes</h3>
+                <p>View all 155+ train schedules</p>
+              </div>
+              <div className="action-card" onClick={() => navigate('/transportation')}>
+                <Bus size={32} />
+                <h3>Transportation</h3>
+                <p>Find buses and cabs</p>
+              </div>
+              <div className="action-card" onClick={() => navigate('/guides')}>
+                <Users size={32} />
+                <h3>Expert Guides</h3>
+                <p>Connect with 45+ local guides</p>
+              </div>
+              <div className="action-card" onClick={() => navigate('/bookings')}>
+                <Calendar size={32} />
+                <h3>My Bookings</h3>
+                <p>Track your reservations</p>
+              </div>
             </>
           )}
 
-          {user?.role === 'user' && (
+          {user?.role === 'guide' && (
             <>
-              <a href="/locations" className="btn btn-primary text-center">
-                Browse Locations
-              </a>
-              <a href="/hotels" className="btn btn-primary text-center">
-                Find Hotels
-              </a>
-              <a href="/transportation" className="btn btn-primary text-center">
-                View Transport
-              </a>
+              <div className="action-card" onClick={() => navigate('/guide/locations')}>
+                <MapPin size={32} />
+                <h3>Add Location</h3>
+                <p>Share new destinations</p>
+              </div>
+              <div className="action-card" onClick={() => navigate('/guide/hotels')}>
+                <Hotel size={32} />
+                <h3>List Hotel</h3>
+                <p>Add accommodation options</p>
+              </div>
+              <div className="action-card" onClick={() => navigate('/guide/transport')}>
+                <Bus size={32} />
+                <h3>Add Transport</h3>
+                <p>Include travel services</p>
+              </div>
+              <div className="action-card" onClick={() => navigate('/profile')}>
+                <Users size={32} />
+                <h3>My Profile</h3>
+                <p>Manage your listings</p>
+              </div>
             </>
           )}
 
           {user?.role === 'admin' && (
             <>
-              <a href="/admin/approvals" className="btn btn-primary text-center">
-                Pending Approvals
-              </a>
-              <a href="/admin" className="btn btn-primary text-center">
-                View Statistics
-              </a>
-              <a href="/locations" className="btn btn-secondary text-center">
-                Browse All
-              </a>
+              <div className="action-card" onClick={() => navigate('/admin/approvals')}>
+                <Award size={32} />
+                <h3>Pending Approvals</h3>
+                <p>Review submissions</p>
+              </div>
+              <div className="action-card" onClick={() => navigate('/admin')}>
+                <TrendingUp size={32} />
+                <h3>Dashboard</h3>
+                <p>View platform statistics</p>
+              </div>
+              <div className="action-card" onClick={() => navigate('/admin/guide-verifications')}>
+                <Shield size={32} />
+                <h3>Verify Guides</h3>
+                <p>Approve guide applications</p>
+              </div>
+              <div className="action-card" onClick={() => navigate('/locations')}>
+                <MapPin size={32} />
+                <h3>Browse All</h3>
+                <p>View all content</p>
+              </div>
             </>
           )}
         </div>
       </div>
 
-      {/* AI Route Advisor - User Dashboard */}
+      {/* AI Route Advisor */}
       {user?.role === 'user' && (
-        <div className="card">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-              <Compass className="w-6 h-6 text-primary-600" />
+        <div className="ai-advisor-section">
+          <div className="ai-card">
+            <div className="ai-header">
+              <div className="ai-title-group">
+                <div className="ai-icon">
+                  <Compass size={32} />
+                </div>
+                <div>
+                  <h2>AI Route Advisor</h2>
+                  <p>Get intelligent travel recommendations powered by AI</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">AI Route Advisor</h2>
-              <p className="text-sm text-gray-600">
-                Get AI recommendations on how to travel between two places in Bangladesh using different transports.
-              </p>
-            </div>
-          </div>
 
-          <div className="grid md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">From</label>
-              <input
-                type="text"
-                className="input input-bordered w-full"
-                placeholder="e.g. Dhaka"
-                value={origin}
-                onChange={e => setOrigin(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
-              <input
-                type="text"
-                className="input input-bordered w-full"
-                placeholder="e.g. Cox's Bazar"
-                value={destination}
-                onChange={e => setDestination(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={handleAskAI}
-            className="btn btn-primary"
-            disabled={aiLoading}
-          >
-            {aiLoading ? 'Thinking with AI...' : 'Ask AI for Route'}
-          </button>
-
-          {aiError && (
-            <p className="mt-3 text-sm text-red-600">{aiError}</p>
-          )}
-
-          {aiResult && (
-            <div className="mt-6 space-y-5">
-              <div className="bg-gradient-to-r from-primary-50 to-blue-50 rounded-xl p-5 border-l-4 border-primary-500">
-                <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary-600" />
-                  AI Recommendation
-                </h3>
-                <p className="text-gray-700">{aiResult.summary}</p>
+            <div className="ai-content">
+              <div className="ai-input-group">
+                <div className="ai-input-wrapper">
+                  <Map size={20} />
+                  <input
+                    type="text"
+                    placeholder="Starting point (e.g., Dhaka)"
+                    value={origin}
+                    onChange={e => setOrigin(e.target.value)}
+                  />
+                </div>
+                <div className="ai-input-wrapper">
+                  <Navigation size={20} />
+                  <input
+                    type="text"
+                    placeholder="Destination (e.g., Cox's Bazar)"
+                    value={destination}
+                    onChange={e => setDestination(e.target.value)}
+                  />
+                </div>
               </div>
 
-              <div className="grid gap-5">
-                {aiResult.recommendedTransports?.map((t, idx) => (
-                  <div key={idx} className="bg-white border-2 border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-gradient-to-r from-primary-500 to-primary-600 px-5 py-4 text-white">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-lg font-bold capitalize">
-                          {t.mode?.replace('_', ' ') || `Option ${idx + 1}`}
-                        </h4>
-                        <span className="bg-white text-primary-700 px-3 py-1 rounded-full text-sm font-semibold">
-                          Option {idx + 1}
-                        </span>
-                      </div>
-                    </div>
+              <button
+                onClick={handleAskAI}
+                className="ai-submit-btn"
+                disabled={aiLoading}
+              >
+                {aiLoading ? (
+                  <>
+                    <div className="loading-spinner"></div>
+                    <span>AI is thinking...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={20} />
+                    <span>Get AI Recommendations</span>
+                  </>
+                )}
+              </button>
 
-                    {/* Key Info Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-5 bg-gray-50 border-b">
-                      <div className="text-center">
-                        <p className="text-xs text-gray-500 mb-1">Duration</p>
-                        <p className="font-bold text-gray-900">
-                          {t.estimatedDurationText || (t.estimatedDurationMinutes ? `${Math.floor(t.estimatedDurationMinutes / 60)}h ${t.estimatedDurationMinutes % 60}m` : 'N/A')}
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-gray-500 mb-1">Cost</p>
-                        <p className="font-bold text-gray-900">{t.estimatedCostRange || 'N/A'}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-gray-500 mb-1">Stops</p>
-                        <p className="font-bold text-gray-900">{t.numberOfStops ?? t.steps?.length ?? 0}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-gray-500 mb-1">Mode</p>
-                        <p className="font-bold text-gray-900 capitalize">{t.mode || 'Mixed'}</p>
-                      </div>
-                    </div>
+              {aiError && (
+                <div className="ai-error">
+                  <span>⚠️</span> {aiError}
+                </div>
+              )}
 
-                    {/* Must-Visit Places */}
-                    {Array.isArray(t.mustVisitPlaces) && t.mustVisitPlaces.length > 0 && (
-                      <div className="px-5 py-4 bg-amber-50 border-b">
-                        <h5 className="text-sm font-bold text-amber-900 mb-2 flex items-center gap-2">
-                          <MapPin className="w-4 h-4" />
-                          Must-Visit Places
-                        </h5>
-                        <div className="flex flex-wrap gap-2">
-                          {t.mustVisitPlaces.map((place, i) => (
-                            <span key={i} className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-medium">
-                              {place}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Steps */}
-                    {Array.isArray(t.steps) && t.steps.length > 0 && (
-                      <div className="px-5 py-4 border-b">
-                        <h5 className="text-sm font-bold text-gray-900 mb-3">Journey Steps</h5>
-                        <ol className="space-y-2">
-                          {t.steps.map(step => (
-                            <li key={step.order || `${idx}-${step.instruction}`} className="flex gap-3">
-                              <span className="flex-shrink-0 w-6 h-6 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-xs font-bold">
-                                {step.order}
-                              </span>
-                              <div className="flex-1">
-                                <p className="text-sm text-gray-800">{step.instruction}</p>
-                                {step.from && step.to && (
-                                  <p className="text-xs text-gray-500 mt-0.5">
-                                    {step.from} → {step.to} ({step.transportType})
-                                  </p>
-                                )}
-                              </div>
-                            </li>
-                          ))}
-                        </ol>
-                      </div>
-                    )}
-
-                    {/* Pros & Cons */}
-                    <div className="grid md:grid-cols-2 gap-4 px-5 py-4">
-                      {Array.isArray(t.pros) && t.pros.length > 0 && (
-                        <div>
-                          <p className="text-sm font-bold text-green-700 mb-2">✓ Pros</p>
-                          <ul className="space-y-1">
-                            {t.pros.map((p, i) => (
-                              <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
-                                <span className="text-green-500 mt-0.5">•</span>
-                                <span>{p}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {Array.isArray(t.cons) && t.cons.length > 0 && (
-                        <div>
-                          <p className="text-sm font-bold text-red-700 mb-2">✗ Cons</p>
-                          <ul className="space-y-1">
-                            {t.cons.map((c, i) => (
-                              <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
-                                <span className="text-red-500 mt-0.5">•</span>
-                                <span>{c}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+              {aiResult && (
+                <div className="ai-results">
+                  <div className="ai-summary">
+                    <Sparkles size={24} />
+                    <div>
+                      <h3>AI Recommendation</h3>
+                      <p>{aiResult.summary}</p>
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  <div className="transport-options">
+                    {aiResult.recommendedTransports?.map((t, idx) => (
+                      <div key={idx} className="transport-card">
+                        <div className="transport-header">
+                          <h4>{t.mode?.replace('_', ' ') || `Option ${idx + 1}`}</h4>
+                          <span className="transport-badge">Option {idx + 1}</span>
+                        </div>
+
+                        <div className="transport-stats">
+                          <div className="stat">
+                            <Clock size={16} />
+                            <div>
+                              <p className="stat-value">
+                                {t.estimatedDurationText || 
+                                  (t.estimatedDurationMinutes ? 
+                                    `${Math.floor(t.estimatedDurationMinutes / 60)}h ${t.estimatedDurationMinutes % 60}m` : 
+                                    'N/A')}
+                              </p>
+                              <p className="stat-label">Duration</p>
+                            </div>
+                          </div>
+                          <div className="stat">
+                            <span className="currency">৳</span>
+                            <div>
+                              <p className="stat-value">{t.estimatedCostRange || 'N/A'}</p>
+                              <p className="stat-label">Estimated Cost</p>
+                            </div>
+                          </div>
+                          <div className="stat">
+                            <MapPin size={16} />
+                            <div>
+                              <p className="stat-value">{t.numberOfStops ?? t.steps?.length ?? 0}</p>
+                              <p className="stat-label">Stops</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {Array.isArray(t.mustVisitPlaces) && t.mustVisitPlaces.length > 0 && (
+                          <div className="must-visit">
+                            <h5>
+                              <Camera size={16} />
+                              Must-Visit Places
+                            </h5>
+                            <div className="places-tags">
+                              {t.mustVisitPlaces.map((place, i) => (
+                                <span key={i} className="place-tag">{place}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {Array.isArray(t.steps) && t.steps.length > 0 && (
+                          <div className="journey-steps">
+                            <h5>Journey Steps</h5>
+                            <ol>
+                              {t.steps.map(step => (
+                                <li key={step.order || `${idx}-${step.instruction}`}>
+                                  <span className="step-number">{step.order}</span>
+                                  <div className="step-content">
+                                    <p>{step.instruction}</p>
+                                    {step.from && step.to && (
+                                      <p className="step-route">
+                                        {step.from} → {step.to} ({step.transportType})
+                                      </p>
+                                    )}
+                                  </div>
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+
+                        <div className="pros-cons">
+                          {Array.isArray(t.pros) && t.pros.length > 0 && (
+                            <div className="pros">
+                              <h5>✓ Advantages</h5>
+                              <ul>
+                                {t.pros.map((p, i) => (
+                                  <li key={i}>{p}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {Array.isArray(t.cons) && t.cons.length > 0 && (
+                            <div className="cons">
+                              <h5>✗ Considerations</h5>
+                              <ul>
+                                {t.cons.map((c, i) => (
+                                  <li key={i}>{c}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>

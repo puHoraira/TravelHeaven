@@ -1,5 +1,5 @@
 import express from 'express';
-import { searchRailwayRoutes, getRailwaySeatClasses, getRailwayInfo } from '../controllers/railway.controller.js';
+import { searchRailwayRoutes, getRailwaySeatClasses, getRailwayInfo, getAllTrainRoutes } from '../controllers/railway.controller.js';
 
 const router = express.Router();
 
@@ -16,5 +16,8 @@ router.get('/seat-classes', getRailwaySeatClasses);
 
 // Get railway info
 router.get('/info', getRailwayInfo);
+
+// Get all train routes
+router.post('/routes', getAllTrainRoutes);
 
 export default router;

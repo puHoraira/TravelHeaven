@@ -19,6 +19,8 @@ import Locations from './pages/Locations';
 import Hotels from './pages/Hotels';
 import HotelDetail from './pages/HotelDetail';
 import Transportation from './pages/Transportation';
+import BDRailway from './pages/BDRailway';
+import TrainList from './pages/TrainList';
 import Profile from './pages/Profile';
 import Guides from './pages/Guides';
 import GuideProfile from './pages/GuideProfile';
@@ -79,6 +81,8 @@ function App() {
           <Route path="/hotels" element={<Hotels />} />
           <Route path="/hotels/:id" element={<HotelDetail />} />
           <Route path="/transportation" element={<Transportation />} />
+          <Route path="/railway" element={<BDRailway />} />
+          <Route path="/trains" element={<TrainList />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/guides" element={<Guides />} />
           <Route path="/guides/:id" element={<GuideProfile />} />

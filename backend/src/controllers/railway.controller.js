@@ -1,4 +1,4 @@
-import { searchTrains, formatDateForRailwayAPI, getSeatClasses } from '../services/railway.service.js';
+import { searchTrains, formatDateForRailwayAPI, getSeatClasses, getTrainRoutes } from '../services/railway.service.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -133,6 +133,67 @@ export const getRailwayInfo = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to get railway information'
+    });
+  }
+};
+
+/**
+ * Get route details for a specific train
+ * POST /api/railway/routes
+ * Body: { trainNumber, date }
+ */
+export const getAllTrainRoutes = async (req, res) => {
+  try {
+    const { trainNumber, date, bearerToken, deviceId, deviceKey } = req.body;
+    
+    if (!trainNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Train number is required'
+      });
+    }
+
+    // Use tokens from config file if not provided in request
+    const finalBearerToken = bearerToken || process.env.RAILWAY_BEARER_TOKEN || null;
+    const finalDeviceId = deviceId || process.env.RAILWAY_DEVICE_ID || null;
+    const finalDeviceKey = deviceKey || process.env.RAILWAY_DEVICE_KEY || null;
+
+    console.log(`🚂 Fetching routes for train ${trainNumber} on ${date || 'today'}`);
+    console.log('🔑 Has Bearer Token:', !!finalBearerToken, finalBearerToken ? `(${finalBearerToken.substring(0, 20)}...)` : '(none)');
+    console.log('🔑 Has Device ID:', !!finalDeviceId);
+    console.log('🔑 Has Device Key:', !!finalDeviceKey);
+
+    // Check if we have all required tokens
+    if (!finalBearerToken || !finalDeviceId || !finalDeviceKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'Railway API requires authentication. Please provide Bearer Token, Device ID, and Device Key.',
+        missing: {
+          bearerToken: !finalBearerToken,
+          deviceId: !finalDeviceId,
+          deviceKey: !finalDeviceKey
+        }
+      });
+    }
+
+    // Get train routes
+    const result = await getTrainRoutes(trainNumber, date, {
+      bearerToken: finalBearerToken,
+      deviceId: finalDeviceId,
+      deviceKey: finalDeviceKey
+    });
+
+    return res.json({
+      success: true,
+      data: result.data
+    });
+
+  } catch (error) {
+    console.error('Get train routes error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to get train routes',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };

@@ -8,6 +8,103 @@ import axios from 'axios';
 const RAILWAY_API_BASE_URL = 'https://railspaapi.shohoz.com/v1.0/web';
 
 /**
+ * Get route details for a specific train
+ * @param {string} trainNumber - Train model/number
+ * @param {string} date - Departure date in YYYY-MM-DD format
+ * @param {Object} params - Request parameters
+ * @param {string} params.bearerToken - Optional Bearer token for authentication
+ * @param {string} params.deviceId - Optional device ID
+ * @param {string} params.deviceKey - Optional device key
+ * @returns {Promise<Object>} Train route details
+ */
+export const getTrainRoutes = async (trainNumber, date, { 
+  bearerToken = null,
+  deviceId = null,
+  deviceKey = null
+} = {}) => {
+  try {
+    const url = `${RAILWAY_API_BASE_URL}/train-routes`;
+    
+    console.log(`🚂 Fetching routes for train ${trainNumber} on ${date}`);
+
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+      'Referer': 'https://eticket.railway.gov.bd/',
+      'Origin': 'https://eticket.railway.gov.bd',
+      'sec-ch-ua': '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'X-Requested-With': 'XMLHttpRequest'
+    };
+
+    // Add Bearer token if provided
+    if (bearerToken) {
+      headers['Authorization'] = `Bearer ${bearerToken}`;
+    }
+
+    // Add device ID and key if provided
+    if (deviceId) {
+      headers['X-Device-Id'] = deviceId;
+    }
+    if (deviceKey) {
+      headers['X-Device-Key'] = deviceKey;
+    }
+
+    const requestBody = {
+      model: trainNumber,
+      departure_date_time: date || new Date().toISOString().split('T')[0]
+    };
+
+    console.log('📤 Request body:', JSON.stringify(requestBody));
+
+    const response = await axios.post(url, requestBody, {
+      headers,
+      timeout: 10000
+    });
+
+    if (response.data) {
+      console.log(`✅ Fetched train routes successfully`);
+      
+      return {
+        success: true,
+        data: response.data
+      };
+    }
+
+    return {
+      success: false,
+      data: null,
+      message: 'No route data found'
+    };
+
+  } catch (error) {
+    console.error('❌ Train Routes API Error:', error.message);
+    
+    if (error.response) {
+      const status = error.response.status;
+      const message = error.response.data?.message || error.response.statusText;
+      
+      console.error(`API Response Status: ${status}`);
+      console.error(`API Response Message:`, message);
+      
+      if (status === 401 || status === 403) {
+        throw new Error('Railway API requires authentication. Please provide Bearer Token, Device ID, and Device Key.');
+      }
+      
+      throw new Error(`Railway API Error (${status}): ${message}`);
+    }
+    
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Request timeout. Please try again.');
+    }
+    
+    throw new Error('Failed to fetch train routes. Please try again.');
+  }
+};
+
+/**
  * Search for available trains between two cities
  * @param {Object} params - Search parameters
  * @param {string} params.fromCity - Origin city name

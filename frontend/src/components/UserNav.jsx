@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Map, MapPin, Hotel, Users, Bus, Calendar } from 'lucide-react';
+import { Home, Map, MapPin, Hotel, Users, Bus, Train, Calendar } from 'lucide-react';
 
 const UserNav = () => {
   const location = useLocation();
@@ -45,6 +45,14 @@ const UserNav = () => {
       <Link to="/transportation" className={navLinkClass('/transportation')}>
         <Bus className="w-4 h-4" />
         Transportation
+      </Link>
+      <Link to="/railway" className={navLinkClass('/railway')}>
+        <Train className="w-4 h-4" />
+        BD Railway
+      </Link>
+      <Link to="/trains" className={navLinkClass('/trains')}>
+        <Train className="w-4 h-4" />
+        All Trains
       </Link>
       <Link to="/bookings" className={navLinkClass('/bookings')}>
         <Calendar className="w-4 h-4" />

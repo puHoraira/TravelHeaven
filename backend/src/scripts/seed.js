@@ -12,13 +12,22 @@ const seed = async () => {
   const db = DatabaseConnection.getInstance();
   await db.connect();
 
-  // Clear collections (safe for local dev)
+  console.log('⚠️  WARNING: This script will DELETE ALL DATA in the database!');
+  console.log('⚠️  This should ONLY be used for initial setup or testing!');
+  console.log('⚠️  Use "npm run cleanup-seed" instead for safe seeding.');
+  console.log('');
+  console.log('Waiting 5 seconds... Press Ctrl+C to cancel.');
+  await new Promise(resolve => setTimeout(resolve, 5000));
+
+  // Clear collections (DANGEROUS - only for initial dev setup)
+  console.log('🗑️  Deleting all data...');
   await Promise.all([
     User.deleteMany({}),
     Location.deleteMany({}),
     Hotel.deleteMany({}),
     Transport.deleteMany({}),
   ]);
+  console.log('✅ All data deleted');
 
   // Create admin
   const adminPassword = await bcrypt.hash('adminpass', 10);

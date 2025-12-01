@@ -124,8 +124,6 @@ export class RecommendationFacade {
       this.transportRepo.findAll(transportFilter, { limit: 30, page: 1 }),
     ]);
 
-    console.log('DEBUG - First location from repo:', locationsResult.data?.[0]);
-
     return {
       locations: locationsResult.data || [],
       hotels: hotelsResult.data || [],
@@ -290,10 +288,6 @@ export class RecommendationFacade {
    */
   async saveItinerary(itineraryData) {
     console.log('💾 Saving itinerary to database...');
-    console.log('📦 Received itineraryData.budget:', itineraryData.budget);
-    console.log('📦 Received itineraryData.preferences?.budget:', itineraryData.preferences?.budget);
-    console.log('Dates:', itineraryData.startDate, 'to', itineraryData.endDate);
-    console.log('Selected locations:', itineraryData.destinations?.length);
     
     try {
       // Ensure dates are valid
@@ -332,9 +326,7 @@ export class RecommendationFacade {
       
       // Save to database
       const savedItinerary = await itineraryDoc.save();
-      console.log('✅ Itinerary saved with ID:', savedItinerary._id);
-      console.log('✅ Budget saved in DB:', savedItinerary.budget.total);
-      console.log('✅ Dates saved:', savedItinerary.startDate, 'to', savedItinerary.endDate);
+      console.log('✅ Itinerary saved successfully:', savedItinerary._id);
       
       return savedItinerary;
     } catch (error) {

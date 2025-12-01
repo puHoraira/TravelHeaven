@@ -18,30 +18,7 @@ const cleanupAndSeed = async () => {
     const db = DatabaseConnection.getInstance();
     await db.connect();
 
-    console.log('🗑️  Step 1: Removing TEST data...');
-    
-    // Delete all locations/hotels/transport with "TEST" in name
-    const deletedLocations = await Location.deleteMany({ 
-      name: { $regex: 'TEST', $options: 'i' } 
-    });
-    console.log(`✅ Removed ${deletedLocations.deletedCount} TEST locations`);
-
-    const deletedHotels = await Hotel.deleteMany({ 
-      name: { $regex: 'TEST', $options: 'i' } 
-    });
-    console.log(`✅ Removed ${deletedHotels.deletedCount} TEST hotels`);
-
-    const deletedTransport = await Transport.deleteMany({ 
-      name: { $regex: 'TEST', $options: 'i' } 
-    });
-    console.log(`✅ Removed ${deletedTransport.deletedCount} TEST transport`);
-
-    // Also remove by isTestData flag
-    await Location.deleteMany({ isTestData: true });
-    await Hotel.deleteMany({ isTestData: true });
-    await Transport.deleteMany({ isTestData: true });
-
-    console.log('\n🌟 Step 2: Seeding diverse realistic locations...');
+    console.log('🌟 Seeding diverse realistic locations (preserving existing data)...');
 
     // Create a test guide user if not exists
     let guideUser = await User.findOne({ email: 'guide@test.com' });
@@ -188,8 +165,16 @@ const cleanupAndSeed = async () => {
       }
     ];
 
-    const createdLocations = await Location.insertMany(locations);
-    console.log(`✅ Created ${createdLocations.length} diverse locations`);
+    // Insert locations only if they don't exist
+    let createdCount = 0;
+    for (const locationData of locations) {
+      const exists = await Location.findOne({ name: locationData.name });
+      if (!exists) {
+        await Location.create(locationData);
+        createdCount++;
+      }
+    }
+    console.log(`✅ Added ${createdCount} new locations (${locations.length - createdCount} already existed)`);
 
     // Hotels for each location
     const hotels = [
@@ -268,8 +253,16 @@ const cleanupAndSeed = async () => {
       }
     ];
 
-    const createdHotels = await Hotel.insertMany(hotels);
-    console.log(`✅ Created ${createdHotels.length} hotels`);
+    // Insert hotels only if they don't exist
+    let hotelCount = 0;
+    for (const hotelData of hotels) {
+      const exists = await Hotel.findOne({ name: hotelData.name });
+      if (!exists) {
+        await Hotel.create(hotelData);
+        hotelCount++;
+      }
+    }
+    console.log(`✅ Added ${hotelCount} new hotels (${hotels.length - hotelCount} already existed)`);
 
     // Transport options
     const transport = [
@@ -375,8 +368,16 @@ const cleanupAndSeed = async () => {
       }
     ];
 
-    const createdTransport = await Transport.insertMany(transport);
-    console.log(`✅ Created ${createdTransport.length} transport options`);
+    // Insert transport only if they don't exist
+    let transportCount = 0;
+    for (const transportData of transport) {
+      const exists = await Transport.findOne({ name: transportData.name });
+      if (!exists) {
+        await Transport.create(transportData);
+        transportCount++;
+      }
+    }
+    console.log(`✅ Added ${transportCount} new transport options (${transport.length - transportCount} already existed)`);
 
     console.log('\n🎉 Database seeded successfully!');
     console.log('\n📊 Summary:');

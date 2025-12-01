@@ -60,7 +60,7 @@ temp/
 # Database
 *.db
 *.sqlite
-data/
+backend/data/
 
 # Package manager
 package-lock.json

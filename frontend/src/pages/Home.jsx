@@ -353,7 +353,7 @@ const Home = () => {
                 </div>
                 <div>
                   <h2>AI Route Advisor</h2>
-                  <p>Get intelligent travel recommendations powered by AI</p>
+                  <p>Get intelligent travel recommendations based on your preferences</p>
                 </div>
               </div>
             </div>

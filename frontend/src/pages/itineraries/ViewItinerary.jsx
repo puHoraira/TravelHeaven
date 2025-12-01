@@ -243,6 +243,22 @@ export default function ViewItinerary() {
     }
   };
 
+  const handleExpensesChange = async (updatedExpenses) => {
+    try {
+      await api.put(`/itineraries/${id}`, {
+        budget: {
+          ...itinerary.budget,
+          expenses: updatedExpenses
+        }
+      });
+      toast.success('Expenses updated');
+      fetchItinerary();
+    } catch (error) {
+      toast.error('Failed to update expenses');
+      console.error(error);
+    }
+  };
+
   const handleSaveDay = async (dayData) => {
     try {
       const response = await api.put(`/itineraries/${id}`, {
@@ -672,7 +688,11 @@ export default function ViewItinerary() {
           {/* Budget Tracker */}
           {itinerary.budget && (
             <BudgetTracker 
-              budget={itinerary.budget} 
+              budgetTotal={itinerary.budget.total || 0}
+              currency={itinerary.budget.currency || 'USD'}
+              expenses={itinerary.budget.expenses || []}
+              onExpensesChange={handleExpensesChange}
+              days={itinerary.days || []}
               collaborators={itinerary.collaborators}
             />
           )}

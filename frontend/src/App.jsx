@@ -44,6 +44,9 @@ import PublicItineraries from './pages/itineraries/PublicItineraries';
 import CreateItinerary from './pages/itineraries/CreateItinerary';
 import ViewItinerary from './pages/itineraries/ViewItinerary';
 
+// Recommendation page
+import RecommendationWizard from './pages/RecommendationWizard';
+
 function App() {
   const { user } = useAuthStore();
 
@@ -108,6 +111,9 @@ function App() {
           <Route path="/itineraries/create" element={<CreateItinerary />} />
           <Route path="/itineraries/:id" element={<ViewItinerary />} />
           <Route path="/itineraries/:id/view" element={<ViewItinerary />} />
+
+          {/* Recommendation Wizard - All authenticated users */}
+          <Route path="/recommendations" element={<RecommendationWizard />} />
         </Route>
       </Routes>
     </BrowserRouter>

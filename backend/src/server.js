@@ -16,8 +16,7 @@ import notificationRoutes from './routes/notification.routes.js';
 import expenseRoutes from './routes/expense.route.js';
 import aiRoutes from './routes/ai.routes.js';
 import railwayRoutes from './routes/railway.routes.js';
-
-
+import recommendationRoutes from './routes/recommendation.routes.js';
 
 dotenv.config();
 
@@ -47,7 +46,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/itineraries/:itineraryId/expenses', expenseRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/railway', railwayRoutes);
-
+app.use('/api/recommendations', recommendationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

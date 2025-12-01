@@ -8,6 +8,9 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "seed": "node src/scripts/seed.js",
+    "seed-test": "node src/scripts/seed-recommendation-test.js",
+    "unseed-test": "node src/scripts/unseed-recommendation-test.js",
+    "cleanup-seed": "node src/scripts/cleanup-and-seed-proper.js",
     "test-db": "node src/scripts/test-db.js",
     "test": "jest",
     "recalc:ratings": "node src/scripts/recalc-ratings.js"

@@ -1,5 +1,45 @@
 import mongoose from 'mongoose';
 
+const itineraryActivitySchema = new mongoose.Schema({
+  // References to existing approved content (optional)
+  locationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Location',
+  },
+  hotelId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hotel',
+  },
+  transportId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Transport',
+  },
+
+  // Free-form activity fields (used by AI + manual planner)
+  timeOfDay: String, // e.g. "Morning", "Afternoon", "Evening" or "09:00-11:00"
+  customName: String,
+  customDescription: String,
+  customCoordinates: {
+    latitude: Number,
+    longitude: Number,
+  },
+
+  // Legacy/compat fields used by frontend pages (kept so data persists)
+  order: Number,
+  notes: String,
+  estimatedCost: Number,
+}, { _id: false });
+
+const itineraryDaySchema = new mongoose.Schema({
+  dayNumber: Number,
+  date: Date,
+  title: String,
+  description: String,
+  // Keep `stops` name for backwards compatibility with existing UI.
+  // Conceptually, each stop == an itinerary activity/time block.
+  stops: [itineraryActivitySchema],
+}, { _id: false });
+
 const itinerarySchema = new mongoose.Schema({
   title: {
     type: String,
@@ -9,6 +49,32 @@ const itinerarySchema = new mongoose.Schema({
   description: {
     type: String,
     trim: true,
+  },
+  destination: {
+    type: String,
+    trim: true,
+  },
+  createdByRole: {
+    type: String,
+    enum: ['user', 'guide'],
+    default: 'user',
+  },
+  source: {
+    type: String,
+    enum: ['manual', 'ai-route-adviser', 'smart-recommendation'],
+    default: 'manual',
+  },
+  pricing: {
+    amount: Number,
+    currency: {
+      type: String,
+      default: 'BDT',
+    },
+    contactForPrice: {
+      type: Boolean,
+      default: false,
+    },
+    notes: String,
   },
   ownerId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -36,35 +102,7 @@ const itinerarySchema = new mongoose.Schema({
   endDate: {
     type: Date,
   },
-  days: [{
-    dayNumber: Number,
-    date: Date,
-    title: String,
-    description: String,
-    stops: [{
-      locationId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Location',
-      },
-      hotelId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Hotel',
-      },
-      transportId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Transport',
-      },
-      customName: String,
-      customDescription: String,
-      customCoordinates: {
-        latitude: Number,
-        longitude: Number,
-      },
-      order: Number,
-      notes: String,
-      estimatedCost: Number,
-    }],
-  }],
+  days: [itineraryDaySchema],
   budget: {
     total: Number,
     currency: {
@@ -142,5 +180,8 @@ itinerarySchema.index({ ownerId: 1, createdAt: -1 });
 itinerarySchema.index({ isPublic: 1, createdAt: -1 });
 itinerarySchema.index({ 'collaborators.userId': 1 });
 itinerarySchema.index({ views: -1 });
+itinerarySchema.index({ destination: 1, createdAt: -1 });
+itinerarySchema.index({ createdByRole: 1, createdAt: -1 });
+itinerarySchema.index({ source: 1, createdAt: -1 });
 
 export const Itinerary = mongoose.model('Itinerary', itinerarySchema);

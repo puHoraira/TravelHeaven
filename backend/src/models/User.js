@@ -49,6 +49,9 @@ const userSchema = new mongoose.Schema({
       phone: String,
       whatsapp: String,
       email: String,
+      website: String,
+      facebook: String,
+      instagram: String,
     },
     rating: {
       average: {

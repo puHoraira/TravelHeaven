@@ -34,6 +34,7 @@ const GuideLocations = () => {
   const [imagePreview, setImagePreview] = useState([]);
   const [attractions, setAttractions] = useState(['']);
   const [activities, setActivities] = useState(['']);
+  const [outlineText, setOutlineText] = useState('');
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -105,6 +106,70 @@ const GuideLocations = () => {
     setActivities(updated);
   };
 
+  const parseOutlineText = (text) => {
+    const lines = (text || '')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const days = [];
+    for (const line of lines) {
+      const m = line.match(/^day\s*(\d+)\s*[-:]\s*(.*)$/i);
+      const dayNumber = m ? Number(m[1]) : days.length + 1;
+      const rest = (m ? m[2] : line).trim();
+
+      let title = rest;
+      let highlights = [];
+      if (rest.includes(':')) {
+        const idx = rest.indexOf(':');
+        title = rest.slice(0, idx).trim();
+        const hl = rest.slice(idx + 1);
+        highlights = hl
+          .split(';')
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+
+      days.push({
+        dayNumber,
+        title,
+        highlights,
+      });
+    }
+    return days;
+  };
+
+  const formatOutlineText = (outline) => {
+    const arr = Array.isArray(outline)
+      ? outline
+      : (() => {
+          if (!outline) return [];
+          if (typeof outline === 'string') {
+            try {
+              const parsed = JSON.parse(outline);
+              return Array.isArray(parsed) ? parsed : [];
+            } catch {
+              return [];
+            }
+          }
+          return [];
+        })();
+
+    return arr
+      .slice()
+      .sort((a, b) => (a?.dayNumber || 0) - (b?.dayNumber || 0))
+      .map((d) => {
+        const prefix = `Day ${d.dayNumber || ''}`.trim();
+        const title = (d.title || '').toString().trim();
+        const highlights = Array.isArray(d.highlights) ? d.highlights.filter(Boolean) : [];
+        if (highlights.length) {
+          return `${prefix} - ${title || 'Plan'}: ${highlights.join('; ')}`;
+        }
+        return `${prefix} - ${title || 'Plan'}`;
+      })
+      .join('\n');
+  };
+
   const onSubmit = async (data) => {
     try {
       const formData = new FormData();
@@ -122,6 +187,7 @@ const GuideLocations = () => {
       if (data.longitude) formData.append('longitude', data.longitude);
       if (data.bestTimeToVisit) formData.append('bestTimeToVisit', data.bestTimeToVisit);
       if (data.openingHours) formData.append('openingHours', data.openingHours);
+      if (data.recommendedTripLength) formData.append('recommendedTripLength', data.recommendedTripLength);
       if (data.entryFeeAmount) formData.append('entryFeeAmount', data.entryFeeAmount);
       if (data.entryFeeCurrency) formData.append('entryFeeCurrency', data.entryFeeCurrency);
       if (data.entryFeeDetails) formData.append('entryFeeDetails', data.entryFeeDetails);
@@ -132,6 +198,11 @@ const GuideLocations = () => {
       
       formData.append('attractions', JSON.stringify(validAttractions));
       formData.append('activities', JSON.stringify(validActivities));
+
+      const outlineDays = parseOutlineText(outlineText);
+      if (outlineDays.length > 0) {
+        formData.append('dayByDayOutline', JSON.stringify(outlineDays));
+      }
       
       // Images
       images.forEach(image => {
@@ -173,6 +244,7 @@ const GuideLocations = () => {
     setEditingLocation(null);
     setAttractions(['']);
     setActivities(['']);
+    setOutlineText('');
   };
 
   const handleEdit = (location) => {
@@ -187,12 +259,14 @@ const GuideLocations = () => {
     setValue('longitude', location.coordinates?.longitude || '');
     setValue('bestTimeToVisit', location.bestTimeToVisit || '');
     setValue('openingHours', location.openingHours || '');
+    setValue('recommendedTripLength', location.recommendedTripLength || '');
     setValue('entryFeeAmount', location.entryFee?.amount || '');
     setValue('entryFeeCurrency', location.entryFee?.currency || 'USD');
     setValue('entryFeeDetails', location.entryFee?.details || '');
     
     setAttractions(location.attractions?.length ? location.attractions : ['']);
     setActivities(location.activities?.length ? location.activities : ['']);
+    setOutlineText(formatOutlineText(location.dayByDayOutline));
     
     setShowForm(true);
   };
@@ -797,6 +871,35 @@ const GuideLocations = () => {
                     placeholder="e.g., 9:00 AM - 6:00 PM daily, Closed Mondays"
                     {...register('openingHours')}
                   />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Recommended Trip Length
+                  </label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="e.g., 2 days, 3-4 days, One day trip"
+                    {...register('recommendedTripLength')}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Optional Day-by-day Outline
+                  </label>
+                  <textarea
+                    className="input min-h-[120px]"
+                    placeholder={
+                      "Example:\nDay 1 - Arrival & beach: Sunset walk; Seafood dinner\nDay 2 - Local sights: Market visit; Boat ride"
+                    }
+                    value={outlineText}
+                    onChange={(e) => setOutlineText(e.target.value)}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Format: one line per day. Use “Day X - Title: highlight; highlight”.
+                  </p>
                 </div>
 
                 <div>

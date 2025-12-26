@@ -35,6 +35,7 @@ import GuideDashboard from './pages/guide/Dashboard';
 import GuideLocations from './pages/guide/Locations';
 import GuideHotels from './pages/guide/Hotels';
 import GuideTransport from './pages/guide/Transport';
+import GuideItineraries from './pages/guide/Itineraries';
 
 import UserBookings from './pages/user/Bookings';
 
@@ -101,6 +102,7 @@ function App() {
           <Route path="/guide/locations" element={<ProtectedRoute requiredRole="guide"><GuideLocations /></ProtectedRoute>} />
           <Route path="/guide/hotels" element={<ProtectedRoute requiredRole="guide"><GuideHotels /></ProtectedRoute>} />
           <Route path="/guide/transport" element={<ProtectedRoute requiredRole="guide"><GuideTransport /></ProtectedRoute>} />
+          <Route path="/guide/itineraries" element={<ProtectedRoute requiredRole="guide"><GuideItineraries /></ProtectedRoute>} />
 
           {/* User Bookings */}
           <Route path="/bookings" element={<ProtectedRoute requiredRole="user"><UserBookings /></ProtectedRoute>} />

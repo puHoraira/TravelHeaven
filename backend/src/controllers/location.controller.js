@@ -87,6 +87,19 @@ export const createLocation = async (req, res) => {
     if (req.body.address) locationData.address = req.body.address.trim();
     if (req.body.bestTimeToVisit) locationData.bestTimeToVisit = req.body.bestTimeToVisit.trim();
     if (req.body.openingHours) locationData.openingHours = req.body.openingHours.trim();
+      if (req.body.recommendedTripLength) locationData.recommendedTripLength = req.body.recommendedTripLength.trim();
+
+      // Optional day-by-day outline (stringified JSON or array)
+      if (req.body.dayByDayOutline) {
+        try {
+          const outline = typeof req.body.dayByDayOutline === 'string'
+            ? JSON.parse(req.body.dayByDayOutline)
+            : req.body.dayByDayOutline;
+          locationData.dayByDayOutline = Array.isArray(outline) ? outline : [];
+        } catch {
+          locationData.dayByDayOutline = [];
+        }
+      }
     
     // Coordinates
     if (req.body.latitude && req.body.longitude) {
@@ -261,7 +274,25 @@ export const updateLocation = async (req, res) => {
       });
     }
 
-    const updateData = { ...req.body };
+    const updateData = {
+      ...req.body,
+      updatedAt: Date.now(),
+    };
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'recommendedTripLength')) {
+      updateData.recommendedTripLength = req.body.recommendedTripLength ? req.body.recommendedTripLength.trim() : '';
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'dayByDayOutline')) {
+      try {
+        const outline = typeof req.body.dayByDayOutline === 'string'
+          ? JSON.parse(req.body.dayByDayOutline)
+          : req.body.dayByDayOutline;
+        updateData.dayByDayOutline = Array.isArray(outline) ? outline : [];
+      } catch {
+        updateData.dayByDayOutline = [];
+      }
+    }
 
     // Handle uploaded images - store as MongoDB File references
     if (req.files && req.files.length > 0) {

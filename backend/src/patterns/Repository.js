@@ -225,6 +225,7 @@ export class ItineraryRepository extends BaseRepository {
     
     let score = 0;
     if (itinerary.title) score += 20;
+    if (itinerary.destination) score += 10;
     if (itinerary.startDate && itinerary.endDate) score += 20;
     if (itinerary.days && itinerary.days.length > 0) score += 30;
     if (itinerary.budget && itinerary.budget.total) score += 15;

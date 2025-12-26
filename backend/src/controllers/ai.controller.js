@@ -1,5 +1,10 @@
 import dotenv from 'dotenv';
-dotenv.config();
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 import axios from 'axios';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -240,6 +245,188 @@ Return ONLY valid JSON (no markdown, no text):
     return res.json(json);
   } catch (err) {
     console.error('AI route advisor error:', err?.response?.data || err);
+    next(err);
+  }
+};
+
+const coercePositiveInt = (value, fallback) => {
+  const n = Number.parseInt(value, 10);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return n;
+};
+
+const extractJson = (text) => {
+  let cleanText = (text || '').trim();
+  cleanText = cleanText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  if (!cleanText.startsWith('{') && !cleanText.startsWith('[')) {
+    const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) cleanText = jsonMatch[0];
+  }
+  return cleanText;
+};
+
+const normalizeItineraryPreview = (payload, durationDays) => {
+  const obj = payload && typeof payload === 'object' ? payload : {};
+  const days = Array.isArray(obj.days) ? obj.days : [];
+  const normalizedDays = days.map((d, idx) => {
+    const activities = Array.isArray(d.activities) ? d.activities : [];
+    const normalizedActivities = activities
+      .filter(Boolean)
+      .slice(0, 6)
+      .map((a) => ({
+        time_of_day: (a.time_of_day || '').toString(),
+        place_name: (a.place_name || '').toString(),
+        description: (a.description || '').toString(),
+      }))
+      .filter((a) => a.place_name);
+
+    // Ensure 2-4 activities minimum
+    while (normalizedActivities.length < 2) {
+      normalizedActivities.push({
+        time_of_day: normalizedActivities.length === 0 ? 'Morning' : 'Evening',
+        place_name: 'Free exploration',
+        description: 'Explore nearby spots and local food options.',
+      });
+    }
+
+    return {
+      day_number: Number(d.day_number) || idx + 1,
+      title: (d.title || `Day ${idx + 1}`).toString(),
+      activities: normalizedActivities.slice(0, 4),
+    };
+  });
+
+  // If AI returned fewer days, pad up to durationDays
+  while (normalizedDays.length < durationDays) {
+    const nextDay = normalizedDays.length + 1;
+    normalizedDays.push({
+      day_number: nextDay,
+      title: `Day ${nextDay}`,
+      activities: [
+        { time_of_day: 'Morning', place_name: 'Sightseeing walk', description: 'Start with a relaxed exploration of a nearby attraction.' },
+        { time_of_day: 'Evening', place_name: 'Local dinner', description: 'Try a popular local dish and rest.' },
+      ],
+    });
+  }
+
+  return {
+    destination: (obj.destination || '').toString(),
+    number_of_days: coercePositiveInt(obj.number_of_days, durationDays),
+    notes: (obj.notes || '').toString(),
+    days: normalizedDays.slice(0, durationDays),
+  };
+};
+
+/**
+ * POST /api/ai/itinerary/preview
+ * Generates a structured day-by-day itinerary plan (JSON) without saving.
+ */
+export const previewItineraryPlan = async (req, res, next) => {
+  try {
+    const destination = (req.body.destination || '').toString().trim();
+    const durationDays = coercePositiveInt(req.body.durationDays, 3);
+    const budgetLevel = (req.body.budgetLevel || '').toString().trim();
+    const interests = Array.isArray(req.body.interests) ? req.body.interests : [];
+    const travelerType = (req.body.travelerType || '').toString().trim();
+
+    if (!destination) {
+      return res.status(400).json({ message: 'destination is required' });
+    }
+
+    const prompt = `You are a travel planner.
+Create a practical day-by-day itinerary for: ${destination}.
+
+Constraints:
+- Number of days: ${durationDays}
+- Budget level: ${budgetLevel || 'mid'}
+- Interests: ${interests.length ? interests.join(', ') : 'general'}
+- Traveler type: ${travelerType || 'traveler'}
+
+Return ONLY valid JSON (no markdown, no extra text) with this exact schema:
+{
+  "destination": "string",
+  "number_of_days": number,
+  "notes": "string",
+  "days": [
+    {
+      "day_number": number,
+      "title": "string",
+      "activities": [
+        {
+          "time_of_day": "Morning|Afternoon|Evening|Night|HH:MM-HH:MM",
+          "place_name": "string",
+          "description": "string"
+        }
+      ]
+    }
+  ]
+}
+
+Rules:
+- days.length must equal number_of_days.
+- Each day must have 2 to 4 activities.
+- Keep place_name real-world and Bangladesh-friendly when relevant.
+`;
+
+    // Reuse the same model selection approach as getRouteAdvice
+    const candidateModelsRaw = [
+      cachedWorkingModel,
+      MODEL_NAME,
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-1.5-flash-latest',
+      'gemini-1.0-pro',
+    ];
+    const seen = new Set();
+    const candidateModels = candidateModelsRaw.filter(m => {
+      if (!m || seen.has(m)) return false;
+      seen.add(m);
+      return true;
+    });
+
+    let lastErr;
+    let text;
+    for (const m of candidateModels) {
+      try {
+        try {
+          text = await generateViaRest(m, prompt);
+        } catch (restErr) {
+          const status = restErr?.response?.status;
+          if (status === 404) throw restErr;
+          const model = genAI.getGenerativeModel({ model: (m || '').replace(/^models\//, '') });
+          const result = await model.generateContent(prompt);
+          text = result.response.text().trim();
+        }
+        cachedWorkingModel = m;
+        break;
+      } catch (err) {
+        lastErr = err;
+        const status = err?.status || err?.response?.status;
+        if (status === 404) continue;
+        throw err;
+      }
+    }
+
+    if (!text) {
+      throw lastErr || new Error('Failed to generate itinerary preview');
+    }
+
+    const cleanText = extractJson(text);
+    let json;
+    try {
+      json = JSON.parse(cleanText);
+    } catch (e) {
+      return res.status(500).json({
+        message: 'AI response was not valid JSON. Please try again.',
+        raw: text.substring(0, 500),
+      });
+    }
+
+    const normalized = normalizeItineraryPreview(json, durationDays);
+    return res.json({ success: true, data: normalized });
+  } catch (err) {
+    console.error('AI itinerary preview error:', err?.response?.data || err);
     next(err);
   }
 };

@@ -131,6 +131,9 @@ export class ItineraryBuilder {
       rating: location.rating,
       coordinates: location.coordinates,
       entryFee: location.entryFee || 0,
+      // Guide-authored planning fields (optional)
+      recommendedTripLength: location.recommendedTripLength,
+      dayByDayOutline: Array.isArray(location.dayByDayOutline) ? location.dayByDayOutline : [],
       estimatedDuration: location.estimatedDuration || 2, // hours
       order: this.itinerary.destinations.length + 1,
     });

@@ -13,16 +13,13 @@ import {
   Award,
   Calendar,
   ArrowLeft,
-  Building2,
   Bus,
   Camera,
   CheckCircle,
   ExternalLink,
   Hotel as HotelIcon,
   Briefcase,
-  TrendingUp,
-  Users,
-  Eye
+  TrendingUp
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
@@ -36,6 +33,7 @@ const GuideProfile = () => {
   const [locations, setLocations] = useState([]);
   const [hotels, setHotels] = useState([]);
   const [transports, setTransports] = useState([]);
+  const [itineraries, setItineraries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewData, setReviewData] = useState({ rating: 5, title: '', comment: '' });
@@ -44,18 +42,20 @@ const GuideProfile = () => {
   const fetchGuideData = useCallback(async () => {
     try {
       setLoading(true);
-      const [guideRes, reviewsRes, locationsRes, hotelsRes, transportsRes] = await Promise.all([
+      const [guideRes, reviewsRes, locationsRes, hotelsRes, transportsRes, itinerariesRes] = await Promise.all([
         api.get(`/guides/${id}`),
         api.get('/reviews', { params: { reviewType: 'guide', referenceId: id } }),
         api.get('/locations', { params: { guideId: id, limit: 100 } }).catch(() => ({ data: [] })),
         api.get('/hotels', { params: { guideId: id, limit: 100 } }).catch(() => ({ data: [] })),
         api.get('/transportation', { params: { guideId: id, limit: 100 } }).catch(() => ({ data: [] })),
+        api.get('/itineraries/public', { params: { guideId: id, createdByRole: 'guide', limit: 100 } }).catch(() => ({ data: [] })),
       ]);
       setGuide(guideRes.data);
       setReviews(reviewsRes.data);
       setLocations(Array.isArray(locationsRes.data) ? locationsRes.data : []);
       setHotels(Array.isArray(hotelsRes.data) ? hotelsRes.data : []);
       setTransports(Array.isArray(transportsRes.data) ? transportsRes.data : []);
+      setItineraries(Array.isArray(itinerariesRes?.data) ? itinerariesRes.data : []);
     } catch (error) {
       toast.error('Failed to load guide profile');
     } finally {
@@ -203,7 +203,7 @@ const GuideProfile = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Tabs */}
         <div className="flex flex-wrap gap-2 mb-8 border-b">
-          {['overview', 'locations', 'hotels', 'transport', 'reviews'].map((tab) => (
+          {['overview', 'locations', 'hotels', 'transport', 'itineraries', 'reviews'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -217,6 +217,7 @@ const GuideProfile = () => {
               {tab === 'locations' && ` (${locations.length})`}
               {tab === 'hotels' && ` (${hotels.length})`}
               {tab === 'transport' && ` (${transports.length})`}
+              {tab === 'itineraries' && ` (${itineraries.length})`}
               {tab === 'reviews' && ` (${reviews.length})`}
             </button>
           ))}
@@ -565,6 +566,55 @@ const GuideProfile = () => {
               </div>
             )}
 
+            {/* Itineraries Tab */}
+            {activeTab === 'itineraries' && (
+              <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                    <div className="h-1 w-12 bg-blue-600 rounded-full"></div>
+                    Itineraries
+                  </h2>
+                </div>
+
+                {itineraries.length === 0 ? (
+                  <p className="text-gray-600 text-center py-12">No itineraries published yet.</p>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {itineraries.map((it) => (
+                      <Link
+                        key={it._id}
+                        to={`/itineraries/${it._id}`}
+                        className="group border border-gray-200 hover:border-blue-300 rounded-xl p-5 transition-all hover:shadow-lg bg-white"
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                            {it.title}
+                          </h3>
+                          <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
+                        </div>
+                        {it.destination && (
+                          <p className="text-sm text-gray-600 flex items-center gap-1">
+                            <MapPin className="h-4 w-4" />
+                            {it.destination}
+                          </p>
+                        )}
+                        <p className="text-sm text-gray-600 mt-2">Days: {Array.isArray(it.days) ? it.days.length : 0}</p>
+                        {it.pricing?.amount && (
+                          <p className="text-sm text-gray-700 mt-1 flex items-center gap-1">
+                            <DollarSign className="h-4 w-4" />
+                            {it.pricing.currency || ''} {it.pricing.amount}
+                          </p>
+                        )}
+                        {it.pricing?.contactForPrice && (
+                          <p className="text-xs text-gray-500 mt-1">Contact for price</p>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Reviews Tab */}
             {activeTab === 'reviews' && (
               <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
@@ -722,6 +772,42 @@ const GuideProfile = () => {
                   >
                     <MessageCircle className="h-5 w-5" />
                     WhatsApp
+                  </a>
+                )}
+
+                {guide.guideInfo?.contactMethods?.website && (
+                  <a
+                    href={guide.guideInfo.contactMethods.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg"
+                  >
+                    <ExternalLink className="h-5 w-5" />
+                    Website
+                  </a>
+                )}
+
+                {guide.guideInfo?.contactMethods?.facebook && (
+                  <a
+                    href={guide.guideInfo.contactMethods.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg"
+                  >
+                    <ExternalLink className="h-5 w-5" />
+                    Facebook
+                  </a>
+                )}
+
+                {guide.guideInfo?.contactMethods?.instagram && (
+                  <a
+                    href={guide.guideInfo.contactMethods.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg"
+                  >
+                    <ExternalLink className="h-5 w-5" />
+                    Instagram
                   </a>
                 )}
               </div>

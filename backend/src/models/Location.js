@@ -32,6 +32,15 @@ const locationSchema = new mongoose.Schema({
     },
     caption: String,
   }],
+  recommendedTripLength: {
+    type: String,
+    trim: true,
+  },
+  dayByDayOutline: [{
+    dayNumber: Number,
+    title: String,
+    highlights: [String],
+  }],
   category: {
     type: String,
     enum: ['historical', 'natural', 'adventure', 'cultural', 'beach', 'mountain', 'other'],

@@ -2,6 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import {
   createItinerary,
+  createItineraryFromAiPlan,
   getMyItineraries,
   getPublicItineraries,
   getItineraryById,
@@ -47,6 +48,8 @@ router.get('/public', getPublicItineraries);
 router.get('/:id/view', getItineraryById); // Public view if isPublic
 
 // Protected routes
+router.post('/from-ai', authenticate, authorize('user'), createItineraryFromAiPlan);
+
 router.post(
   '/',
   authenticate,

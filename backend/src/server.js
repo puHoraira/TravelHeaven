@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { DatabaseConnection } from './config/database.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authRoutes from './routes/auth.routes.js';
@@ -18,8 +20,11 @@ import aiRoutes from './routes/ai.routes.js';
 import railwayRoutes from './routes/railway.routes.js';
 import recommendationRoutes from './routes/recommendation.routes.js';
 import fileRoutes from './routes/file.routes.js';
+import suggestionRoutes from './routes/suggestion.routes.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 
@@ -48,6 +53,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/railway', railwayRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/suggestions', suggestionRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

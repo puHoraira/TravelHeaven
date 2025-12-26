@@ -1,4 +1,4 @@
-import { Briefcase, Bus, CheckCircle, Clock, Hotel, MapPin, ShieldAlert, Star, XCircle } from 'lucide-react';
+import { Briefcase, Bus, CalendarDays, CheckCircle, Clock, Hotel, MapPin, ShieldAlert, Star, XCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
@@ -228,6 +228,14 @@ const GuideDashboard = () => {
             </p>
             <p className="text-sm text-gray-600 mt-1">Manage transport options</p>
           </Link>
+
+          <Link to="/guide/itineraries" className="content-card p-4 rounded-lg">
+            <div className="flex items-center gap-3 mb-2">
+              <CalendarDays className="w-6 h-6 icon-red" />
+              <h3 className="font-semibold">My Itineraries</h3>
+            </div>
+            <p className="text-sm text-gray-600 mt-1">Create and publish travel plans</p>
+          </Link>
         </div>
       </div>
 
@@ -266,6 +274,9 @@ const GuideDashboard = () => {
           <ActionLink to="/guide/locations">Add New Location</ActionLink>
           <ActionLink to="/guide/hotels">Add New Hotel</ActionLink>
           <ActionLink to="/guide/transport">Add Transportation</ActionLink>
+        </div>
+        <div className="mt-4">
+          <ActionLink to="/itineraries/create">Create Itinerary</ActionLink>
         </div>
       </div>
     </div>

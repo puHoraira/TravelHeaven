@@ -1,12 +1,14 @@
 import { Calendar, Clock, Compass, DollarSign, Eye, Image as ImageIcon, Info, MapPin, MapPinned, RefreshCcw, Search, Star, User, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Link, useLocation as useRouterLocation } from 'react-router-dom';
 import ReviewSection from '../components/ReviewSection';
 import { getImageUrlFromMixed } from '../lib/media';
 import api from '../lib/api';
 import './Locations.css';
 
 const Locations = () => {
+  const routerLocation = useRouterLocation();
   const [locations, setLocations] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -90,6 +92,18 @@ const Locations = () => {
   useEffect(() => {
     fetchLocations(1);
   }, [fetchLocations]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(routerLocation.search);
+    const openId = params.get('open');
+    if (!openId) return;
+
+    const found = locations.find((l) => l?._id === openId);
+    if (found) {
+      handleViewDetails(found);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routerLocation.search, locations]);
 
   const categoryOptions = useMemo(() => {
     const values = Array.from(new Set(locations.map((item) => item.category).filter(Boolean))).sort();
@@ -459,6 +473,19 @@ const Locations = () => {
                   </div>
                 </div>
               )}
+
+              {/* Recommended Trip Length */}
+              {selectedLocation.recommendedTripLength && (
+                <div>
+                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Calendar className="text-blue-600" />
+                    Recommended Trip Length
+                  </h3>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-gray-900">{selectedLocation.recommendedTripLength}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -474,6 +501,95 @@ const Locations = () => {
               </p>
             </div>
           </div>
+
+          {/* Day-by-day Outline (Guide post) */}
+          {Array.isArray(selectedLocation.dayByDayOutline) && selectedLocation.dayByDayOutline.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Compass className="text-blue-600" />
+                Suggested Trip Outline
+              </h3>
+              <div className="space-y-3">
+                {selectedLocation.dayByDayOutline
+                  .slice()
+                  .sort((a, b) => (a?.dayNumber || 0) - (b?.dayNumber || 0))
+                  .map((d, idx) => (
+                    <div key={`${d.dayNumber || idx}`} className="bg-blue-50 p-4 rounded-lg">
+                      <p className="font-semibold text-gray-900">
+                        Day {d.dayNumber || idx + 1}{d.title ? `: ${d.title}` : ''}
+                      </p>
+                      {Array.isArray(d.highlights) && d.highlights.length > 0 && (
+                        <ul className="list-disc list-inside text-sm text-gray-800 mt-2 space-y-1">
+                          {d.highlights.map((h, hIdx) => (
+                            <li key={hIdx}>{h}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Contact Guide */}
+          {selectedLocation.guideId && (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <User className="text-blue-600" />
+                Contact Guide
+              </h3>
+              <div className="bg-gray-50 p-6 rounded-lg space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-gray-900 font-semibold">
+                      {selectedLocation.guideId.profile
+                        ? `${selectedLocation.guideId.profile.firstName || ''} ${selectedLocation.guideId.profile.lastName || ''}`.trim()
+                        : selectedLocation.guideId.username || 'Guide'}
+                    </p>
+                    <p className="text-sm text-gray-600">Local guide</p>
+                  </div>
+                  {selectedLocation.guideId?._id && (
+                    <Link to={`/guides/${selectedLocation.guideId._id}`} className="btn btn-secondary">
+                      View Profile
+                    </Link>
+                  )}
+                </div>
+
+                {(() => {
+                  const cm = selectedLocation.guideId?.guideInfo?.contactMethods || {};
+                  const items = [
+                    cm.phone ? { label: 'Phone', value: cm.phone, href: `tel:${cm.phone}` } : null,
+                    cm.email ? { label: 'Email', value: cm.email, href: `mailto:${cm.email}` } : null,
+                    cm.whatsapp ? { label: 'WhatsApp', value: cm.whatsapp, href: `https://wa.me/${String(cm.whatsapp).replace(/\D/g, '')}` } : null,
+                    cm.website ? { label: 'Website', value: cm.website, href: cm.website } : null,
+                    cm.facebook ? { label: 'Facebook', value: cm.facebook, href: cm.facebook } : null,
+                    cm.instagram ? { label: 'Instagram', value: cm.instagram, href: cm.instagram } : null,
+                  ].filter(Boolean);
+
+                  if (items.length === 0) {
+                    return <p className="text-sm text-gray-600">No contact details provided.</p>;
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {items.map((i) => (
+                        <a
+                          key={i.label}
+                          href={i.href}
+                          target={i.href?.startsWith('http') ? '_blank' : undefined}
+                          rel={i.href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+                          className="bg-white border border-gray-100 rounded-lg p-3 hover:bg-gray-50"
+                        >
+                          <p className="text-xs text-gray-500">{i.label}</p>
+                          <p className="text-sm text-gray-900 break-all">{i.value}</p>
+                        </a>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
 
           {/* Attractions */}
           {selectedLocation.attractions && selectedLocation.attractions.length > 0 && (

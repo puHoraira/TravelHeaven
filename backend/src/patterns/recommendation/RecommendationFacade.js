@@ -546,7 +546,10 @@ export class RecommendationFacade {
       const itineraryDoc = new Itinerary({
         title: itineraryData.title || 'Smart Recommendation Itinerary',
         description: itineraryData.description || `Generated using ${itineraryData.strategy || itineraryData.preferences?.optimizationGoal || 'smart'} optimization strategy`,
+        destination: itineraryData.destination || itineraryData.region || (Array.isArray(itineraryData.destinations) && itineraryData.destinations[0]?.name) || '',
         ownerId: new mongoose.Types.ObjectId(itineraryData.userId),
+        createdByRole: 'user',
+        source: 'smart-recommendation',
         startDate: startDate,
         endDate: endDate,
         isPublic: false,
@@ -596,6 +599,7 @@ export class RecommendationFacade {
         title: plan.title || `Day ${index + 1}`,
         description: plan.description || '',
         stops: plan.locations?.map((loc, stopIndex) => ({
+          timeOfDay: loc.timeOfDay || loc.time_of_day || plan.timeOfDay || '',
           locationId: loc._id || loc.locationId,
           hotelId: plan.hotel?._id || plan.hotel?.hotelId,
           transportId: plan.transport?._id || plan.transport?.transportId,
@@ -604,6 +608,112 @@ export class RecommendationFacade {
           estimatedCost: loc.entryFee?.amount || 0,
         })) || []
       }));
+    }
+
+    // If destinations include guide-authored outlines, prefer them to build day plans
+    const hasAnyOutline = Array.isArray(destinations)
+      && destinations.some((d) => Array.isArray(d?.dayByDayOutline) && d.dayByDayOutline.length > 0);
+
+    if (hasAnyOutline) {
+      const duration = itineraryData.duration || 3;
+      const byDay = new Map();
+
+      const timeSlots = ['Morning', 'Afternoon', 'Evening', 'Night'];
+      const getTimeOfDay = (idx) => timeSlots[Math.min(idx, timeSlots.length - 1)];
+
+      // Build up stops per dayNumber from outlines
+      for (const dest of destinations) {
+        const outline = Array.isArray(dest?.dayByDayOutline) ? dest.dayByDayOutline : [];
+        if (outline.length === 0) continue;
+
+        for (const dayEntry of outline) {
+          const dayNumberRaw = dayEntry?.dayNumber ?? dayEntry?.day_number;
+          const dayNumber = Number.parseInt(dayNumberRaw, 10);
+          if (!Number.isFinite(dayNumber) || dayNumber <= 0) continue;
+          if (dayNumber > duration) continue;
+
+          const key = dayNumber;
+          const current = byDay.get(key) || { titleParts: [], stops: [] };
+          if (dest?.name) current.titleParts.push(dest.name);
+
+          const highlights = Array.isArray(dayEntry?.highlights) ? dayEntry.highlights : [];
+          highlights.forEach((h, idx) => {
+            const highlightText = typeof h === 'string' ? h.trim() : '';
+            if (!highlightText) return;
+            current.stops.push({
+              timeOfDay: getTimeOfDay(idx),
+              locationId: dest._id || dest.locationId,
+              customName: highlightText,
+              customDescription: dayEntry?.title ? `${dest.name}: ${dayEntry.title}` : dest.description,
+              order: current.stops.length,
+              estimatedCost: dest.entryFee?.amount || 0,
+            });
+          });
+
+          // If no highlights provided, still add a stop for the destination for that day
+          if (highlights.length === 0) {
+            current.stops.push({
+              timeOfDay: 'Morning',
+              locationId: dest._id || dest.locationId,
+              customName: dest.name,
+              customDescription: dayEntry?.title || dest.description,
+              order: current.stops.length,
+              estimatedCost: dest.entryFee?.amount || 0,
+            });
+          }
+
+          byDay.set(key, current);
+        }
+      }
+
+      for (let dayIndex = 0; dayIndex < duration; dayIndex++) {
+        const dayNumber = dayIndex + 1;
+        const bucket = byDay.get(dayNumber);
+
+        const stops = bucket?.stops ? [...bucket.stops] : [];
+
+        // Add accommodation for the day if available
+        if (accommodations && accommodations[dayIndex]) {
+          stops.push({
+            timeOfDay: 'Night',
+            hotelId: accommodations[dayIndex]._id || accommodations[dayIndex].hotelId,
+            customName: accommodations[dayIndex].name,
+            order: stops.length,
+            estimatedCost: accommodations[dayIndex].priceRange?.min || 0,
+          });
+        }
+
+        // Ensure 2-4 activities per day minimum
+        while (stops.length < 2) {
+          stops.push({
+            timeOfDay: stops.length === 0 ? 'Morning' : 'Evening',
+            customName: 'Free exploration',
+            customDescription: 'Explore nearby spots and local food options.',
+            order: stops.length,
+            estimatedCost: 0,
+          });
+        }
+        if (stops.length > 4) {
+          stops.splice(4);
+        }
+        stops.forEach((s, i) => { s.order = i; });
+
+        const title = bucket?.titleParts?.length
+          ? `Day ${dayNumber} — ${[...new Set(bucket.titleParts)].slice(0, 2).join(', ')}`
+          : `Day ${dayNumber}`;
+
+        days.push({
+          dayNumber,
+          date: this.addDays(new Date(itineraryData.startDate), dayIndex),
+          title,
+          description: bucket?.titleParts?.length
+            ? `Guide plan highlights for ${[...new Set(bucket.titleParts)].join(', ')}`
+            : 'Planned day',
+          stops,
+        });
+      }
+
+      return days;
     }
     
     // Otherwise, distribute destinations across days
@@ -617,6 +727,7 @@ export class RecommendationFacade {
       );
       
       const stops = dayDestinations.map((dest, stopIndex) => ({
+        timeOfDay: stopIndex === 0 ? 'Morning' : stopIndex === 1 ? 'Afternoon' : 'Evening',
         locationId: dest._id || dest.locationId,
         customName: dest.name,
         customDescription: dest.description,
@@ -628,11 +739,27 @@ export class RecommendationFacade {
       // Add accommodation for the day
       if (accommodations && accommodations[dayIndex]) {
         stops.push({
+          timeOfDay: 'Night',
           hotelId: accommodations[dayIndex]._id || accommodations[dayIndex].hotelId,
           customName: accommodations[dayIndex].name,
           order: stops.length,
           estimatedCost: accommodations[dayIndex].priceRange?.min || 0,
         });
+      }
+
+      // Ensure 2-4 activities per day minimum (basic placeholders if needed)
+      while (stops.length < 2) {
+        stops.push({
+          timeOfDay: stops.length === 0 ? 'Morning' : 'Evening',
+          customName: 'Free exploration',
+          customDescription: 'Explore nearby spots and local food options.',
+          order: stops.length,
+          estimatedCost: 0,
+        });
+      }
+      if (stops.length > 4) {
+        stops.splice(4);
+        stops.forEach((s, i) => { s.order = i; });
       }
       
       days.push({

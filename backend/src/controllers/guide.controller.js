@@ -49,7 +49,7 @@ const PROFILE_FIELDS = [
 
 const GUIDE_FIELDS = ['experience', 'availability'];
 const PRICE_RANGE_FIELDS = ['min', 'max', 'currency'];
-const CONTACT_FIELDS = ['phone', 'whatsapp', 'email'];
+const CONTACT_FIELDS = ['phone', 'whatsapp', 'email', 'website', 'facebook', 'instagram'];
 
 const ensureGuideContext = (req, res) => {
   if (req.user.role !== 'guide') {

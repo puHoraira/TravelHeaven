@@ -685,6 +685,86 @@ export default function ViewItinerary() {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {(itinerary?.createdByRole === 'guide' || itinerary?.ownerId?.role === 'guide') && (
+            <div className="view-itinerary-card card">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <MessageCircle size={18} />
+                Contact Guide
+              </h3>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {itinerary.ownerId?.profile
+                        ? `${itinerary.ownerId.profile.firstName || ''} ${itinerary.ownerId.profile.lastName || ''}`.trim()
+                        : itinerary.ownerId?.username || 'Guide'}
+                    </p>
+                    {itinerary.destination && (
+                      <p className="text-sm text-gray-600 flex items-center gap-1">
+                        <MapPin size={14} />
+                        {itinerary.destination}
+                      </p>
+                    )}
+                  </div>
+                  {itinerary.ownerId?._id && (
+                    <Link to={`/guides/${itinerary.ownerId._id}`} className="btn-secondary">
+                      View Profile
+                    </Link>
+                  )}
+                </div>
+
+                {(itinerary.pricing?.amount || itinerary.pricing?.contactForPrice || itinerary.pricing?.notes) && (
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    {itinerary.pricing?.amount && (
+                      <p className="text-sm text-gray-900">
+                        Price: {itinerary.pricing.currency || ''} {itinerary.pricing.amount}
+                      </p>
+                    )}
+                    {itinerary.pricing?.contactForPrice && (
+                      <p className="text-sm text-gray-700">Contact for price</p>
+                    )}
+                    {itinerary.pricing?.notes && (
+                      <p className="text-xs text-gray-600 mt-1">{itinerary.pricing.notes}</p>
+                    )}
+                  </div>
+                )}
+
+                {(() => {
+                  const cm = itinerary.ownerId?.guideInfo?.contactMethods || {};
+                  const items = [
+                    cm.phone ? { label: 'Phone', href: `tel:${cm.phone}` } : null,
+                    cm.email ? { label: 'Email', href: `mailto:${cm.email}` } : null,
+                    cm.whatsapp ? { label: 'WhatsApp', href: `https://wa.me/${String(cm.whatsapp).replace(/\D/g, '')}` } : null,
+                    cm.website ? { label: 'Website', href: cm.website } : null,
+                    cm.facebook ? { label: 'Facebook', href: cm.facebook } : null,
+                    cm.instagram ? { label: 'Instagram', href: cm.instagram } : null,
+                  ].filter(Boolean);
+
+                  if (items.length === 0) {
+                    return <p className="text-sm text-gray-600">No contact details provided.</p>;
+                  }
+
+                  return (
+                    <div className="grid gap-2">
+                      {items.map((i) => (
+                        <a
+                          key={i.label}
+                          href={i.href}
+                          target={i.href?.startsWith('http') ? '_blank' : undefined}
+                          rel={i.href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+                          className="btn-secondary justify-center text-center"
+                        >
+                          {i.label}
+                        </a>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
           {/* Budget Tracker */}
           {itinerary.budget && (
             <BudgetTracker 

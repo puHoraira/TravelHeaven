@@ -10,6 +10,7 @@ const RecommendationWizard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [errorMsg, setErrorMsg] = useState('');
   const [preferences, setPreferences] = useState({
     budget: 1000,
     duration: 3,
@@ -59,6 +60,7 @@ const RecommendationWizard = () => {
 
   const generateRecommendation = async () => {
     setLoading(true);
+    setErrorMsg('');
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
@@ -73,7 +75,7 @@ const RecommendationWizard = () => {
       
       // Check if the response was successful
       if (!response.data.success) {
-        alert(`Failed to generate recommendation: ${response.data.message || 'Unknown error'}`);
+        setErrorMsg(response.data.message || 'Failed to generate recommendation.');
         return;
       }
       
@@ -82,8 +84,15 @@ const RecommendationWizard = () => {
       setStep(4);
     } catch (error) {
       console.error('Error generating recommendation:', error);
+      const code = error.response?.data?.code;
       const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
-      alert(`Failed to generate recommendation: ${errorMessage}`);
+      if (code === 'NO_LOCATIONS') {
+        setErrorMsg(errorMessage || 'No approved locations are available yet.');
+      } else if (code === 'NO_MATCHING_LOCATIONS' || code === 'NO_DESTINATIONS') {
+        setErrorMsg(errorMessage || 'No locations match your current preferences.');
+      } else {
+        setErrorMsg(`Failed to generate recommendation: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -185,6 +194,12 @@ const RecommendationWizard = () => {
       <h1 className="text-4xl font-bold text-center mb-8">
         🎯 Smart Itinerary Recommendation
       </h1>
+
+      {errorMsg && (
+        <div className="mb-6 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {errorMsg}
+        </div>
+      )}
 
       {/* Progress Steps */}
       <div className="flex justify-between mb-8">

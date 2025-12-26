@@ -22,18 +22,86 @@ export const createHotel = async (req, res) => {
       }
     });
 
+    // Strict validation
+    const errors = [];
+    
+    if (!bodyData.name || bodyData.name.trim().length < 3) {
+      errors.push('Hotel name must be at least 3 characters');
+    }
+    
+    if (!bodyData.description || bodyData.description.trim().length < 20) {
+      errors.push('Description must be at least 20 characters');
+    }
+    
+    // Validate location (GeoJSON coordinates)
+    if (!bodyData.location || !bodyData.location.coordinates || bodyData.location.coordinates.length !== 2) {
+      errors.push('Valid location coordinates [longitude, latitude] are required');
+    } else {
+      const [lon, lat] = bodyData.location.coordinates;
+      if (isNaN(lon) || lon < -180 || lon > 180) {
+        errors.push('Longitude must be between -180 and 180');
+      }
+      if (isNaN(lat) || lat < -90 || lat > 90) {
+        errors.push('Latitude must be between -90 and 90');
+      }
+    }
+    
+    // Validate price range
+    if (!bodyData.priceRange || typeof bodyData.priceRange.min !== 'number' || bodyData.priceRange.min < 0) {
+      errors.push('Valid minimum price is required (must be >= 0)');
+    }
+    
+    if (bodyData.priceRange && bodyData.priceRange.max && bodyData.priceRange.max < bodyData.priceRange.min) {
+      errors.push('Maximum price must be greater than minimum price');
+    }
+    
+    // Validate amenities
+    if (!bodyData.amenities || !Array.isArray(bodyData.amenities) || bodyData.amenities.length === 0) {
+      errors.push('At least one amenity/facility is required');
+    }
+    
+    // Validate contact info
+    if (!bodyData.contactInfo || (!bodyData.contactInfo.phone && !bodyData.contactInfo.email)) {
+      errors.push('At least one contact method (phone or email) is required');
+    }
+    
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors,
+      });
+    }
+
     const hotelData = {
-      ...bodyData,
+      name: bodyData.name.trim(),
+      description: bodyData.description.trim(),
+      location: {
+        type: 'Point',
+        coordinates: bodyData.location.coordinates
+      },
+      address: bodyData.address || '',
+      priceRange: {
+        min: parseFloat(bodyData.priceRange.min),
+        max: bodyData.priceRange.max ? parseFloat(bodyData.priceRange.max) : parseFloat(bodyData.priceRange.min) * 2,
+        currency: bodyData.priceRange.currency || 'BDT'
+      },
+      amenities: bodyData.amenities,
+      contactInfo: bodyData.contactInfo,
+      rooms: bodyData.rooms || [],
       guideId: req.user._id,
       approvalStatus: 'pending',
       rejectionReason: null,
       resubmittedAt: null,
     };
 
-    // Handle uploaded images
+    // Optional fields
+    if (bodyData.locationId) hotelData.locationId = bodyData.locationId;
+
+    // Handle uploaded images - store as MongoDB File references
     if (req.files && req.files.length > 0) {
       hotelData.images = req.files.map(file => ({
-        url: `/uploads/${file.filename}`,
+        file: file.mongoId, // Reference to File document in MongoDB
         caption: file.originalname,
       }));
     }
@@ -98,6 +166,9 @@ export const getHotelById = async (req, res) => {
         message: 'Hotel not found',
       });
     }
+
+    // Populate file references in images + room photos
+    await hotel.populate(['images.file', 'rooms.photos.file']);
 
     // Only show approved hotels to non-admin users / public
     const role = req.user?.role || 'public';
@@ -174,10 +245,10 @@ export const updateHotel = async (req, res) => {
     if (updateData.contactInfo) updateData.contactInfo = tryParse(updateData.contactInfo);
     if (updateData.address) updateData.address = tryParse(updateData.address);
 
-    // Handle uploaded images
+    // Handle uploaded images - store as MongoDB File references
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map(file => ({
-        url: `/uploads/${file.filename}`,
+        file: file.mongoId, // Reference to File document in MongoDB
         caption: file.originalname,
       }));
       updateData.images = [...(hotel.images || []), ...newImages];
@@ -305,7 +376,9 @@ export const addRoomToHotel = async (req, res) => {
 
     // Handle room photos via upload field name `photos`
     if (req.files && req.files.length > 0) {
-      room.photos = req.files.map(f => ({ url: `/uploads/${f.filename}`, caption: f.originalname }));
+      room.photos = req.files
+        .filter((f) => f?.mongoId)
+        .map((f) => ({ file: f.mongoId, caption: f.originalname }));
     }
 
     hotel.rooms = hotel.rooms || [];
@@ -350,7 +423,9 @@ export const updateRoomInHotel = async (req, res) => {
     });
 
     if (req.files && req.files.length > 0) {
-      const newPhotos = req.files.map(f => ({ url: `/uploads/${f.filename}`, caption: f.originalname }));
+      const newPhotos = req.files
+        .filter((f) => f?.mongoId)
+        .map((f) => ({ file: f.mongoId, caption: f.originalname }));
       target.photos = [...(target.photos || []), ...newPhotos];
     }
 

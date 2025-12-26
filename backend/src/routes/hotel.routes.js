@@ -13,9 +13,9 @@ import {
   findNearbyHotels,
   trackHotelView,
 } from '../controllers/hotel.controller.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, authenticateOptional, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
-import { upload } from '../middleware/upload.js';
+import { upload, saveToMongoDB } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -33,6 +33,7 @@ router.post(
   authenticate,
   authorize('guide'),
   upload.array('images', 5),
+  saveToMongoDB,
   hotelValidation,
   validate,
   createHotel
@@ -41,7 +42,7 @@ router.post(
 router.get('/', getHotels);
 router.get('/my-hotels', authenticate, authorize('guide'), getMyHotels);
 router.get('/find-nearby', findNearbyHotels);
-router.get('/:id', getHotelById);
+router.get('/:id', authenticateOptional, getHotelById);
 router.post('/:id/track-view', trackHotelView);
 
 router.put(
@@ -49,6 +50,7 @@ router.put(
   authenticate,
   authorize('guide', 'admin'),
   upload.array('images', 5),
+  saveToMongoDB,
   updateHotel
 );
 
@@ -69,6 +71,7 @@ router.post(
   authenticate,
   authorize('guide', 'admin'),
   upload.array('photos', 10),
+  saveToMongoDB,
   roomValidation,
   validate,
   addRoomToHotel
@@ -79,6 +82,7 @@ router.put(
   authenticate,
   authorize('guide', 'admin'),
   upload.array('photos', 10),
+  saveToMongoDB,
   updateRoomInHotel
 );
 

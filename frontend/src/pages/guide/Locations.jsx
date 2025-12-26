@@ -148,8 +148,19 @@ const GuideLocations = () => {
       resetForm();
       fetchMyLocations();
     } catch (error) {
-      toast.error(error.message || 'Failed to save location');
-      console.error(error);
+      console.error('Detailed error:', error);
+      console.error('Error response:', error.response?.data);
+      
+      // Show specific validation errors if available
+      if (error.response?.data?.errors) {
+        const errorList = error.response.data.errors;
+        const errorMessage = Array.isArray(errorList) 
+          ? errorList.map(e => e.message || e).join(', ')
+          : JSON.stringify(errorList);
+        toast.error(`Validation failed: ${errorMessage}`);
+      } else {
+        toast.error(error.response?.data?.message || error.message || 'Failed to save location');
+      }
     }
   };
 
@@ -218,10 +229,22 @@ const GuideLocations = () => {
     setShowDetails(true);
   };
 
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith('http')) return imagePath;
-    return `http://localhost:5000${imagePath}`;
+  const getImageUrl = (image) => {
+    if (!image) return null;
+    
+    // Handle MongoDB file reference objects
+    if (typeof image === 'object' && image.file) {
+      // If file has _id, use it to fetch from API
+      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
+    }
+    
+    // Handle string paths (legacy format)
+    if (typeof image === 'string') {
+      if (image.startsWith('http')) return image;
+      return `http://localhost:5000${image}`;
+    }
+    
+    return null;
   };
 
   if (showDetails && selectedLocation) {
@@ -260,7 +283,7 @@ const GuideLocations = () => {
                 {selectedLocation.images.map((image, index) => (
                   <div key={index} className="relative group">
                     <img
-                      src={getImageUrl(image.url || image)}
+                      src={getImageUrl(image)}
                       alt={`${selectedLocation.name} - ${index + 1}`}
                       className="w-full h-64 object-cover rounded-lg shadow-md"
                       onError={(e) => {
@@ -629,15 +652,15 @@ const GuideLocations = () => {
                     placeholder="Provide a detailed description of the location, its history, significance, what visitors can expect, and any special features..."
                     {...register('description', { 
                       required: 'Description is required', 
-                      minLength: { value: 100, message: 'Description must be at least 100 characters' } 
+                      minLength: { value: 20, message: 'Description must be at least 20 characters' } 
                     })}
                   />
                   {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>}
                   <div className="flex justify-between items-center mt-1">
                     <p className="text-xs text-gray-500">
-                      {watch('description')?.length || 0} / 100 characters minimum
+                      {watch('description')?.length || 0} / 20 characters minimum
                     </p>
-                    {watch('description')?.length >= 100 && (
+                    {watch('description')?.length >= 20 && (
                       <span className="text-green-600 text-xs">✓ Good length!</span>
                     )}
                   </div>
@@ -947,7 +970,7 @@ const GuideLocations = () => {
               >
                 {location.images && location.images.length > 0 ? (
                   <img
-                    src={getImageUrl(location.images[0].url || location.images[0])}
+                    src={getImageUrl(location.images[0])}
                     alt={location.name}
                     className="w-full h-48 object-cover rounded-lg mb-4"
                     onError={(e) => {

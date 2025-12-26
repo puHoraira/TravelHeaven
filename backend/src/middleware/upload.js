@@ -1,27 +1,8 @@
 import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+import File from '../models/File.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Create uploads directory if it doesn't exist
-const uploadDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Storage configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
+// Use memory storage instead of disk storage
+const storage = multer.memoryStorage();
 
 // File filter
 const fileFilter = (req, file, cb) => {
@@ -34,7 +15,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Multer configuration
+// Multer configuration with memory storage
 export const upload = multer({
   storage,
   limits: {
@@ -42,3 +23,95 @@ export const upload = multer({
   },
   fileFilter,
 });
+
+// Middleware to save files to MongoDB
+export const saveToMongoDB = async (req, res, next) => {
+  try {
+    console.log('[saveToMongoDB] Called - file:', !!req.file, ', files:', !!req.files);
+    
+    if (!req.file && !req.files) {
+      console.log('[saveToMongoDB] No file provided, skipping...');
+      return next();
+    }
+
+    // Handle single file upload
+    if (req.file) {
+      console.log('[saveToMongoDB] Processing single file:', req.file.originalname);
+      const fileDoc = new File({
+        filename: `${Date.now()}-${req.file.originalname}`,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        data: req.file.buffer,
+        encoding: req.file.encoding,
+        uploadedBy: req.user?._id || null, // Can be null if not authenticated
+        metadata: {
+          caption: req.body.caption,
+          description: req.body.description,
+          tags: req.body.tags ? (Array.isArray(req.body.tags) ? req.body.tags : [req.body.tags]) : [],
+        },
+      });
+
+      await fileDoc.save();
+      console.log('[saveToMongoDB] File saved with ID:', fileDoc._id);
+      
+      // Replace file buffer with file document info
+      req.file.mongoId = fileDoc._id;
+      req.file.url = fileDoc.url;
+      req.savedFile = fileDoc;
+    }
+
+    // Handle multiple files upload
+    if (req.files) {
+      const savedFiles = [];
+      
+      // Handle array of files
+      if (Array.isArray(req.files)) {
+        for (const file of req.files) {
+          const fileDoc = new File({
+            filename: `${Date.now()}-${file.originalname}`,
+            originalName: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            data: file.buffer,
+            encoding: file.encoding,
+            uploadedBy: req.user?._id,
+          });
+
+          await fileDoc.save();
+          file.mongoId = fileDoc._id;
+          file.url = fileDoc.url;
+          savedFiles.push(fileDoc);
+        }
+      } 
+      // Handle named fields (multer.fields())
+      else {
+        for (const fieldName in req.files) {
+          for (const file of req.files[fieldName]) {
+            const fileDoc = new File({
+              filename: `${Date.now()}-${file.originalname}`,
+              originalName: file.originalname,
+              mimetype: file.mimetype,
+              size: file.size,
+              data: file.buffer,
+              encoding: file.encoding,
+              uploadedBy: req.user?._id,
+            });
+
+            await fileDoc.save();
+            file.mongoId = fileDoc._id;
+            file.url = fileDoc.url;
+            savedFiles.push(fileDoc);
+          }
+        }
+      }
+
+      req.savedFiles = savedFiles;
+    }
+
+    next();
+  } catch (error) {
+    console.error('[saveToMongoDB] Error:', error.message);
+    next(error);
+  }
+};

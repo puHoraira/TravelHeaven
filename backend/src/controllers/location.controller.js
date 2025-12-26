@@ -10,11 +10,72 @@ export const createLocation = async (req, res) => {
   try {
     if (!ensureGuideApproved(req, res)) return;
 
-    const locationData = {
+    console.log('[createLocation] Request body:', {
       name: req.body.name,
-      description: req.body.description,
+      description: req.body.description?.substring(0, 50),
       country: req.body.country,
       city: req.body.city,
+      category: req.body.category,
+      filesCount: req.files?.length || 0,
+    });
+
+    // Strict validation
+    const errors = [];
+    
+    if (!req.body.name || req.body.name.trim().length < 3) {
+      errors.push('Name must be at least 3 characters');
+    }
+    
+    if (!req.body.description || req.body.description.trim().length < 20) {
+      errors.push('Description must be at least 20 characters');
+    }
+    
+    if (!req.body.country || req.body.country.trim().length < 2) {
+      errors.push('Country is required');
+    }
+    
+    if (!req.body.city || req.body.city.trim().length < 2) {
+      errors.push('City is required');
+    }
+    
+    if (!req.body.category || !['historical', 'natural', 'adventure', 'cultural', 'beach', 'mountain', 'other'].includes(req.body.category)) {
+      errors.push('Valid category is required (historical, natural, adventure, cultural, beach, mountain, other)');
+    }
+    
+    // Validate coordinates if provided
+    if ((req.body.latitude || req.body.longitude)) {
+      const lat = parseFloat(req.body.latitude);
+      const lon = parseFloat(req.body.longitude);
+      if (isNaN(lat) || lat < -90 || lat > 90) {
+        errors.push('Latitude must be between -90 and 90');
+      }
+      if (isNaN(lon) || lon < -180 || lon > 180) {
+        errors.push('Longitude must be between -180 and 180');
+      }
+    }
+    
+    // Validate entry fee if provided
+    if (req.body.entryFeeAmount) {
+      const fee = parseFloat(req.body.entryFeeAmount);
+      if (isNaN(fee) || fee < 0) {
+        errors.push('Entry fee must be a positive number');
+      }
+    }
+    
+    if (errors.length > 0) {
+      console.log('[createLocation] Validation errors:', errors);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors,
+      });
+    }
+
+    const locationData = {
+      name: req.body.name.trim(),
+      description: req.body.description.trim(),
+      country: req.body.country.trim(),
+      city: req.body.city.trim(),
       category: req.body.category,
       guideId: req.user._id,
       approvalStatus: 'pending',
@@ -23,15 +84,15 @@ export const createLocation = async (req, res) => {
     };
 
     // Optional fields
-    if (req.body.address) locationData.address = req.body.address;
-    if (req.body.bestTimeToVisit) locationData.bestTimeToVisit = req.body.bestTimeToVisit;
-    if (req.body.openingHours) locationData.openingHours = req.body.openingHours;
+    if (req.body.address) locationData.address = req.body.address.trim();
+    if (req.body.bestTimeToVisit) locationData.bestTimeToVisit = req.body.bestTimeToVisit.trim();
+    if (req.body.openingHours) locationData.openingHours = req.body.openingHours.trim();
     
     // Coordinates
-    if (req.body.latitude || req.body.longitude) {
+    if (req.body.latitude && req.body.longitude) {
       locationData.coordinates = {
-        latitude: parseFloat(req.body.latitude) || 0,
-        longitude: parseFloat(req.body.longitude) || 0,
+        latitude: parseFloat(req.body.latitude),
+        longitude: parseFloat(req.body.longitude),
       };
     }
 
@@ -39,8 +100,15 @@ export const createLocation = async (req, res) => {
     if (req.body.entryFeeAmount) {
       locationData.entryFee = {
         amount: parseFloat(req.body.entryFeeAmount),
-        currency: req.body.entryFeeCurrency || 'USD',
+        currency: req.body.entryFeeCurrency || 'BDT',
         details: req.body.entryFeeDetails || '',
+      };
+    } else {
+      // Default to free entry
+      locationData.entryFee = {
+        amount: 0,
+        currency: 'BDT',
+        details: 'Free entry',
       };
     }
 
@@ -65,10 +133,10 @@ export const createLocation = async (req, res) => {
       }
     }
 
-    // Handle uploaded images
+    // Handle uploaded images - store as MongoDB File references
     if (req.files && req.files.length > 0) {
       locationData.images = req.files.map(file => ({
-        url: `/uploads/${file.filename}`,
+        file: file.mongoId, // Reference to File document in MongoDB
         caption: file.originalname,
       }));
     }
@@ -135,6 +203,11 @@ export const getLocationById = async (req, res) => {
       });
     }
 
+    // Populate file references in images
+    if (location.images && location.images.length > 0) {
+      await location.populate('images.file');
+    }
+
     // Only show approved locations to non-admin users / public
     const role = req.user?.role || 'public';
     if (role !== 'admin' && location.approvalStatus !== 'approved') {
@@ -189,10 +262,10 @@ export const updateLocation = async (req, res) => {
 
     const updateData = { ...req.body };
 
-    // Handle uploaded images
+    // Handle uploaded images - store as MongoDB File references
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map(file => ({
-        url: `/uploads/${file.filename}`,
+        file: file.mongoId, // Reference to File document in MongoDB
         caption: file.originalname,
       }));
       updateData.images = [...(location.images || []), ...newImages];

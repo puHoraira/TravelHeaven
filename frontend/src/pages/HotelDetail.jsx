@@ -21,6 +21,18 @@ const formatPriceRange = (priceRange) => {
   return 'Pricing unavailable';
 };
 
+const getImageUrl = (img) => {
+  if (!img) return '';
+  if (typeof img === 'string') return img;
+
+  const file = img?.file ?? img;
+  if (!file) return '';
+  if (typeof file === 'string') return `/api/files/${file}`;
+  if (typeof file === 'object') return file.url || (file._id ? `/api/files/${file._id}` : '');
+
+  return '';
+};
+
 export default function HotelDetail() {
   const { id } = useParams();
   const [hotel, setHotel] = useState(null);
@@ -68,7 +80,7 @@ export default function HotelDetail() {
     images: [],
   });
 
-  const coverImage = useMemo(() => hotel?.images?.[0]?.url, [hotel]);
+  const coverImage = useMemo(() => getImageUrl(hotel?.images?.[0]), [hotel]);
 
   useEffect(() => {
     const load = async () => {
@@ -342,8 +354,8 @@ export default function HotelDetail() {
                         ))}
                       </div>
                     )}
-                    {room.photos?.[0]?.url && (
-                      <img src={room.photos[0].url} alt={room.photos[0].caption || 'Room photo'} className="mt-3 h-40 w-full rounded object-cover" />
+                    {getImageUrl(room.photos?.[0]) && (
+                      <img src={getImageUrl(room.photos?.[0])} alt={room.photos?.[0]?.caption || 'Room photo'} className="mt-3 h-40 w-full rounded object-cover" />
                     )}
                     {room.notes && (
                       <p className="mt-2 text-sm text-gray-600">{room.notes}</p>

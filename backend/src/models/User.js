@@ -62,17 +62,10 @@ const userSchema = new mongoose.Schema({
         default: 0,
       },
     },
-    // Guide verification documents
+    // Guide verification documents stored in MongoDB
     verificationDocument: {
-      filename: String,
-      originalName: String,
-      path: String,
-      url: String,
-      diskPath: String,
-      uploadedAt: {
-        type: Date,
-        default: Date.now,
-      },
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'File',
     },
     verificationStatus: {
       type: String,

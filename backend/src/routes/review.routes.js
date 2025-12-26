@@ -8,7 +8,7 @@ import {
   toggleLikeReview,
 } from '../controllers/review.controller.js';
 import { authenticate } from '../middleware/auth.js';
-import { upload } from '../middleware/upload.js';
+import { upload, saveToMongoDB } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -19,7 +19,7 @@ router.get('/', getReviews);
 router.use(authenticate);
 
 router.post('/', createReview);
-router.post('/with-images', upload.array('images', 5), createReview);
+router.post('/with-images', upload.array('images', 5), saveToMongoDB, createReview);
 router.get('/my-reviews', getMyReviews);
 router.put('/:id', updateReview);
 router.delete('/:id', deleteReview);

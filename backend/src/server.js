@@ -17,6 +17,7 @@ import expenseRoutes from './routes/expense.route.js';
 import aiRoutes from './routes/ai.routes.js';
 import railwayRoutes from './routes/railway.routes.js';
 import recommendationRoutes from './routes/recommendation.routes.js';
+import fileRoutes from './routes/file.routes.js';
 
 dotenv.config();
 
@@ -26,7 +27,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static('uploads'));
 
 // Database Connection (Singleton Pattern)
 const db = DatabaseConnection.getInstance();
@@ -47,6 +47,7 @@ app.use('/api/itineraries/:itineraryId/expenses', expenseRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/railway', railwayRoutes);
 app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/files', fileRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

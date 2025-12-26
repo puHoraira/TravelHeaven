@@ -27,10 +27,18 @@ export const generateRecommendation = async (req, res) => {
     const result = await recommendationFacade.generateRecommendation(userId, preferences);
 
     if (!result.success) {
-      return res.status(500).json({
-        success: false,
-        message: result.error || 'Failed to generate recommendation',
-      });
+      const code = result.code;
+      const message = result.error || 'Failed to generate recommendation';
+
+      if (code === 'NO_LOCATIONS') {
+        return res.status(404).json({ success: false, message, code });
+      }
+
+      if (code === 'NO_MATCHING_LOCATIONS' || code === 'NO_DESTINATIONS') {
+        return res.status(422).json({ success: false, message, code });
+      }
+
+      return res.status(500).json({ success: false, message, code });
     }
 
     return res.status(200).json(result);
@@ -57,6 +65,18 @@ export const getQuickRecommendation = async (req, res) => {
       duration: duration || 3,
       interests: interests || ['cultural'],
     });
+
+    if (!result.success) {
+      const code = result.code;
+      const message = result.error || 'Failed to generate recommendation';
+      if (code === 'NO_LOCATIONS') {
+        return res.status(404).json({ success: false, message, code });
+      }
+      if (code === 'NO_MATCHING_LOCATIONS' || code === 'NO_DESTINATIONS') {
+        return res.status(422).json({ success: false, message, code });
+      }
+      return res.status(500).json({ success: false, message, code });
+    }
 
     return res.status(200).json(result);
   } catch (error) {

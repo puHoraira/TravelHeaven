@@ -11,75 +11,113 @@ export const createTransport = async (req, res) => {
   try {
     if (!ensureGuideApproved(req, res)) return;
 
-    const transportData = {
-      ...req.body,
+    const transportData = { ...req.body };
+    
+    // Parse JSON strings from FormData
+    ['route', 'operator', 'pricing', 'schedule', 'booking', 'facilities', 'contactInfo'].forEach(field => {
+      if (transportData[field] && typeof transportData[field] === 'string') {
+        try {
+          transportData[field] = JSON.parse(transportData[field]);
+        } catch (e) {
+          console.error(`Failed to parse ${field}:`, e);
+        }
+      }
+    });
+
+    // Strict validation
+    const errors = [];
+    
+    if (!transportData.name || transportData.name.trim().length < 3) {
+      errors.push('Transport name must be at least 3 characters');
+    }
+    
+    if (!transportData.type || !['bus', 'train', 'taxi', 'rental-car', 'flight', 'boat', 'launch', 'cng', 'rickshaw', 'other'].includes(transportData.type)) {
+      errors.push('Valid transport type is required (bus, train, taxi, rental-car, flight, boat, launch, cng, rickshaw, other)');
+    }
+    
+    // Validate route
+    if (!transportData.route || !transportData.route.from || !transportData.route.to) {
+      errors.push('Route with from and to locations is required');
+    } else {
+      // Validate from location
+      if (!transportData.route.from.name || transportData.route.from.name.trim().length < 2) {
+        errors.push('Route from location name is required');
+      }
+      if (transportData.route.from.location && transportData.route.from.location.coordinates) {
+        const [lon, lat] = transportData.route.from.location.coordinates;
+        if (isNaN(lon) || lon < -180 || lon > 180 || isNaN(lat) || lat < -90 || lat > 90) {
+          errors.push('Invalid from location coordinates');
+        }
+      }
+      
+      // Validate to location
+      if (!transportData.route.to.name || transportData.route.to.name.trim().length < 2) {
+        errors.push('Route to location name is required');
+      }
+      if (transportData.route.to.location && transportData.route.to.location.coordinates) {
+        const [lon, lat] = transportData.route.to.location.coordinates;
+        if (isNaN(lon) || lon < -180 || lon > 180 || isNaN(lat) || lat < -90 || lat > 90) {
+          errors.push('Invalid to location coordinates');
+        }
+      }
+    }
+    
+    // Validate pricing
+    if (!transportData.pricing || typeof transportData.pricing.amount !== 'number' || transportData.pricing.amount < 0) {
+      errors.push('Valid pricing amount is required (must be >= 0)');
+    }
+    
+    // Validate facilities
+    if (transportData.facilities && !Array.isArray(transportData.facilities)) {
+      errors.push('Facilities must be an array');
+    }
+    
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors,
+      });
+    }
+
+    // Build clean transport data
+    const cleanData = {
+      name: transportData.name.trim(),
+      type: transportData.type,
+      description: transportData.description ? transportData.description.trim() : '',
+      route: transportData.route,
+      pricing: {
+        amount: parseFloat(transportData.pricing.amount),
+        currency: transportData.pricing.currency || 'BDT',
+        priceType: transportData.pricing.priceType || 'per-person',
+        priceNote: transportData.pricing.priceNote || ''
+      },
+      facilities: transportData.facilities || [],
       guideId: req.user._id,
       approvalStatus: 'pending',
       rejectionReason: null,
       resubmittedAt: null,
     };
-    
-    // Parse JSON strings from FormData
-    if (transportData.route && typeof transportData.route === 'string') {
-      try {
-        transportData.route = JSON.parse(transportData.route);
-      } catch (e) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid route data format',
-        });
-      }
-    }
-    
-    if (transportData.operator && typeof transportData.operator === 'string') {
-      try {
-        transportData.operator = JSON.parse(transportData.operator);
-      } catch (e) {
-        // Operator is optional, ignore parse errors
-      }
-    }
-    
-    if (transportData.pricing && typeof transportData.pricing === 'string') {
-      try {
-        transportData.pricing = JSON.parse(transportData.pricing);
-      } catch (e) {
-        // Pricing is optional, ignore parse errors
-      }
-    }
-    
-    if (transportData.schedule && typeof transportData.schedule === 'string') {
-      try {
-        transportData.schedule = JSON.parse(transportData.schedule);
-      } catch (e) {
-        // Schedule is optional, ignore parse errors
-      }
-    }
-    
-    if (transportData.booking && typeof transportData.booking === 'string') {
-      try {
-        transportData.booking = JSON.parse(transportData.booking);
-      } catch (e) {
-        // Booking is optional, ignore parse errors
-      }
-    }
-    
-    if (transportData.facilities && typeof transportData.facilities === 'string') {
-      try {
-        transportData.facilities = JSON.parse(transportData.facilities);
-      } catch (e) {
-        // Facilities is optional, ignore parse errors
-      }
-    }
 
-    // Handle uploaded images
+    // Optional fields
+    if (transportData.operator) cleanData.operator = transportData.operator;
+    if (transportData.schedule) cleanData.schedule = transportData.schedule;
+    if (transportData.booking) cleanData.booking = transportData.booking;
+    if (transportData.contactInfo) cleanData.contactInfo = transportData.contactInfo;
+    if (transportData.capacity) cleanData.capacity = transportData.capacity;
+    if (transportData.accessibility) cleanData.accessibility = transportData.accessibility;
+    if (transportData.safetyFeatures) cleanData.safetyFeatures = transportData.safetyFeatures;
+    if (transportData.locationId) cleanData.locationId = transportData.locationId;
+
+    // Handle uploaded images - store as MongoDB File references
     if (req.files && req.files.length > 0) {
-      transportData.images = req.files.map(file => ({
-        url: `/uploads/${file.filename}`,
+      cleanData.images = req.files.map(file => ({
+        file: file.mongoId, // Reference to File document in MongoDB
         caption: file.originalname,
       }));
     }
 
-    const transport = await transportRepo.create(transportData);
+    const transport = await transportRepo.create(cleanData);
 
     res.status(201).json({
       success: true,
@@ -141,6 +179,11 @@ export const getTransportById = async (req, res) => {
       });
     }
 
+    // Populate file references in images
+    if (transport.images && transport.images.length > 0) {
+      await transport.populate('images.file');
+    }
+
     // Only show approved transport to non-admin users / public
     const role = req.user?.role || 'public';
     if (role !== 'admin' && transport.approvalStatus !== 'approved') {
@@ -191,10 +234,10 @@ export const updateTransport = async (req, res) => {
 
     const updateData = { ...req.body };
 
-    // Handle uploaded images
+    // Handle uploaded images - store as MongoDB File references
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map(file => ({
-        url: `/uploads/${file.filename}`,
+        file: file.mongoId, // Reference to File document in MongoDB
         caption: file.originalname,
       }));
       updateData.images = [...(transport.images || []), ...newImages];

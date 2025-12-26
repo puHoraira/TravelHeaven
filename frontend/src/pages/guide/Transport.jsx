@@ -178,6 +178,23 @@ const GuideTransport = () => {
     }));
   };
 
+  const getImageUrl = (image) => {
+    if (!image) return null;
+    
+    // Handle MongoDB file reference objects
+    if (typeof image === 'object' && image.file) {
+      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
+    }
+    
+    // Handle string paths (legacy format)
+    if (typeof image === 'string') {
+      if (image.startsWith('http')) return image;
+      return `http://localhost:5000${image}`;
+    }
+    
+    return null;
+  };
+
   const submitTransport = async (e) => {
     e.preventDefault();
     
@@ -784,8 +801,8 @@ const GuideTransport = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {myTransports.map(t => (
               <div key={t._id} className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                {t.images?.[0]?.url ? (
-                  <img src={t.images[0].url} alt={t.name} className="w-full h-40 object-cover" />
+                {t.images?.[0] ? (
+                  <img src={getImageUrl(t.images[0])} alt={t.name} className="w-full h-40 object-cover" />
                 ) : (
                   <div className="w-full h-40 bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-gray-400">
                     <MapPin className="w-12 h-12 text-blue-300" />

@@ -57,11 +57,12 @@ const AdminApprovals = () => {
       const endpointMap = {
         location: `/locations/${id}`,
         hotel: `/hotels/${id}`,
-        transport: `/transport/${id}`,
+        transport: `/transportation/${id}`,
       };
       const res = await api.get(endpointMap[type]);
-      const data = res.data || res; // interceptor usually returns {success, data}
-      setView({ type, id, data });
+      // Support both shapes: {success:true, data: item} OR item
+      const item = res?.data ?? res;
+      setView({ type, id, data: item });
     } catch (err) {
       toast.error(err.message || 'Failed to load item');
     } finally {
@@ -69,10 +70,22 @@ const AdminApprovals = () => {
     }
   };
 
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith('http')) return imagePath;
-    return `http://localhost:5000${imagePath}`;
+  const getImageUrl = (image) => {
+    if (!image) return null;
+    
+    // Handle MongoDB file reference objects
+    if (typeof image === 'object' && image.file) {
+      // If file has _id, use it to fetch from API
+      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
+    }
+    
+    // Handle string paths (legacy format)
+    if (typeof image === 'string') {
+      if (image.startsWith('http')) return image;
+      return `http://localhost:5000${image}`;
+    }
+    
+    return null;
   };
 
   const totalPending = useMemo(() => counts?.total ?? (pending.locations.length + pending.hotels.length + pending.transportation.length), [counts, pending]);
@@ -96,8 +109,8 @@ const AdminApprovals = () => {
           {pending.locations.length === 0 && <p className="text-sm text-gray-500">No pending locations</p>}
           {pending.locations.map(loc => (
             <div key={loc._id} className="p-3 border rounded my-2 flex items-center gap-4">
-              {loc.images?.[0]?.url && (
-                <img src={getImageUrl(loc.images[0].url)} alt={loc.name} className="w-24 h-16 object-cover rounded" onError={(e)=>{e.target.src='https://via.placeholder.com/160x96?text=No+Image';}} />
+              {loc.images?.[0] && (
+                <img src={getImageUrl(loc.images[0])} alt={loc.name} className="w-24 h-16 object-cover rounded" onError={(e)=>{e.target.src='https://via.placeholder.com/160x96?text=No+Image';}} />
               )}
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate">{loc.name}</div>
@@ -121,8 +134,8 @@ const AdminApprovals = () => {
           {pending.hotels.length === 0 && <p className="text-sm text-gray-500">No pending hotels</p>}
           {pending.hotels.map(h => (
             <div key={h._id} className="p-3 border rounded my-2 flex items-center gap-4">
-              {h.images?.[0]?.url && (
-                <img src={getImageUrl(h.images[0].url)} alt={h.name} className="w-24 h-16 object-cover rounded" onError={(e)=>{e.target.src='https://via.placeholder.com/160x96?text=No+Image';}} />
+              {h.images?.[0] && (
+                <img src={getImageUrl(h.images[0])} alt={h.name} className="w-24 h-16 object-cover rounded" onError={(e)=>{e.target.src='https://via.placeholder.com/160x96?text=No+Image';}} />
               )}
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate">{h.name}</div>
@@ -145,8 +158,8 @@ const AdminApprovals = () => {
           {pending.transportation.length === 0 && <p className="text-sm text-gray-500">No pending transport</p>}
           {pending.transportation.map(t => (
             <div key={t._id} className="p-3 border rounded my-2 flex items-center gap-4">
-              {t.images?.[0]?.url && (
-                <img src={getImageUrl(t.images[0].url)} alt={t.name} className="w-24 h-16 object-cover rounded" onError={(e)=>{e.target.src='https://via.placeholder.com/160x96?text=No+Image';}} />
+              {t.images?.[0] && (
+                <img src={getImageUrl(t.images[0])} alt={t.name} className="w-24 h-16 object-cover rounded" onError={(e)=>{e.target.src='https://via.placeholder.com/160x96?text=No+Image';}} />
               )}
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate">{t.name}</div>
@@ -187,7 +200,7 @@ const AdminApprovals = () => {
                       <h4 className="font-semibold mb-2 flex items-center gap-2"><ImageIcon className="text-blue-600"/>Images</h4>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {view.data.images.map((img, i)=> (
-                          <img key={i} src={getImageUrl(img.url || img)} alt={`img-${i}`} className="w-full h-40 object-cover rounded" onError={(e)=>{e.target.src='https://via.placeholder.com/300x160?text=Image';}} />
+                          <img key={i} src={getImageUrl(img)} alt={`img-${i}`} className="w-full h-40 object-cover rounded" onError={(e)=>{e.target.src='https://via.placeholder.com/300x160?text=Image';}} />
                         ))}
                       </div>
                     </div>

@@ -3,12 +3,13 @@ node_modules/
 frontend/node_modules/
 backend/node_modules/
 
-# Environment variables (commented out to include .env in repo)
-# .env
-# .env.local
-# .env.*.local
-# backend/.env
-# frontend/.env
+# Environment variables (never commit secrets)
+.env
+.env.*
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
 
 # Logs
 logs/

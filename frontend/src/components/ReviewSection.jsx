@@ -369,10 +369,21 @@ const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onRevie
     }
   };
 
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith('http')) return imagePath;
-    return `http://localhost:5000${imagePath}`;
+  const getImageUrl = (image) => {
+    if (!image) return null;
+    
+    // Handle MongoDB file reference objects
+    if (typeof image === 'object' && image.file) {
+      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
+    }
+    
+    // Handle string paths (legacy format)
+    if (typeof image === 'string') {
+      if (image.startsWith('http')) return image;
+      return `http://localhost:5000${image}`;
+    }
+    
+    return null;
   };
 
   // Calculate average rating
@@ -716,7 +727,7 @@ const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onRevie
                         {review.images.map((image, index) => (
                           <img
                             key={index}
-                            src={getImageUrl(image.url || image)}
+                            src={getImageUrl(image)}
                             alt={`Review image ${index + 1}`}
                             className="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                             onError={(e) => {

@@ -26,7 +26,10 @@ const locationSchema = new mongoose.Schema({
     longitude: Number,
   },
   images: [{
-    url: String,
+    file: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'File',
+    },
     caption: String,
   }],
   category: {

@@ -162,6 +162,23 @@ const GuideHotel = () => {
     }));
   };
 
+  const getImageUrl = (image) => {
+    if (!image) return null;
+    
+    // Handle MongoDB file reference objects
+    if (typeof image === 'object' && image.file) {
+      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
+    }
+    
+    // Handle string paths (legacy format)
+    if (typeof image === 'string') {
+      if (image.startsWith('http')) return image;
+      return `http://localhost:5000${image}`;
+    }
+    
+    return null;
+  };
+
   const toggleAmenity = (amenity) => {
     setForm(prev => ({
       ...prev,
@@ -571,8 +588,8 @@ const GuideHotel = () => {
                   <div key={h._id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all transform hover:-translate-y-1 group">
                     {/* Hotel Image */}
                     <div className="relative h-48 overflow-hidden">
-                      {h.images?.[0]?.url ? (
-                        <img src={h.images[0].url} alt={h.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                      {h.images?.[0] ? (
+                        <img src={getImageUrl(h.images[0])} alt={h.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-purple-400 via-pink-400 to-blue-400 flex items-center justify-center">
                           <HotelIcon className="w-16 h-16 text-white opacity-60" />

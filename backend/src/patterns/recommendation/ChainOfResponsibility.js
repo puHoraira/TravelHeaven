@@ -68,36 +68,63 @@ export class BudgetFilter extends RecommendationFilter {
 
     console.log(`🔍 Applying Budget Filter: Max budget ${budget}`);
 
-    // Filter hotels within budget
+    // Filter hotels within budget (40% allocation)
+    const hotelBudget = budget * 0.4;
     const filteredHotels = options.hotels.filter(hotel => {
-      const pricePerNight = hotel.priceRange?.min || 0;
+      const pricePerNight = hotel.pricePerNight || hotel.priceRange?.min || 0;
       const totalNights = preferences.duration || 1;
-      return pricePerNight * totalNights <= budget * 0.4; // 40% of budget for accommodation
-    });
+      const totalHotelCost = pricePerNight * totalNights;
+      return totalHotelCost <= hotelBudget && pricePerNight > 0; // Exclude zero-price hotels
+    }).map(hotel => ({
+      ...hotel,
+      budgetScore: 1 - ((hotel.pricePerNight || hotel.priceRange?.min || 0) * (preferences.duration || 1)) / hotelBudget,
+    })).sort((a, b) => b.budgetScore - a.budgetScore); // Best value first
 
-    // Filter transport within budget
+    // Filter transport within budget (30% allocation)
+    const transportBudget = budget * 0.3;
     const filteredTransport = options.transport.filter(transport => {
-      const price = transport.pricing?.amount || 0;
-      return price <= budget * 0.3; // 30% of budget for transport
-    });
+      const price = transport.price || transport.pricing?.amount || 0;
+      return price <= transportBudget && price > 0; // Exclude zero-price transport
+    }).map(transport => ({
+      ...transport,
+      budgetScore: 1 - ((transport.price || transport.pricing?.amount || 0) / transportBudget),
+    })).sort((a, b) => b.budgetScore - a.budgetScore);
 
-    // Filter locations (free or low-cost attractions prioritized)
+    // Filter locations (30% allocation for activities/entry fees)
+    const locationBudget = budget * 0.3;
     const filteredLocations = options.locations
       .map(location => {
-        // Convert Mongoose document to plain object
         const loc = location.toObject ? location.toObject() : location;
-        const entryFee = loc.entryFee?.amount || 0;
+        const entryFee = typeof loc.entryFee === 'number' ? loc.entryFee : (loc.entryFee?.amount || 0);
+        
+        // Calculate priority: free locations get highest priority
+        const priorityScore = entryFee === 0 ? 2.0 : 
+                            (entryFee <= locationBudget * 0.1 ? 1.5 : 
+                            (entryFee <= locationBudget * 0.3 ? 1.0 : 0.5));
+        
+        const budgetScore = entryFee === 0 ? 1 : (1 - entryFee / locationBudget);
+        
         return {
           ...loc,
-          priorityScore: entryFee > 0 ? 
-            (entryFee <= budget * 0.05 ? 1 : 0.5) : 
-            1.5 // Free locations get highest priority
+          priorityScore,
+          budgetScore,
         };
       })
       .filter(loc => {
-        const entryFee = loc.entryFee?.amount || 0;
-        return entryFee === 0 || entryFee <= budget * 0.1;
+        const entryFee = typeof loc.entryFee === 'number' ? loc.entryFee : (loc.entryFee?.amount || 0);
+        return entryFee <= locationBudget; // Only include if within budget
+      })
+      .sort((a, b) => {
+        // Sort by priority first, then by rating
+        if (b.priorityScore !== a.priorityScore) {
+          return b.priorityScore - a.priorityScore;
+        }
+        const ratingA = a.rating?.average || 0;
+        const ratingB = b.rating?.average || 0;
+        return ratingB - ratingA;
       });
+
+    console.log(`✅ Budget Filter: ${filteredLocations.length} locations, ${filteredHotels.length} hotels, ${filteredTransport.length} transport`);
 
     return {
       ...context,
@@ -142,7 +169,18 @@ export class DurationFilter extends RecommendationFilter {
     // Filter transport based on travel time
     const maxTravelHoursPerDay = 4;
     const filteredTransport = options.transport.filter(transport => {
-      const travelHours = transport.estimatedDuration || 2;
+      // derive duration from available fields: numeric hours preferred; fallback simple 2h
+      let travelHours = transport.estimatedDuration;
+      if (travelHours == null) {
+        const est = transport?.route?.duration?.estimated;
+        if (typeof est === 'string') {
+          // try to parse formats like "4h", "3.5h", "2-3h", "120m"
+          const hoursMatch = est.match(/([0-9]+(?:\.[0-9]+)?)/);
+          travelHours = hoursMatch ? parseFloat(hoursMatch[1]) : 2;
+        } else {
+          travelHours = 2;
+        }
+      }
       return travelHours <= maxTravelHoursPerDay;
     });
 
@@ -333,15 +371,53 @@ export class RatingFilter extends RecommendationFilter {
 
     console.log(`🔍 Applying Rating Filter: Minimum rating ${minRating}`);
 
-    const filteredLocations = options.locations.filter(loc => {
-      const rating = loc.rating?.average || loc.rating || 0;
-      return rating >= minRating;
-    });
+    const filteredLocations = options.locations
+      .filter(loc => {
+        const rating = loc.rating?.average || loc.rating || 0;
+        return rating >= minRating;
+      })
+      .sort((a, b) => {
+        // Sort by rating descending, then by review count
+        const ratingA = a.rating?.average || a.rating || 0;
+        const ratingB = b.rating?.average || b.rating || 0;
+        if (ratingB !== ratingA) return ratingB - ratingA;
+        
+        const countA = a.rating?.count || 0;
+        const countB = b.rating?.count || 0;
+        return countB - countA;
+      });
 
-    const filteredHotels = options.hotels.filter(hotel => {
-      const hotelRating = hotel.rating?.average || hotel.rating || 0;
-      return hotelRating >= minRating;
-    });
+    const filteredHotels = options.hotels
+      .filter(hotel => {
+        const hotelRating = hotel.rating?.average || hotel.rating || 0;
+        return hotelRating >= minRating;
+      })
+      .sort((a, b) => {
+        const ratingA = a.rating?.average || a.rating || 0;
+        const ratingB = b.rating?.average || b.rating || 0;
+        if (ratingB !== ratingA) return ratingB - ratingA;
+        
+        const countA = a.rating?.count || 0;
+        const countB = b.rating?.count || 0;
+        return countB - countA;
+      });
+    
+    const filteredTransport = options.transport
+      .filter(transport => {
+        const tRating = transport.rating?.average || transport.averageRating || 0;
+        return tRating >= minRating;
+      })
+      .sort((a, b) => {
+        const ratingA = a.rating?.average || a.averageRating || 0;
+        const ratingB = b.rating?.average || b.averageRating || 0;
+        if (ratingB !== ratingA) return ratingB - ratingA;
+        
+        const countA = a.rating?.count || a.totalReviews || 0;
+        const countB = b.rating?.count || b.totalReviews || 0;
+        return countB - countA;
+      });
+
+    console.log(`✅ Rating Filter: ${filteredLocations.length} locations, ${filteredHotels.length} hotels, ${filteredTransport.length} transport`);
 
     return {
       ...context,
@@ -349,6 +425,7 @@ export class RatingFilter extends RecommendationFilter {
         ...options,
         locations: filteredLocations,
         hotels: filteredHotels,
+        transport: filteredTransport,
       },
       filterChain: [...(context.filterChain || []), 'RatingFilter'],
     };

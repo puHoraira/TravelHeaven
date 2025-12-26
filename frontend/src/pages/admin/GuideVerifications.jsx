@@ -3,8 +3,6 @@ import toast from 'react-hot-toast';
 import api from '../../lib/api';
 
 const API_PREFIX = import.meta.env.VITE_API_URL || '/api';
-const FILE_BASE_URL = import.meta.env.VITE_FILE_BASE_URL
-  || (API_PREFIX.startsWith('http') ? API_PREFIX.replace(/\/api$/, '') : 'http://localhost:5000');
 
 const GuideVerifications = () => {
   const [pendingGuides, setPendingGuides] = useState([]);
@@ -25,9 +23,16 @@ const GuideVerifications = () => {
   const resolveDocumentUrl = (doc) => {
     if (!doc) return null;
 
+    // If it's a File document with _id (from MongoDB)
+    if (doc._id || doc.id) {
+      const fileId = doc._id || doc.id;
+      return `${API_PREFIX.replace(/\/api$/, '')}/api/files/${fileId}`;
+    }
+
+    // Fallback for old structure
     const raw = doc.url || doc.path || doc.diskPath;
     if (!raw && doc.filename) {
-      return `${FILE_BASE_URL}/uploads/${doc.filename}`;
+      return `${API_PREFIX.replace(/\/api$/, '')}/uploads/${doc.filename}`;
     }
 
     if (!raw) return null;
@@ -36,13 +41,18 @@ const GuideVerifications = () => {
       return raw;
     }
 
+    // If it's already an API path
+    if (raw.startsWith('/api/files/')) {
+      return `${API_PREFIX.replace(/\/api$/, '')}${raw}`;
+    }
+
     const cleaned = raw.replace(/\\/g, '/');
     const uploadsIndex = cleaned.lastIndexOf('uploads');
     const relativePath = uploadsIndex !== -1
       ? cleaned.slice(uploadsIndex)
       : cleaned.replace(/^\/?/, '');
 
-    return `${FILE_BASE_URL}/${relativePath.replace(/^\/?/, '')}`;
+    return `${API_PREFIX.replace(/\/api$/, '')}/${relativePath.replace(/^\/?/, '')}`;
   };
 
   const fetchPendingGuides = async () => {
@@ -211,14 +221,25 @@ const GuideVerifications = () => {
             
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
               {selectedDocumentUrl ? (
-                <iframe
-                  src={selectedDocumentUrl}
-                  className="w-full h-[600px] border border-gray-300 rounded"
-                  title="Verification Document"
-                />
+                <div className="space-y-4">
+                  <iframe
+                    src={`${selectedDocumentUrl}#toolbar=1`}
+                    className="w-full h-[600px] border border-gray-300 rounded"
+                    title="Verification Document"
+                  />
+                  <div className="text-center">
+                    <a
+                      href={selectedDocumentUrl}
+                      download={selectedGuide?.guideInfo?.verificationDocument?.originalName}
+                      className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      📥 Download Document
+                    </a>
+                  </div>
+                </div>
               ) : (
                 <div className="flex h-[300px] items-center justify-center rounded border border-dashed border-gray-300 bg-gray-50">
-                  <p className="text-gray-500">Document preview unavailable. Download from admin storage.</p>
+                  <p className="text-gray-500">Document preview unavailable.</p>
                 </div>
               )}
             </div>

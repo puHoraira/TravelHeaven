@@ -50,13 +50,42 @@ export class RecommendationFacade {
       const availableOptions = await this.fetchAvailableOptions(preferences);
       console.log(`✅ Fetched ${availableOptions.locations.length} locations, ${availableOptions.hotels.length} hotels, ${availableOptions.transport.length} transport options`);
 
+      // If we have no approved locations, we can't build an itinerary
+      if (!availableOptions.locations || availableOptions.locations.length === 0) {
+        return {
+          success: false,
+          code: 'NO_LOCATIONS',
+          error: 'No approved locations are available yet. Please add and approve at least one location before generating recommendations.',
+          itinerary: null,
+        };
+      }
+
       // Step 2: Build and execute filter chain
       const filteredOptions = await this.applyFilters(availableOptions, preferences);
       console.log(`✅ Filtered to ${filteredOptions.options.locations.length} locations, ${filteredOptions.options.hotels.length} hotels, ${filteredOptions.options.transport.length} transport options`);
 
+      // If filters remove everything, return a friendly error
+      if (!filteredOptions?.options?.locations || filteredOptions.options.locations.length === 0) {
+        return {
+          success: false,
+          code: 'NO_MATCHING_LOCATIONS',
+          error: 'No locations match your current preferences. Try lowering minRating, changing interests, or removing region/destination filters.',
+          itinerary: null,
+        };
+      }
+
       // Step 3: Apply recommendation strategy
       const recommendations = await this.applyStrategy(filteredOptions, preferences);
       console.log(`✅ Strategy applied: ${recommendations.strategy}`);
+
+      if (!recommendations?.locations || recommendations.locations.length === 0) {
+        return {
+          success: false,
+          code: 'NO_DESTINATIONS',
+          error: 'No destinations could be selected with the current data and preferences.',
+          itinerary: null,
+        };
+      }
 
       // Step 4: Build base itinerary
       const baseItinerary = await this.buildItinerary(userId, preferences, recommendations);
@@ -98,18 +127,14 @@ export class RecommendationFacade {
   async fetchAvailableOptions(preferences) {
     const { destination, region } = preferences;
 
-    // Build query filters
-    const locationFilter = {};
-    const hotelFilter = {};
-    const transportFilter = {};
+    // Build query filters - ONLY APPROVED ITEMS
+    const locationFilter = { approvalStatus: 'approved' };
+    const hotelFilter = { approvalStatus: 'approved' };
+    const transportFilter = { approvalStatus: 'approved' };
 
     if (destination) {
       locationFilter.city = destination;
-      hotelFilter.city = destination;
-      transportFilter.$or = [
-        { origin: destination },
-        { destination: destination },
-      ];
+      hotelFilter.address = { $regex: destination, $options: 'i' };
     }
 
     if (region) {
@@ -117,18 +142,237 @@ export class RecommendationFacade {
       hotelFilter.region = region;
     }
 
-    // Fetch from repositories (with pagination)
+    // Fetch from repositories (with pagination) - APPROVED ONLY
     const [locationsResult, hotelsResult, transportResult] = await Promise.all([
-      this.locationRepo.findAll(locationFilter, { limit: 100, page: 1 }),
-      this.hotelRepo.findAll(hotelFilter, { limit: 50, page: 1 }),
-      this.transportRepo.findAll(transportFilter, { limit: 30, page: 1 }),
+      this.locationRepo.findApproved(locationFilter, { limit: 100, page: 1 }),
+      this.hotelRepo.findApproved(hotelFilter, { limit: 50, page: 1 }),
+      this.transportRepo.findApproved(transportFilter, { limit: 30, page: 1 }),
     ]);
 
-    return {
-      locations: locationsResult.data || [],
-      hotels: hotelsResult.data || [],
-      transport: transportResult.data || [],
-    };
+    // Normalize and validate data
+    const locations = this.normalizeLocations(locationsResult.data || []);
+    const hotels = this.normalizeHotels(hotelsResult.data || []);
+    const transport = this.normalizeTransport(transportResult.data || []);
+
+    console.log(`📦 Fetched: ${locations.length} locations, ${hotels.length} hotels, ${transport.length} transport`);
+
+    return { locations, hotels, transport };
+  }
+
+  /**
+   * Normalize location data for consistency
+   */
+  normalizeLocations(locations) {
+    return locations
+      .filter(loc => {
+        // Filter out incomplete locations
+        const hasName = loc?.name && loc.name.trim().length > 0;
+        const hasCategory = loc?.category && loc.category !== 'other';
+        const hasRating = loc?.rating?.average != null || typeof loc.rating === 'number';
+        return hasName && hasCategory && hasRating;
+      })
+      .map(loc => {
+        const normalized = loc.toObject ? loc.toObject() : { ...loc };
+        
+        // Normalize rating
+        if (typeof normalized.rating === 'number') {
+          normalized.rating = { average: normalized.rating, count: 0 };
+        }
+        
+        // Normalize entry fee
+        if (typeof normalized.entryFee === 'number') {
+          normalized.entryFee = { amount: normalized.entryFee, currency: 'BDT' };
+        } else if (!normalized.entryFee) {
+          normalized.entryFee = { amount: 0, currency: 'BDT' };
+        }
+        
+        // Quality score
+        normalized.qualityScore = this.calculateLocationQuality(normalized);
+        
+        return normalized;
+      })
+      .filter(loc => loc.qualityScore > 0.3); // Filter low-quality
+  }
+
+  /**
+   * Normalize hotel data for consistency
+   */
+  normalizeHotels(hotels) {
+    return hotels
+      .filter(hotel => {
+        // Filter out incomplete hotels
+        const hasName = hotel?.name && hotel.name.trim().length > 0;
+        const hasPrice = hotel?.priceRange?.min != null || hotel?.rooms?.[0]?.pricePerNight != null;
+        const hasRating = hotel?.rating?.average != null || typeof hotel.rating === 'number';
+        return hasName && hasPrice && hasRating;
+      })
+      .map(hotel => {
+        const normalized = hotel.toObject ? hotel.toObject() : { ...hotel };
+        
+        // Normalize rating
+        if (typeof normalized.rating === 'number') {
+          normalized.rating = { average: normalized.rating, count: 0 };
+        } else if (typeof normalized.averageRating === 'number') {
+          normalized.rating = { average: normalized.averageRating, count: normalized.totalReviews || 0 };
+        }
+        
+        // Normalize price
+        if (!normalized.pricePerNight && normalized.priceRange?.min) {
+          normalized.pricePerNight = normalized.priceRange.min;
+        } else if (!normalized.pricePerNight && normalized.rooms?.[0]?.pricePerNight) {
+          normalized.pricePerNight = normalized.rooms[0].pricePerNight;
+        }
+        
+        // Ensure amenities array
+        normalized.amenities = normalized.amenities || normalized.facilities || [];
+        
+        // Quality score
+        normalized.qualityScore = this.calculateHotelQuality(normalized);
+        
+        return normalized;
+      })
+      .filter(hotel => hotel.qualityScore > 0.3);
+  }
+
+  /**
+   * Normalize transport data for consistency
+   */
+  normalizeTransport(transport) {
+    return transport
+      .filter(t => {
+        // Filter out incomplete transport
+        const hasName = t?.name && t.name.trim().length > 0;
+        const hasType = t?.type;
+        const hasPrice = t?.pricing?.amount != null || t?.price != null;
+        return hasName && hasType && hasPrice;
+      })
+      .map(t => {
+        const normalized = t.toObject ? t.toObject() : { ...t };
+        
+        // Normalize rating
+        if (typeof normalized.rating === 'number') {
+          normalized.rating = { average: normalized.rating, count: 0 };
+        } else if (typeof normalized.averageRating === 'number') {
+          normalized.rating = { average: normalized.averageRating, count: normalized.totalReviews || 0 };
+        }
+        
+        // Normalize price
+        if (!normalized.price && normalized.pricing?.amount != null) {
+          normalized.price = normalized.pricing.amount;
+        }
+        
+        // Normalize duration
+        if (!normalized.estimatedDuration && normalized.route?.duration?.estimated) {
+          const est = normalized.route.duration.estimated;
+          const match = typeof est === 'string' ? est.match(/([0-9]+(?:\.[0-9]+)?)/) : null;
+          normalized.estimatedDuration = match ? parseFloat(match[1]) : 2;
+        }
+        
+        // Ensure facilities array
+        normalized.facilities = normalized.facilities || [];
+        
+        // Quality score
+        normalized.qualityScore = this.calculateTransportQuality(normalized);
+        
+        return normalized;
+      })
+      .filter(t => t.qualityScore > 0.3);
+  }
+
+  /**
+   * Calculate location quality score (0-1)
+   */
+  calculateLocationQuality(location) {
+    let score = 0;
+    
+    // Rating score (0-0.4)
+    const rating = location.rating?.average || 0;
+    score += (rating / 5) * 0.4;
+    
+    // Review count score (0-0.2)
+    const reviewCount = location.rating?.count || 0;
+    score += Math.min(reviewCount / 100, 1) * 0.2;
+    
+    // Description quality (0-0.2)
+    const descLength = location.description?.length || 0;
+    score += Math.min(descLength / 200, 1) * 0.2;
+    
+    // Has coordinates (0-0.1)
+    if (location.coordinates?.latitude && location.coordinates?.longitude) {
+      score += 0.1;
+    }
+    
+    // Has images (0-0.1)
+    if (location.images && location.images.length > 0) {
+      score += 0.1;
+    }
+    
+    return score;
+  }
+
+  /**
+   * Calculate hotel quality score (0-1)
+   */
+  calculateHotelQuality(hotel) {
+    let score = 0;
+    
+    // Rating score (0-0.4)
+    const rating = hotel.rating?.average || 0;
+    score += (rating / 5) * 0.4;
+    
+    // Amenities score (0-0.2)
+    const amenityCount = hotel.amenities?.length || 0;
+    score += Math.min(amenityCount / 10, 1) * 0.2;
+    
+    // Has price info (0-0.2)
+    if (hotel.pricePerNight > 0 || (hotel.priceRange?.min > 0)) {
+      score += 0.2;
+    }
+    
+    // Has location (0-0.1)
+    if (hotel.location?.coordinates && hotel.location.coordinates.length === 2) {
+      score += 0.1;
+    }
+    
+    // Has contact info (0-0.1)
+    if (hotel.contactInfo?.phone || hotel.contactInfo?.email) {
+      score += 0.1;
+    }
+    
+    return score;
+  }
+
+  /**
+   * Calculate transport quality score (0-1)
+   */
+  calculateTransportQuality(transport) {
+    let score = 0;
+    
+    // Rating score (0-0.3)
+    const rating = transport.rating?.average || transport.averageRating || 0;
+    score += (rating / 5) * 0.3;
+    
+    // Has route info (0-0.3)
+    if (transport.route?.from && transport.route?.to) {
+      score += 0.3;
+    }
+    
+    // Has pricing (0-0.2)
+    if (transport.price > 0 || transport.pricing?.amount > 0) {
+      score += 0.2;
+    }
+    
+    // Has facilities (0-0.1)
+    if (transport.facilities && transport.facilities.length > 0) {
+      score += 0.1;
+    }
+    
+    // Has operator info (0-0.1)
+    if (transport.operator?.name) {
+      score += 0.1;
+    }
+    
+    return score;
   }
 
   /**

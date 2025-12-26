@@ -8,6 +8,17 @@ import { Transport } from '../models/Transport.js';
 
 dotenv.config();
 
+// Safety guard: prevent accidental destructive runs
+const { NODE_ENV, ALLOW_DESTRUCTIVE_SEED } = process.env;
+if (NODE_ENV === 'production') {
+  console.error('❌ Refusing to run: destructive seed is blocked in production. Set NODE_ENV=development.');
+  process.exit(1);
+}
+if (ALLOW_DESTRUCTIVE_SEED !== 'true') {
+  console.error('❌ Refusing to run: set ALLOW_DESTRUCTIVE_SEED=true to confirm you want to wipe the database.');
+  process.exit(1);
+}
+
 const seed = async () => {
   const db = DatabaseConnection.getInstance();
   await db.connect();

@@ -9,7 +9,7 @@ import {
 } from '../controllers/auth.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
-import { upload } from '../middleware/upload.js';
+import { upload, saveToMongoDB } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -28,9 +28,9 @@ const loginValidation = [
 
 // Routes
 router.post('/register', registerValidation, validate, register);
-router.post('/register-guide', upload.single('verificationDocument'), registerGuide);
+router.post('/register-guide', upload.single('verificationDocument'), saveToMongoDB, registerGuide);
 router.post('/login', loginValidation, validate, login);
 router.get('/me', authenticate, getCurrentUser);
-router.put('/profile', authenticate, upload.single('avatar'), updateProfile);
+router.put('/profile', authenticate, upload.single('avatar'), saveToMongoDB, updateProfile);
 
 export default router;

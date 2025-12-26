@@ -317,7 +317,7 @@ export const resubmitGuideVerification = async (req, res) => {
   try {
     if (!ensureGuideContext(req, res)) return;
 
-    if (!req.file) {
+    if (!req.savedFile) {
       return res.status(400).json({
         success: false,
         message: 'Verification document is required',
@@ -333,18 +333,15 @@ export const resubmitGuideVerification = async (req, res) => {
       });
     }
 
-    const relativeUploadPath = path.posix.join('uploads', req.file.filename);
-    const fileUrl = `/${relativeUploadPath}`.replace(/\\/g, '/');
+    // Delete old verification document if exists
+    if (guide.guideInfo?.verificationDocument) {
+      // TODO: Delete old file from MongoDB if needed
+      const File = (await import('../models/File.js')).default;
+      await File.findByIdAndDelete(guide.guideInfo.verificationDocument);
+    }
 
     guide.guideInfo = guide.guideInfo || {};
-    guide.guideInfo.verificationDocument = {
-      filename: req.file.filename,
-      originalName: req.file.originalname,
-      path: relativeUploadPath,
-      url: fileUrl,
-      diskPath: req.file.path,
-      uploadedAt: new Date(),
-    };
+    guide.guideInfo.verificationDocument = req.savedFile._id; // Store reference to File document
     guide.guideInfo.verificationStatus = 'pending';
     guide.guideInfo.rejectionReason = undefined;
     guide.guideInfo.verificationResubmittedAt = new Date();
@@ -356,7 +353,10 @@ export const resubmitGuideVerification = async (req, res) => {
       message: 'Verification document resubmitted. Awaiting admin review.',
       data: {
         verificationStatus: guide.guideInfo.verificationStatus,
-        verificationDocument: guide.guideInfo.verificationDocument,
+        verificationDocument: {
+          id: req.savedFile._id,
+          url: req.savedFile.url,
+        },
       },
     });
   } catch (error) {

@@ -1,6 +1,5 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import path from 'path';
 import { UserRepository } from '../patterns/Repository.js';
 
 const userRepo = new UserRepository();
@@ -12,11 +11,8 @@ const buildUserResponse = (user) => {
   const profile = doc.profile || {};
   const guideInfo = doc.guideInfo || null;
 
-  if (guideInfo?.verificationDocument) {
-    const sanitizedDocument = { ...guideInfo.verificationDocument };
-    delete sanitizedDocument.diskPath;
-    guideInfo.verificationDocument = sanitizedDocument;
-  }
+  // verificationDocument is now an ObjectId, no need to sanitize
+  // It will be populated when needed via populate('guideInfo.verificationDocument')
 
   return {
     id: doc._id,
@@ -225,12 +221,12 @@ export const updateProfile = async (req, res) => {
       hasChanges = true;
     }
 
-    if (req.file) {
-      const relativeUploadPath = path.posix.join('uploads', req.file.filename);
-      const fileUrl = `/${relativeUploadPath}`.replace(/\\/g, '/');
-      user.profile = user.profile || {};
-      user.profile.avatar = fileUrl;
-      hasChanges = true;
+      // Avatar upload is stored in MongoDB via saveToMongoDB middleware
+      if (req.savedFile?.url || req.file?.url || req.file?.mongoId) {
+        const fileUrl = req.savedFile?.url || req.file?.url || `/api/files/${req.file.mongoId}`;
+        user.profile = user.profile || {};
+        user.profile.avatar = fileUrl;
+        hasChanges = true;
     }
 
     if (!hasChanges) {
@@ -263,8 +259,15 @@ export const registerGuide = async (req, res) => {
   try {
     const { username, email, password, firstName, lastName, phone, experience } = req.body;
 
-    // Check if file was uploaded
-    if (!req.file) {
+    // Debug: Log what we received
+    console.log('[registerGuide] Request body keys:', Object.keys(req.body));
+    console.log('[registerGuide] Has file:', !!req.file);
+    console.log('[registerGuide] Has savedFile:', !!req.savedFile);
+    console.log('[registerGuide] Has files:', !!req.files);
+
+    // Check if file was uploaded (now using MongoDB storage)
+    if (!req.savedFile) {
+      console.log('[registerGuide] No savedFile found');
       return res.status(400).json({
         success: false,
         message: 'Verification document (NID/Passport) is required',
@@ -291,10 +294,7 @@ export const registerGuide = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create guide user with verification document
-    const relativeUploadPath = path.posix.join('uploads', req.file.filename);
-    const fileUrl = `/${relativeUploadPath}`;
-
+    // Create guide user with verification document (stored in MongoDB)
     const user = await userRepo.create({
       username,
       email,
@@ -307,14 +307,7 @@ export const registerGuide = async (req, res) => {
       },
       guideInfo: {
         experience,
-        verificationDocument: {
-          filename: req.file.filename,
-          originalName: req.file.originalname,
-          path: relativeUploadPath,
-          url: fileUrl,
-          diskPath: req.file.path,
-          uploadedAt: new Date(),
-        },
+        verificationDocument: req.savedFile._id, // Reference to File document in MongoDB
         verificationStatus: 'pending',
       },
     });

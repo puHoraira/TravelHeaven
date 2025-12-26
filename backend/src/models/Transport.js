@@ -195,7 +195,10 @@ const transportSchema = new mongoose.Schema({
   },
 
   images: [{
-    url: String,
+    file: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'File',
+    },
     caption: String,
   }],
 

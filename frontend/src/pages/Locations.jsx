@@ -272,10 +272,21 @@ const Locations = () => {
 
   const averageRating = calculateAverageRating();
 
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith('http')) return imagePath;
-    return `http://localhost:5000${imagePath}`;
+  const getImageUrl = (image) => {
+    if (!image) return null;
+    
+    // Handle MongoDB file reference objects
+    if (typeof image === 'object' && image.file) {
+      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
+    }
+    
+    // Handle string paths (legacy format)
+    if (typeof image === 'string') {
+      if (image.startsWith('http')) return image;
+      return `http://localhost:5000${image}`;
+    }
+    
+    return null;
   };
 
   if (showDetails && selectedLocation) {
@@ -311,7 +322,7 @@ const Locations = () => {
                 {selectedLocation.images.map((image, index) => (
                   <div key={index} className="relative group">
                     <img
-                      src={getImageUrl(image.url || image)}
+                      src={getImageUrl(image)}
                       alt={`${selectedLocation.name} - ${index + 1}`}
                       className="w-full h-64 object-cover rounded-lg shadow-md"
                       onError={(e) => {

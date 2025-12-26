@@ -10,7 +10,7 @@ import {
 } from '../controllers/location.controller.js';
 import { authenticate, authorize, authorizeResource, authenticateOptional } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
-import { upload } from '../middleware/upload.js';
+import { upload, saveToMongoDB } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -31,6 +31,7 @@ router.post(
   upload.array('images', 5),
   locationValidation,
   validate,
+  saveToMongoDB,
   createLocation
 );
 
@@ -43,6 +44,7 @@ router.put(
   authenticate,
   authorize('guide', 'admin'),
   upload.array('images', 5),
+  saveToMongoDB,
   updateLocation
 );
 

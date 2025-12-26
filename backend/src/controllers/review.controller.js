@@ -17,10 +17,14 @@ export const createReview = async (req, res) => {
     const { reviewType, referenceId, rating, title, comment } = req.body;
 
     // Handle uploaded images
-    const images = req.files ? req.files.map(file => ({
-      url: `/uploads/${file.filename}`,
-      caption: ''
-    })) : [];
+    const images = req.files
+      ? req.files
+          .filter((file) => file?.mongoId)
+          .map((file) => ({
+            file: file.mongoId,
+            caption: '',
+          }))
+      : [];
 
     // Parse images from body if sent as JSON (non-multipart request)
     let parsedImages = images;
@@ -78,7 +82,7 @@ export const getReviews = async (req, res) => {
       page,
       limit,
       sort: { createdAt: -1 },
-      populate: ['userId'],
+      populate: ['userId', 'images.file'],
     });
 
     res.json({
@@ -107,6 +111,7 @@ export const getMyReviews = async (req, res) => {
       page,
       limit,
       sort: { createdAt: -1 },
+      populate: ['images.file'],
     });
 
     res.json({
@@ -149,11 +154,48 @@ export const updateReview = async (req, res) => {
 
     const isVerified = await hasCompletedBooking(req.user._id, review.reviewType, review.referenceId);
 
+    const isObjectId = (value) => typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value);
+
+    const normalizeImages = (raw) => {
+      if (!raw) return undefined;
+
+      let parsed = raw;
+      if (typeof parsed === 'string') {
+        try {
+          parsed = JSON.parse(parsed);
+        } catch {
+          parsed = undefined;
+        }
+      }
+
+      if (!Array.isArray(parsed)) return undefined;
+
+      return parsed
+        .map((img) => {
+          if (!img) return null;
+
+          if (typeof img === 'string') {
+            return isObjectId(img) ? { file: img, caption: '' } : null;
+          }
+
+          const file = img.file;
+          if (isObjectId(file)) return { file, caption: img.caption || '' };
+          if (file && typeof file === 'object' && isObjectId(file._id)) {
+            return { file: file._id, caption: img.caption || '' };
+          }
+
+          return null;
+        })
+        .filter(Boolean);
+    };
+
+    const normalizedImages = normalizeImages(images);
+
     const updatedReview = await reviewRepo.update(id, {
       rating,
       title,
       comment,
-      images,
+      ...(normalizedImages !== undefined ? { images: normalizedImages } : {}),
       isVerified,
     });
 

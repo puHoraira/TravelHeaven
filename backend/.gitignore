@@ -1,6 +1,6 @@
 node_modules/
-# .env (included in repo)
-# .env.railway
+/.env
+/.env.*
 uploads/
 *.log
 .DS_Store

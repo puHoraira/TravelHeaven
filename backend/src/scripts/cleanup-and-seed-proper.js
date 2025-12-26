@@ -381,15 +381,15 @@ const cleanupAndSeed = async () => {
 
     console.log('\n🎉 Database seeded successfully!');
     console.log('\n📊 Summary:');
-    console.log(`   ✨ Locations: ${createdLocations.length}`);
+    console.log(`   ✨ Locations: ${createdCount}`);
     console.log(`      - Historical: 2`);
     console.log(`      - Cultural: 2`);
     console.log(`      - Natural: 2`);
     console.log(`      - Adventure: 1`);
     console.log(`      - Beach: 1`);
     console.log(`      - Mountain: 1`);
-    console.log(`   🏨 Hotels: ${createdHotels.length}`);
-    console.log(`   🚗 Transport: ${createdTransport.length}`);
+    console.log(`   🏨 Hotels: ${hotelCount}`);
+    console.log(`   🚗 Transport: ${transportCount}`);
 
     process.exit(0);
   } catch (error) {

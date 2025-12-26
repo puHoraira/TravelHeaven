@@ -11,7 +11,7 @@ import {
   getGuidesForAdmin,
 } from '../controllers/guide.controller.js';
 import { authenticate, authorize } from '../middleware/auth.js';
-import { upload } from '../middleware/upload.js';
+import { upload, saveToMongoDB } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -29,6 +29,7 @@ router.post(
   authenticate,
   authorize('guide'),
   upload.single('verificationDocument'),
+  saveToMongoDB,
   resubmitGuideVerification
 );
 

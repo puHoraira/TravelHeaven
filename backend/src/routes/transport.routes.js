@@ -13,9 +13,9 @@ import {
   incrementViewCount,
   recordBooking,
 } from '../controllers/transport.controller.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, authenticateOptional, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
-import { upload } from '../middleware/upload.js';
+import { upload, saveToMongoDB } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -32,7 +32,7 @@ router.get('/find-routes', findRoutes); // NEW: Find routes
 router.get('/popular', getPopularRoutes); // NEW: Popular routes
 router.get('/search-operator', searchByOperator); // NEW: Search by operator
 router.get('/my-transport', authenticate, authorize('guide'), getMyTransport);
-router.get('/:id', getTransportById);
+router.get('/:id', authenticateOptional, getTransportById);
 router.post('/:id/view', incrementViewCount); // NEW: Track views
 router.post('/:id/book', recordBooking); // NEW: Track bookings
 
@@ -42,6 +42,7 @@ router.post(
   authenticate,
   authorize('guide'),
   upload.array('images', 5),
+  saveToMongoDB,
   transportValidation,
   validate,
   createTransport
@@ -52,6 +53,7 @@ router.put(
   authenticate,
   authorize('guide', 'admin'),
   upload.array('images', 5),
+  saveToMongoDB,
   updateTransport
 );
 

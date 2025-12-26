@@ -32,7 +32,10 @@ const reviewSchema = new mongoose.Schema({
     trim: true,
   },
   images: [{
-    url: String,
+    file: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'File',
+    },
     caption: String,
   }],
   likes: [{

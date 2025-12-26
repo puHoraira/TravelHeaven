@@ -32,6 +32,29 @@ export class RecommendationStrategy {
   }
 }
 
+// Helper accessors to normalize differing schema fields across models
+const ratingOf = (item) => {
+  const r = item?.rating;
+  if (typeof r === 'number') return r;
+  if (r && typeof r === 'object' && typeof r.average === 'number') return r.average;
+  if (typeof item?.averageRating === 'number') return item.averageRating;
+  return 0;
+};
+
+const hotelPricePerNightOf = (hotel, fallbackBudget = 0) => {
+  if (typeof hotel?.pricePerNight === 'number') return hotel.pricePerNight;
+  if (Array.isArray(hotel?.rooms) && hotel.rooms[0]?.pricePerNight) return hotel.rooms[0].pricePerNight;
+  if (typeof hotel?.priceRange?.min === 'number') return hotel.priceRange.min;
+  // last resort: rough guess from budget
+  return Math.max(0, Math.floor(fallbackBudget * 0.1));
+};
+
+const transportPriceOf = (t) => {
+  if (typeof t?.price === 'number') return t.price;
+  if (typeof t?.pricing?.amount === 'number') return t.pricing.amount;
+  return 0;
+};
+
 /**
  * Concrete Strategy - Budget Optimized Strategy
  * Minimizes costs while maximizing value and experiences
@@ -75,22 +98,25 @@ export class BudgetOptimizedStrategy extends RecommendationStrategy {
     
     // For locations: prioritize rating and low/no cost
     if (item.category || item.type === 'location') {
-      const costScore = item.entryFee ? (1 - item.entryFee / (budget * 0.1)) : 1;
-      const ratingScore = (item.rating || 3) / 5;
+      const entryFee = typeof item.entryFee === 'number' ? item.entryFee : (item.entryFee?.amount || 0);
+      const costScore = entryFee ? (1 - entryFee / Math.max(1, budget * 0.1)) : 1;
+      const ratingScore = ratingOf(item) / 5;
       return (costScore * 0.6) + (ratingScore * 0.4);
     }
 
     // For hotels: prioritize low price and decent rating
-    if (item.pricePerNight !== undefined) {
-      const costScore = 1 - (item.pricePerNight / (budget * 0.4));
-      const ratingScore = (item.rating || 3) / 5;
+    if (item) {
+      const ppn = hotelPricePerNightOf(item, budget);
+      const costScore = 1 - (ppn / Math.max(1, budget * 0.4));
+      const ratingScore = ratingOf(item) / 5;
       return (costScore * 0.7) + (ratingScore * 0.3);
     }
 
     // For transport: prioritize low cost
-    if (item.price !== undefined) {
-      const costScore = 1 - (item.price / (budget * 0.3));
-      const reliabilityScore = (item.rating || 3) / 5;
+    if (item) {
+      const price = transportPriceOf(item);
+      const costScore = 1 - (price / Math.max(1, budget * 0.3));
+      const reliabilityScore = ratingOf(item) / 5;
       return (costScore * 0.8) + (reliabilityScore * 0.2);
     }
 
@@ -98,9 +124,9 @@ export class BudgetOptimizedStrategy extends RecommendationStrategy {
   }
 
   calculateTotalCost(locations, hotels, transport, duration) {
-    const locationCost = locations.reduce((sum, loc) => sum + (loc.entryFee || 0), 0);
-    const hotelCost = hotels.reduce((sum, hotel) => sum + (hotel.pricePerNight || 0) * duration, 0);
-    const transportCost = transport.reduce((sum, t) => sum + (t.price || 0), 0);
+    const locationCost = locations.reduce((sum, loc) => sum + (typeof loc.entryFee === 'number' ? loc.entryFee : (loc.entryFee?.amount || 0)), 0);
+    const hotelCost = hotels.reduce((sum, hotel) => sum + hotelPricePerNightOf(hotel) * duration, 0);
+    const transportCost = transport.reduce((sum, t) => sum + transportPriceOf(t), 0);
     return locationCost + hotelCost + transportCost;
   }
 }
@@ -132,7 +158,7 @@ export class ActivityDrivenStrategy extends RecommendationStrategy {
     })).sort((a, b) => b.score - a.score);
 
     const scoredTransport = options.transport.sort((a, b) => 
-      (b.rating || 0) - (a.rating || 0)
+      ratingOf(b) - ratingOf(a)
     );
 
     return {
@@ -162,7 +188,7 @@ export class ActivityDrivenStrategy extends RecommendationStrategy {
       return (ratingScore * 0.6) + (Math.min(amenitiesScore, 1) * 0.4);
     }
 
-    return (item.rating || 3) / 5;
+    return ratingOf(item) / 5;
   }
 
   selectDiverseLocations(locations, maxCount) {
@@ -259,12 +285,12 @@ export class ComfortPrioritizedStrategy extends RecommendationStrategy {
       return (ratingScore * 0.6) + (comfortScore * 0.4);
     }
 
-    return (item.rating || 3) / 5;
+    return ratingOf(item) / 5;
   }
 
   calculateComfortRating(hotels, transport) {
-    const hotelRating = hotels.reduce((sum, h) => sum + (h.rating || 0), 0) / hotels.length;
-    const transportRating = transport.reduce((sum, t) => sum + (t.rating || 0), 0) / transport.length;
+    const hotelRating = hotels.reduce((sum, h) => sum + ratingOf(h), 0) / Math.max(hotels.length, 1);
+    const transportRating = transport.reduce((sum, t) => sum + ratingOf(t), 0) / Math.max(transport.length, 1);
     return ((hotelRating + transportRating) / 2).toFixed(1);
   }
 }
@@ -317,7 +343,7 @@ export class TimeEfficientStrategy extends RecommendationStrategy {
       return (ratingScore * 0.4) + (centralityScore * 0.6);
     }
 
-    return (item.rating || 3) / 5;
+    return ratingOf(item) / 5;
   }
 
   clusterByProximity(locations) {

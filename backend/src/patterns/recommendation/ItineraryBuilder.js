@@ -153,16 +153,20 @@ export class ItineraryBuilder {
       Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)) : 
       1;
 
+    const pricePerNight = (typeof hotel?.pricePerNight === 'number')
+      ? hotel.pricePerNight
+      : (hotel?.rooms?.[0]?.pricePerNight ?? hotel?.priceRange?.min ?? 0);
+
     this.itinerary.accommodations.push({
       hotelId: hotel._id || hotel.id,
       name: hotel.name,
       address: hotel.address,
       rating: hotel.rating,
-      pricePerNight: hotel.pricePerNight || 0,
+      pricePerNight: pricePerNight || 0,
       checkIn: checkIn ? new Date(checkIn) : null,
       checkOut: checkOut ? new Date(checkOut) : null,
       nights: nights,
-      totalCost: (hotel.pricePerNight || 0) * nights,
+      totalCost: (pricePerNight || 0) * nights,
       amenities: hotel.amenities || [],
       order: this.itinerary.accommodations.length + 1,
     });
@@ -195,6 +199,8 @@ export class ItineraryBuilder {
    * Add transportation
    */
   addTransportation(transport, date, from, to) {
+    const price = (typeof transport?.price === 'number') ? transport.price : (transport?.pricing?.amount ?? 0);
+    const duration = transport?.estimatedDuration ?? transport?.duration ?? 2;
     this.itinerary.transportation.push({
       transportId: transport._id || transport.id,
       type: transport.type,
@@ -204,8 +210,8 @@ export class ItineraryBuilder {
       date: date ? new Date(date) : null,
       departureTime: transport.departureTime,
       arrivalTime: transport.arrivalTime,
-      price: transport.price || 0,
-      duration: transport.estimatedDuration || transport.duration || 2,
+      price: price,
+      duration: duration,
       order: this.itinerary.transportation.length + 1,
     });
 

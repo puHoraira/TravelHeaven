@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "DANGER-DELETES-ALL": "node src/scripts/seed.js",
+    "seed:danger": "node src/scripts/seed.js",
     "seed-test": "node src/scripts/seed-recommendation-test.js",
     "cleanup-seed": "node src/scripts/cleanup-and-seed-proper.js",
     "init-users": "node src/scripts/init-users.js",

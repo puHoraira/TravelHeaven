@@ -112,6 +112,23 @@ const HotelSearchWidget = ({ locationName, coords, onSelectHotel }) => {
     setHotelDetails(null);
   };
 
+  const getImageUrl = (image) => {
+    if (!image) return null;
+    
+    // Handle MongoDB file reference objects
+    if (typeof image === 'object' && image.file) {
+      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
+    }
+    
+    // Handle string paths (legacy format)
+    if (typeof image === 'string') {
+      if (image.startsWith('http')) return image;
+      return `http://localhost:5000${image}`;
+    }
+    
+    return null;
+  };
+
   return (
     <div className="border border-purple-200 rounded-lg bg-purple-50 p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -181,9 +198,9 @@ const HotelSearchWidget = ({ locationName, coords, onSelectHotel }) => {
                     >
                       <div className="flex gap-3">
                         {/* Hotel Image */}
-                        {hotel.images?.[0]?.url ? (
+                        {hotel.images?.[0] ? (
                           <img 
-                            src={hotel.images[0].url} 
+                            src={getImageUrl(hotel.images[0])}
                             alt={hotel.name}
                             className="w-20 h-20 object-cover rounded"
                           />

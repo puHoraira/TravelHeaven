@@ -54,7 +54,10 @@ const hotelSchema = new mongoose.Schema({
     },
   },
   images: [{
-    url: String,
+    file: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'File',
+    },
     caption: String,
   }],
   rooms: [{
@@ -64,7 +67,13 @@ const hotelSchema = new mongoose.Schema({
     pricePerNight: { type: Number, min: 0 },
     currency: { type: String, default: 'USD' },
     amenities: [String],
-    photos: [{ url: String, caption: String }],
+    photos: [{ 
+      file: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'File',
+      },
+      caption: String 
+    }],
     notes: String,
   }],
   contactInfo: {

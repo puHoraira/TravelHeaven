@@ -14,6 +14,23 @@ const normalizeVerificationDocument = (guide) => {
   const guideCopy = typeof guide.toObject === 'function' ? guide.toObject() : { ...guide };
   const doc = guideCopy.guideInfo.verificationDocument;
 
+  // If it's a populated File document (from MongoDB)
+  if (doc._id) {
+    // File document structure
+    guideCopy.guideInfo.verificationDocument = {
+      _id: doc._id,
+      id: doc._id,
+      filename: doc.filename,
+      originalName: doc.originalName,
+      mimetype: doc.mimetype,
+      size: doc.size,
+      uploadedAt: doc.createdAt || new Date(),
+      url: `/api/files/${doc._id}`, // Generate file URL
+    };
+    return guideCopy;
+  }
+
+  // Fallback for old structure (shouldn't happen with new system)
   const rawPath = doc.url || doc.path || doc.diskPath;
   if (!rawPath) {
     guideCopy.guideInfo.verificationDocument = {
@@ -323,17 +340,15 @@ export const getAllSubmissions = async (req, res) => {
  */
 export const getPendingGuides = async (req, res) => {
   try {
-    const pendingGuides = await userRepo.findAll(
-      { 
-        role: 'guide', 
-        'guideInfo.verificationStatus': 'pending' 
-      },
-      { 
-        populate: [],
-        sort: { createdAt: -1 }
-      }
-    );
-    const guides = pendingGuides.data.map(normalizeVerificationDocument);
+    const { User } = await import('../models/User.js');
+    const pendingGuides = await User.find({ 
+      role: 'guide', 
+      'guideInfo.verificationStatus': 'pending' 
+    })
+      .populate('guideInfo.verificationDocument')
+      .sort({ createdAt: -1 });
+    
+    const guides = pendingGuides.map(normalizeVerificationDocument);
 
     res.json({
       success: true,
@@ -354,8 +369,9 @@ export const getPendingGuides = async (req, res) => {
 export const approveGuide = async (req, res) => {
   try {
     const { guideId } = req.params;
+    const { User } = await import('../models/User.js');
 
-    const guide = await userRepo.findById(guideId);
+    const guide = await User.findById(guideId).populate('guideInfo.verificationDocument');
     if (!guide) {
       return res.status(404).json({
         success: false,

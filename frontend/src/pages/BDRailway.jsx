@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   Train, 
   Search, 
   Calendar, 
-  MapPin, 
   Clock, 
   Users,
   DollarSign,
@@ -12,17 +11,18 @@ import {
   Loader2,
   AlertCircle,
   ArrowRight,
+  Route,
   Filter,
   RefreshCw,
-  List,
-  Route
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 import StationAutocomplete from '../components/StationAutocomplete';
+import { useNavigate } from 'react-router-dom';
 import './BDRailway.css';
 
 const BDRailway = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useState({
     fromCity: '',
     toCity: '',
@@ -38,9 +38,6 @@ const BDRailway = () => {
   const [deviceKey, setDeviceKey] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [filterClass, setFilterClass] = useState('all');
-  const [showRoutes, setShowRoutes] = useState(false);
-  const [trainRoutes, setTrainRoutes] = useState(null);
-  const [loadingRoutes, setLoadingRoutes] = useState(false);
 
   const seatClasses = [
     { value: 'S_CHAIR', label: 'Shulov Chair' },
@@ -139,27 +136,6 @@ const BDRailway = () => {
     });
   };
 
-  const fetchTrainRoutes = async (trainNumber) => {
-    try {
-      setLoadingRoutes(true);
-      const today = new Date().toISOString().split('T')[0];
-      
-      const response = await api.post('/railway/routes', {
-        trainNumber,
-        date: today
-      });
-
-      if (response.data && response.data.data) {
-        setTrainRoutes(response.data.data);
-        setShowRoutes(true);
-      }
-    } catch (error) {
-      console.error('Failed to fetch train routes:', error);
-      toast.error('Failed to load route details');
-    } finally {
-      setLoadingRoutes(false);
-    }
-  };
 
   const swapCities = () => {
     setSearchParams({
@@ -169,7 +145,7 @@ const BDRailway = () => {
     });
   };
 
-  const handleBookTrain = (train, seatType) => {
+  const handleBookTrain = () => {
     window.open('https://eticket.railway.gov.bd/', '_blank');
   };
 
@@ -378,75 +354,6 @@ const BDRailway = () => {
           </div>
         </div>
 
-        {/* All Train Routes Modal/Section */}
-        {showRoutes && trainRoutes && (
-          <div className="train-routes-section">
-            <div className="routes-header">
-              <h2>
-                <Route size={24} />
-                All Train Routes
-              </h2>
-              <button
-                onClick={() => setShowRoutes(false)}
-                className="btn btn-secondary"
-              >
-                Hide Routes
-              </button>
-            </div>
-
-            <div className="routes-content">
-              {trainRoutes.data && trainRoutes.data.routes ? (
-                <div className="routes-list">
-                  {trainRoutes.data.routes.map((route, idx) => (
-                    <div key={idx} className="route-item">
-                      <div className="route-number">
-                        <Train size={20} />
-                        <span>{route.train_number || route.trainNumber || 'N/A'}</span>
-                      </div>
-                      <div className="route-details">
-                        <div className="route-name">
-                          {route.train_name || route.trainName || 'Unknown Train'}
-                        </div>
-                        <div className="route-path">
-                          <MapPin size={14} />
-                          <span>{route.from_station || route.fromStation}</span>
-                          <ArrowRight size={14} />
-                          <MapPin size={14} />
-                          <span>{route.to_station || route.toStation}</span>
-                        </div>
-                        {route.departure_time && (
-                          <div className="route-time">
-                            <Clock size={14} />
-                            <span>Departs: {route.departure_time}</span>
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => {
-                          setSearchParams({
-                            ...searchParams,
-                            fromCity: route.from_station || route.fromStation,
-                            toCity: route.to_station || route.toStation
-                          });
-                          setShowRoutes(false);
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        className="btn-select-route"
-                      >
-                        Select Route
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="routes-raw-data">
-                  <pre>{JSON.stringify(trainRoutes, null, 2)}</pre>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Results Section */}
         {searched && (
           <div className="results-section">
@@ -498,9 +405,30 @@ const BDRailway = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="train-duration">
-                        <Clock size={16} />
-                        <span>{train.travelTime}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="train-duration">
+                          <Clock size={16} />
+                          <span>{train.travelTime}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => {
+                            const trainNumber = train.trainModel || train.tripNumber;
+                            if (!trainNumber) {
+                              toast.error('Train number not available for route lookup');
+                              return;
+                            }
+                            if (!searchParams.date) {
+                              toast.error('Select a date first');
+                              return;
+                            }
+                            navigate(`/trains?trainNumber=${encodeURIComponent(trainNumber)}&date=${encodeURIComponent(searchParams.date)}`);
+                          }}
+                        >
+                          <Route size={16} />
+                          View Route
+                        </button>
                       </div>
                     </div>
 
@@ -550,7 +478,7 @@ const BDRailway = () => {
                               </div>
                               {seat.availability.available && (
                                 <button
-                                  onClick={() => handleBookTrain(train, seat)}
+                                  onClick={handleBookTrain}
                                   className="btn btn-book"
                                 >
                                   <ExternalLink size={16} />

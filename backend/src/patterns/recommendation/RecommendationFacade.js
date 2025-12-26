@@ -688,11 +688,14 @@ export class RecommendationFacade {
    * @returns {Object} Itinerary
    */
   async getItinerary(itineraryId) {
-    // In a real implementation, this would fetch from database
     console.log('📖 Fetching itinerary:', itineraryId);
-    
-    // Mock implementation
-    throw new Error('Not implemented - would fetch from database');
+
+    const itinerary = await Itinerary.findById(itineraryId);
+    if (!itinerary) {
+      return null;
+    }
+
+    return itinerary;
   }
 
   /**
@@ -703,9 +706,23 @@ export class RecommendationFacade {
    */
   async updateItinerary(itineraryId, updates) {
     console.log('✏️ Updating itinerary:', itineraryId);
-    
-    // In a real implementation, this would update in database
-    throw new Error('Not implemented - would update in database');
+
+    const updatePayload = updates && typeof updates === 'object' ? { ...updates } : {};
+    // Do not allow owner change via update
+    delete updatePayload.ownerId;
+    delete updatePayload.userId;
+
+    const updated = await Itinerary.findByIdAndUpdate(
+      itineraryId,
+      { ...updatePayload, updatedAt: Date.now() },
+      { new: true, runValidators: true }
+    );
+
+    if (!updated) {
+      return null;
+    }
+
+    return updated;
   }
 
   /**
@@ -715,77 +732,9 @@ export class RecommendationFacade {
    */
   async deleteItinerary(itineraryId) {
     console.log('🗑️ Deleting itinerary:', itineraryId);
-    
-    // In a real implementation, this would delete from database
-    throw new Error('Not implemented - would delete from database');
-  }
 
-  /**
-   * Convert recommendation destinations to Itinerary days format
-   * @param {Object} itineraryData - Recommendation itinerary
-   * @returns {Array} Days array for Itinerary model
-   */
-  convertToDaysFormat(itineraryData) {
-    const days = [];
-    const { destinations, accommodations, transportation, dailyPlans } = itineraryData;
-    
-    // If dailyPlans exist, use them
-    if (dailyPlans && dailyPlans.length > 0) {
-      return dailyPlans.map((plan, index) => ({
-        dayNumber: index + 1,
-        date: this.addDays(new Date(itineraryData.startDate), index),
-        title: plan.title || `Day ${index + 1}`,
-        description: plan.description || '',
-        stops: plan.locations?.map((loc, stopIndex) => ({
-          locationId: loc._id || loc.locationId,
-          hotelId: plan.hotel?._id || plan.hotel?.hotelId,
-          transportId: plan.transport?._id || plan.transport?.transportId,
-          customName: loc.name,
-          order: stopIndex,
-          estimatedCost: loc.entryFee?.amount || 0,
-        })) || []
-      }));
-    }
-    
-    // Otherwise, distribute destinations across days
-    const duration = itineraryData.duration || 3;
-    const destinationsPerDay = Math.ceil(destinations.length / duration);
-    
-    for (let dayIndex = 0; dayIndex < duration; dayIndex++) {
-      const dayDestinations = destinations.slice(
-        dayIndex * destinationsPerDay,
-        (dayIndex + 1) * destinationsPerDay
-      );
-      
-      const stops = dayDestinations.map((dest, stopIndex) => ({
-        locationId: dest._id || dest.locationId,
-        customName: dest.name,
-        customDescription: dest.description,
-        customCoordinates: dest.coordinates,
-        order: stopIndex,
-        estimatedCost: dest.entryFee?.amount || 0,
-      }));
-      
-      // Add accommodation for the day
-      if (accommodations && accommodations[dayIndex]) {
-        stops.push({
-          hotelId: accommodations[dayIndex]._id || accommodations[dayIndex].hotelId,
-          customName: accommodations[dayIndex].name,
-          order: stops.length,
-          estimatedCost: accommodations[dayIndex].priceRange?.min || 0,
-        });
-      }
-      
-      days.push({
-        dayNumber: dayIndex + 1,
-        date: this.addDays(new Date(itineraryData.startDate), dayIndex),
-        title: `Day ${dayIndex + 1}`,
-        description: `Exploring ${dayDestinations.map(d => d.name).join(', ')}`,
-        stops: stops,
-      });
-    }
-    
-    return days;
+    const deleted = await Itinerary.findByIdAndDelete(itineraryId);
+    return Boolean(deleted);
   }
 
   /**

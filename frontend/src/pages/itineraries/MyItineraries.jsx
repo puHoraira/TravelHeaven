@@ -36,15 +36,6 @@ export default function MyItineraries() {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const badges = {
-      planning: 'bg-blue-100 text-blue-800',
-      active: 'bg-green-100 text-green-800',
-      completed: 'bg-gray-100 text-gray-800',
-    };
-    return badges[status] || badges.planning;
-  };
-
   const formatDateRange = (startDate, endDate) => {
     const start = new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const end = new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });

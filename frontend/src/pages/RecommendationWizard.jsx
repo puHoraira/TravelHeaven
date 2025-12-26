@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/api';
 
 /**
  * Smart Itinerary Recommendation Component
@@ -62,30 +62,22 @@ const RecommendationWizard = () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        'http://localhost:5000/api/recommendations/generate',
-        preferences,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      
-      console.log('Recommendation response:', response.data);
-      
-      // Check if the response was successful
-      if (!response.data.success) {
-        setErrorMsg(response.data.message || 'Failed to generate recommendation.');
+      const data = await api.post('/recommendations/generate', preferences);
+
+      console.log('Recommendation response:', data);
+
+      if (!data?.success) {
+        setErrorMsg(data?.message || 'Failed to generate recommendation.');
         return;
       }
-      
-      setRecommendation(response.data);
+
+      setRecommendation(data);
       setSelectedLocations([]); // Reset selected locations
       setStep(4);
     } catch (error) {
       console.error('Error generating recommendation:', error);
-      const code = error.response?.data?.code;
-      const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+      const code = error?.code;
+      const errorMessage = error?.message || 'Unknown error';
       if (code === 'NO_LOCATIONS') {
         setErrorMsg(errorMessage || 'No approved locations are available yet.');
       } else if (code === 'NO_MATCHING_LOCATIONS' || code === 'NO_DESTINATIONS') {
@@ -101,15 +93,8 @@ const RecommendationWizard = () => {
   const compareStrategies = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        'http://localhost:5000/api/recommendations/compare',
-        preferences,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setComparison(response.data);
+      const data = await api.post('/recommendations/compare', preferences);
+      setComparison(data);
     } catch (error) {
       console.error('Error comparing strategies:', error);
       alert('Failed to compare strategies.');
@@ -129,8 +114,6 @@ const RecommendationWizard = () => {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      
       // Create a meaningful title from selected location names
       const locationNames = selectedLocations.map(loc => loc.name).filter(Boolean);
       const itineraryTitle = locationNames.length > 0 
@@ -151,14 +134,8 @@ const RecommendationWizard = () => {
       
       console.log('💾 Saving itinerary with budget:', preferences.budget);
       console.log('📦 Full itinerary data:', itineraryToSave);
-      
-      await axios.post(
-        'http://localhost:5000/api/recommendations/save',
-        itineraryToSave,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+
+      await api.post('/recommendations/save', itineraryToSave);
       alert('Itinerary saved successfully!');
       navigate('/itineraries');
     } catch (error) {

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
-import { MapPin, Image as ImageIcon, User, Info, Calendar, Clock, DollarSign, X } from 'lucide-react';
+import { getImageUrlFromMixed } from '../../lib/media';
+import { MapPin, Image as ImageIcon, User, Info, Clock, DollarSign, X } from 'lucide-react';
 
 const AdminApprovals = () => {
   const [pending, setPending] = useState({ locations: [], hotels: [], transportation: [] });
@@ -71,21 +72,7 @@ const AdminApprovals = () => {
   };
 
   const getImageUrl = (image) => {
-    if (!image) return null;
-    
-    // Handle MongoDB file reference objects
-    if (typeof image === 'object' && image.file) {
-      // If file has _id, use it to fetch from API
-      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
-    }
-    
-    // Handle string paths (legacy format)
-    if (typeof image === 'string') {
-      if (image.startsWith('http')) return image;
-      return `http://localhost:5000${image}`;
-    }
-    
-    return null;
+    return getImageUrlFromMixed(image);
   };
 
   const totalPending = useMemo(() => counts?.total ?? (pending.locations.length + pending.hotels.length + pending.transportation.length), [counts, pending]);

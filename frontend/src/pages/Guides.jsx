@@ -1,5 +1,5 @@
 import { DollarSign, Languages, MapPin, Search, Star } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
@@ -12,11 +12,7 @@ const Guides = () => {
   const [sortBy, setSortBy] = useState('rating');
   const [pagination, setPagination] = useState({});
 
-  useEffect(() => {
-    fetchGuides();
-  }, [search, sortBy]);
-
-  const fetchGuides = async (page = 1) => {
+  const fetchGuides = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const { data = [], pagination: pageInfo = {} } = await api.get('/guides', {
@@ -33,7 +29,11 @@ const Guides = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, sortBy]);
+
+  useEffect(() => {
+    fetchGuides();
+  }, [fetchGuides]);
 
   return (
     <div className="space-y-6">

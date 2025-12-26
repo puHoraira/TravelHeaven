@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -170,7 +170,7 @@ export default function MapView({
   showRoute = true, 
   height = 400 
 }) {
-  const [mapCenter, setMapCenter] = useState([23.8103, 90.4125]); // Default: Dhaka
+  const defaultCenter = [23.8103, 90.4125]; // Default: Dhaka
 
   // Decide whether to use days or flat stops
   const useDayBased = days && days.length > 0;
@@ -266,15 +266,6 @@ export default function MapView({
     });
   }
 
-  // Update map center based on positions
-  useEffect(() => {
-    if (allPositions.length > 0) {
-      const avgLat = allPositions.reduce((sum, pos) => sum + pos[0], 0) / allPositions.length;
-      const avgLng = allPositions.reduce((sum, pos) => sum + pos[1], 0) / allPositions.length;
-      setMapCenter([avgLat, avgLng]);
-    }
-  }, [allPositions.length]);
-
   if (allPositions.length === 0) {
     return (
       <div 
@@ -293,7 +284,7 @@ export default function MapView({
   return (
     <div className="rounded-lg overflow-hidden shadow-lg border-4 border-white">
       <MapContainer
-        center={mapCenter}
+        center={defaultCenter}
         zoom={13}
         style={{ height: `${height}px`, width: '100%' }}
         scrollWheelZoom={true}

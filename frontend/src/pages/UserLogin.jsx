@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
-import { User, MapPin } from 'lucide-react';
+import { User } from 'lucide-react';
 
 const UserLogin = () => {
   const navigate = useNavigate();

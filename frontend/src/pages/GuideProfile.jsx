@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { getImageUrlFromMixed } from '../lib/media';
 import { 
   Star, 
   MapPin, 
@@ -40,11 +41,7 @@ const GuideProfile = () => {
   const [reviewData, setReviewData] = useState({ rating: 5, title: '', comment: '' });
   const [activeTab, setActiveTab] = useState('overview');
 
-  useEffect(() => {
-    fetchGuideData();
-  }, [id]);
-
-  const fetchGuideData = async () => {
+  const fetchGuideData = useCallback(async () => {
     try {
       setLoading(true);
       const [guideRes, reviewsRes, locationsRes, hotelsRes, transportsRes] = await Promise.all([
@@ -64,7 +61,11 @@ const GuideProfile = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchGuideData();
+  }, [fetchGuideData]);
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
@@ -83,14 +84,7 @@ const GuideProfile = () => {
     }
   };
 
-  const getImageUrl = (image) => {
-    if (!image) return null;
-    if (typeof image === 'string') return image;
-    if (image.file?._id) return `http://localhost:5000/api/files/${image.file._id}`;
-    if (image.file) return `http://localhost:5000/api/files/${image.file}`;
-    if (image._id) return `http://localhost:5000/api/files/${image._id}`;
-    return null;
-  };
+  const getImageUrl = (image) => getImageUrlFromMixed(image);
 
   const totalContributions = locations.length + hotels.length + transports.length;
 

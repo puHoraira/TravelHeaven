@@ -1,0 +1,21 @@
+{
+  "name": "travelheaven",
+  "private": true,
+  "description": "TravelHeaven monorepo helper scripts (frontend + backend)",
+  "scripts": {
+    "install:backend": "npm --prefix backend install",
+    "install:frontend": "npm --prefix frontend install",
+    "install:all": "npm run install:backend && npm run install:frontend",
+
+    "start": "npm --prefix backend start",
+    "start:backend": "npm --prefix backend start",
+    "dev:backend": "npm --prefix backend run dev",
+
+    "dev": "npm --prefix frontend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint",
+
+    "test": "npm --prefix backend test"
+  }
+}

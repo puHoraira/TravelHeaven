@@ -2,6 +2,7 @@ import { Calendar, Clock, Compass, DollarSign, Eye, Image as ImageIcon, Info, Ma
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import ReviewSection from '../components/ReviewSection';
+import { getImageUrlFromMixed } from '../lib/media';
 import api from '../lib/api';
 import './Locations.css';
 
@@ -273,20 +274,7 @@ const Locations = () => {
   const averageRating = calculateAverageRating();
 
   const getImageUrl = (image) => {
-    if (!image) return null;
-    
-    // Handle MongoDB file reference objects
-    if (typeof image === 'object' && image.file) {
-      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
-    }
-    
-    // Handle string paths (legacy format)
-    if (typeof image === 'string') {
-      if (image.startsWith('http')) return image;
-      return `http://localhost:5000${image}`;
-    }
-    
-    return null;
+    return getImageUrlFromMixed(image);
   };
 
   if (showDetails && selectedLocation) {

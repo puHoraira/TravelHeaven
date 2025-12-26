@@ -52,11 +52,7 @@ export default function DayCard({ day, dayNumber, onRemoveStop, onEditDay, onAdd
             )}
             {day.date && (
               <p className="text-white text-opacity-90 text-sm">
-                {new Date(day.date).toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  month: 'short', 
-                  day: 'numeric' 
-                })}
+                {formatDate(day.date)}
               </p>
             )}
           </div>

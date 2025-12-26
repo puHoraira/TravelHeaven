@@ -6,20 +6,112 @@
 
 import { recommendationFacade } from '../patterns/recommendation/RecommendationFacade.js';
 
+const toNumberOrNull = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+};
+
+const normalizeRecommendationPreferences = (raw) => {
+  const preferences = raw && typeof raw === 'object' ? { ...raw } : {};
+
+  const budget = toNumberOrNull(preferences.budget);
+  const duration = toNumberOrNull(preferences.duration);
+
+  // Normalize interests/enhancements
+  if (!Array.isArray(preferences.interests)) preferences.interests = [];
+  if (!Array.isArray(preferences.enhancements)) preferences.enhancements = [];
+
+  // Normalize minRating
+  const minRating = toNumberOrNull(preferences.minRating);
+  if (minRating !== null) preferences.minRating = minRating;
+
+  // Normalize dates. If missing, derive from duration.
+  const now = new Date();
+  const startDate = preferences.startDate ? new Date(preferences.startDate) : now;
+  const hasValidStart = startDate instanceof Date && !Number.isNaN(startDate.getTime());
+  const safeStart = hasValidStart ? startDate : now;
+
+  let endDate;
+  if (preferences.endDate) {
+    endDate = new Date(preferences.endDate);
+  } else if (duration !== null) {
+    endDate = new Date(safeStart);
+    endDate.setDate(endDate.getDate() + Math.max(1, duration) - 1);
+  } else {
+    endDate = null;
+  }
+
+  const hasValidEnd = endDate instanceof Date && endDate && !Number.isNaN(endDate.getTime());
+
+  if (budget !== null) preferences.budget = budget;
+  if (duration !== null) preferences.duration = duration;
+  preferences.startDate = safeStart.toISOString();
+  if (hasValidEnd) preferences.endDate = endDate.toISOString();
+
+  // Ensure endDate is not before startDate
+  if (preferences.endDate) {
+    const s = new Date(preferences.startDate);
+    const e = new Date(preferences.endDate);
+    if (!Number.isNaN(s.getTime()) && !Number.isNaN(e.getTime()) && e < s) {
+      preferences.endDate = s.toISOString();
+    }
+  }
+
+  return preferences;
+};
+
 /**
  * Generate personalized itinerary recommendation
  * POST /api/recommendations/generate
  */
 export const generateRecommendation = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const preferences = req.body;
+    const userId = req.user?._id?.toString();
+    const preferences = normalizeRecommendationPreferences(req.body);
 
     // Validate required fields
-    if (!preferences.budget || !preferences.duration) {
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    if (preferences.budget == null || preferences.duration == null) {
       return res.status(400).json({
         success: false,
         message: 'Budget and duration are required',
+      });
+    }
+
+    if (typeof preferences.budget !== 'number' || preferences.budget <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Budget must be a positive number',
+      });
+    }
+
+    if (typeof preferences.duration !== 'number' || preferences.duration <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Duration must be a positive number of days',
+      });
+    }
+
+    if (!preferences.startDate || !preferences.endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start date and end date are required (or derivable from duration)',
+      });
+    }
+
+    const startDate = new Date(preferences.startDate);
+    const endDate = new Date(preferences.endDate);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate < startDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid startDate/endDate',
       });
     }
 
@@ -57,8 +149,15 @@ export const generateRecommendation = async (req, res) => {
  */
 export const getQuickRecommendation = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?._id?.toString();
     const { budget, duration, interests } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
 
     const result = await recommendationFacade.getQuickRecommendation(userId, {
       budget: budget || 1000,
@@ -94,8 +193,15 @@ export const getQuickRecommendation = async (req, res) => {
  */
 export const compareStrategies = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const preferences = req.body;
+    const userId = req.user?._id?.toString();
+    const preferences = normalizeRecommendationPreferences(req.body);
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
 
     const comparison = await recommendationFacade.compareStrategies(userId, preferences);
 
@@ -118,9 +224,16 @@ export const compareStrategies = async (req, res) => {
  */
 export const getRecommendationByStrategy = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?._id?.toString();
     const { strategyType } = req.params;
-    const preferences = req.body;
+    const preferences = normalizeRecommendationPreferences(req.body);
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
 
     const validStrategies = ['budget', 'activity', 'comfort', 'time'];
     if (!validStrategies.includes(strategyType)) {
@@ -152,15 +265,19 @@ export const getRecommendationByStrategy = async (req, res) => {
  */
 export const saveItinerary = async (req, res) => {
   try {
-    const itinerary = req.body;
-
-    // Ensure itinerary belongs to authenticated user
-    if (itinerary.userId !== req.user.id) {
-      return res.status(403).json({
+    const userId = req.user?._id?.toString();
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        message: 'Unauthorized to save this itinerary',
+        message: 'Authentication required',
       });
     }
+
+    // Never trust client-supplied userId. Force ownership to current user.
+    const itinerary = {
+      ...(req.body && typeof req.body === 'object' ? req.body : {}),
+      userId,
+    };
 
     const savedItinerary = await recommendationFacade.saveItinerary(itinerary);
 
@@ -188,8 +305,18 @@ export const getItinerary = async (req, res) => {
 
     const itinerary = await recommendationFacade.getItinerary(id);
 
+    if (!itinerary) {
+      return res.status(404).json({
+        success: false,
+        message: 'Itinerary not found',
+      });
+    }
+
     // Check authorization
-    if (itinerary.userId !== req.user.id && !req.user.isAdmin) {
+    const isAdmin = req.user?.role === 'admin';
+    const ownerId = itinerary.ownerId?._id?.toString?.() || itinerary.ownerId?.toString?.();
+    const currentUserId = req.user?._id?.toString?.();
+    if (!isAdmin && ownerId && currentUserId && ownerId !== currentUserId) {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized to view this itinerary',
@@ -221,7 +348,16 @@ export const updateItinerary = async (req, res) => {
     // First, get the itinerary to check ownership
     const itinerary = await recommendationFacade.getItinerary(id);
 
-    if (itinerary.userId !== req.user.id) {
+    if (!itinerary) {
+      return res.status(404).json({
+        success: false,
+        message: 'Itinerary not found',
+      });
+    }
+
+    const ownerId = itinerary.ownerId?._id?.toString?.() || itinerary.ownerId?.toString?.();
+    const currentUserId = req.user?._id?.toString?.();
+    if (!ownerId || !currentUserId || ownerId !== currentUserId) {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized to update this itinerary',
@@ -255,7 +391,16 @@ export const deleteItinerary = async (req, res) => {
     // First, get the itinerary to check ownership
     const itinerary = await recommendationFacade.getItinerary(id);
 
-    if (itinerary.userId !== req.user.id) {
+    if (!itinerary) {
+      return res.status(404).json({
+        success: false,
+        message: 'Itinerary not found',
+      });
+    }
+
+    const ownerId = itinerary.ownerId?._id?.toString?.() || itinerary.ownerId?.toString?.();
+    const currentUserId = req.user?._id?.toString?.();
+    if (!ownerId || !currentUserId || ownerId !== currentUserId) {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized to delete this itinerary',

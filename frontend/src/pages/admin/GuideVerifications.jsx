@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
 
@@ -9,10 +9,6 @@ const GuideVerifications = () => {
   const [loading, setLoading] = useState(true);
   const [selectedGuide, setSelectedGuide] = useState(null);
   const [showModal, setShowModal] = useState(false);
-
-  useEffect(() => {
-    fetchPendingGuides();
-  }, []);
 
   const getErrorMessage = (error, fallback) => {
     if (!error) return fallback;
@@ -55,7 +51,7 @@ const GuideVerifications = () => {
     return `${API_PREFIX.replace(/\/api$/, '')}/${relativePath.replace(/^\/?/, '')}`;
   };
 
-  const fetchPendingGuides = async () => {
+  const fetchPendingGuides = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get('/admin/pending-guides');
@@ -67,7 +63,11 @@ const GuideVerifications = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPendingGuides();
+  }, [fetchPendingGuides]);
 
   const handleApprove = async (guideId) => {
     if (!window.confirm('Are you sure you want to approve this guide?')) return;

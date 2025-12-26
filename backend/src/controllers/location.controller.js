@@ -162,12 +162,13 @@ export const createLocation = async (req, res) => {
  */
 export const getLocations = async (req, res) => {
   try {
-    const { page = 1, limit = 10, category, country, city } = req.query;
+    const { page = 1, limit = 10, category, country, city, guideId } = req.query;
 
     const filter = {};
     if (category) filter.category = category;
     if (country) filter.country = country;
     if (city) filter.city = city;
+    if (guideId) filter.guideId = guideId;
 
     const result = await locationRepo.findApproved(filter, {
       page: parseInt(page),

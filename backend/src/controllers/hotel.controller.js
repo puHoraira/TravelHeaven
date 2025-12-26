@@ -8,11 +8,12 @@ const hotelRepo = new HotelRepository();
  */
 export const createHotel = async (req, res) => {
   try {
+    console.log('\n\n🔥🔥🔥 [createHotel] ENDPOINT CALLED 🔥🔥🔥\n');
     if (!ensureGuideApproved(req, res)) return;
 
     // Parse JSON fields from FormData
     const bodyData = { ...req.body };
-    ['location', 'address', 'contactInfo', 'priceRange', 'amenities', 'rooms'].forEach(field => {
+    ['location', 'address', 'contactInfo', 'priceRange', 'amenities'].forEach(field => {
       if (bodyData[field] && typeof bodyData[field] === 'string') {
         try {
           bodyData[field] = JSON.parse(bodyData[field]);
@@ -21,6 +22,63 @@ export const createHotel = async (req, res) => {
         }
       }
     });
+
+    // Parse rooms from FormData format: rooms[0][fieldName]
+    const rooms = [];
+    let roomIndex = 0;
+    
+    console.log('[createHotel] ===== ROOM PARSING START =====');
+    console.log('[createHotel] Room fields in body:', Object.keys(bodyData).filter(k => k.startsWith('rooms[')));
+    console.log('[createHotel] Total files received:', req.files?.length);
+    console.log('[createHotel] Files:', req.files?.map(f => ({ 
+      fieldname: f.fieldname, 
+      mongoId: f.mongoId ? 'YES' : 'NO',
+      originalname: f.originalname 
+    })));
+    
+    while (bodyData[`rooms[${roomIndex}][roomType]`]) {
+      const room = {
+        roomType: bodyData[`rooms[${roomIndex}][roomType]`],
+        bedType: bodyData[`rooms[${roomIndex}][bedType]`] || '',
+        capacity: parseInt(bodyData[`rooms[${roomIndex}][capacity]`]) || 1,
+        pricePerNight: parseFloat(bodyData[`rooms[${roomIndex}][pricePerNight]`]) || 0,
+        currency: bodyData[`rooms[${roomIndex}][currency]`] || 'BDT',
+        notes: bodyData[`rooms[${roomIndex}][notes]`] || '',
+        amenities: [],
+        photos: []
+      };
+
+      // Collect amenities for this room
+      Object.keys(bodyData).forEach(key => {
+        if (key.startsWith(`rooms[${roomIndex}][amenities]`)) {
+          const amenity = bodyData[key];
+          if (amenity && !room.amenities.includes(amenity)) {
+            room.amenities.push(amenity);
+          }
+        }
+      });
+
+      // Collect photos for this room from req.files
+      if (req.files && req.files.length > 0) {
+        const roomPhotos = req.files.filter(file => 
+          file.fieldname === `rooms[${roomIndex}][photos]` && file.mongoId
+        );
+        console.log(`[createHotel] Room ${roomIndex}: Found ${roomPhotos.length} photos with fieldname "rooms[${roomIndex}][photos]"`);
+        room.photos = roomPhotos.map(file => ({
+          file: file.mongoId,
+          caption: file.originalname
+        }));
+      } else {
+        console.log(`[createHotel] Room ${roomIndex}: No files received`);
+      }
+
+      rooms.push(room);
+      roomIndex++;
+    }
+    
+    console.log('[createHotel] ===== ROOM PARSING END =====');
+    console.log('[createHotel] Total rooms parsed:', rooms.length);
+    console.log('[createHotel] Rooms with photos:', rooms.filter(r => r.photos.length > 0).length);
 
     // Strict validation
     const errors = [];
@@ -88,7 +146,7 @@ export const createHotel = async (req, res) => {
       },
       amenities: bodyData.amenities,
       contactInfo: bodyData.contactInfo,
-      rooms: bodyData.rooms || [],
+      rooms: rooms,
       guideId: req.user._id,
       approvalStatus: 'pending',
       rejectionReason: null,
@@ -98,10 +156,13 @@ export const createHotel = async (req, res) => {
     // Optional fields
     if (bodyData.locationId) hotelData.locationId = bodyData.locationId;
 
-    // Handle uploaded images - store as MongoDB File references
+    // Handle uploaded hotel images - store as MongoDB File references
     if (req.files && req.files.length > 0) {
-      hotelData.images = req.files.map(file => ({
-        file: file.mongoId, // Reference to File document in MongoDB
+      const hotelImages = req.files.filter(file => 
+        file.fieldname === 'images' && file.mongoId
+      );
+      hotelData.images = hotelImages.map(file => ({
+        file: file.mongoId,
         caption: file.originalname,
       }));
     }
@@ -127,11 +188,12 @@ export const createHotel = async (req, res) => {
  */
 export const getHotels = async (req, res) => {
   try {
-    const { page = 1, limit = 10, locationId, minRating } = req.query;
+    const { page = 1, limit = 10, locationId, minRating, guideId } = req.query;
 
     const filter = {};
     if (locationId) filter.locationId = locationId;
     if (minRating) filter.rating = { $gte: parseFloat(minRating) };
+    if (guideId) filter.guideId = guideId;
 
     const result = await hotelRepo.findApproved(filter, {
       page: parseInt(page),
@@ -199,6 +261,7 @@ export const getHotelById = async (req, res) => {
  */
 export const updateHotel = async (req, res) => {
   try {
+    console.log('\n\n🔥🔥🔥 [updateHotel] ENDPOINT CALLED 🔥🔥🔥\n');
     if (!ensureGuideApproved(req, res)) return;
 
     const hotel = await hotelRepo.findById(req.params.id);
@@ -241,17 +304,85 @@ export const updateHotel = async (req, res) => {
             .map((s) => s.trim())
             .filter(Boolean);
     }
+    if (updateData.location) updateData.location = tryParse(updateData.location);
     if (updateData.priceRange) updateData.priceRange = tryParse(updateData.priceRange);
     if (updateData.contactInfo) updateData.contactInfo = tryParse(updateData.contactInfo);
     if (updateData.address) updateData.address = tryParse(updateData.address);
 
-    // Handle uploaded images - store as MongoDB File references
+    // Parse rooms from FormData format if provided
+    const bodyData = { ...req.body };
+    let roomIndex = 0;
+    const rooms = [];
+    
+    console.log('[updateHotel] ===== ROOM PARSING START =====');
+    console.log('[updateHotel] Room fields in body:', Object.keys(bodyData).filter(k => k.startsWith('rooms[')));
+    console.log('[updateHotel] Total files received:', req.files?.length);
+    console.log('[updateHotel] Files:', req.files?.map(f => ({ 
+      fieldname: f.fieldname, 
+      mongoId: f.mongoId ? 'YES' : 'NO',
+      originalname: f.originalname 
+    })));
+    
+    while (bodyData[`rooms[${roomIndex}][roomType]`]) {
+      const room = {
+        roomType: bodyData[`rooms[${roomIndex}][roomType]`],
+        bedType: bodyData[`rooms[${roomIndex}][bedType]`] || '',
+        capacity: parseInt(bodyData[`rooms[${roomIndex}][capacity]`]) || 1,
+        pricePerNight: parseFloat(bodyData[`rooms[${roomIndex}][pricePerNight]`]) || 0,
+        currency: bodyData[`rooms[${roomIndex}][currency]`] || 'BDT',
+        notes: bodyData[`rooms[${roomIndex}][notes]`] || '',
+        amenities: [],
+        photos: []
+      };
+
+      // Collect amenities for this room
+      Object.keys(bodyData).forEach(key => {
+        if (key.startsWith(`rooms[${roomIndex}][amenities]`)) {
+          const amenity = bodyData[key];
+          if (amenity && !room.amenities.includes(amenity)) {
+            room.amenities.push(amenity);
+          }
+        }
+      });
+
+      // Collect photos for this room from req.files
+      if (req.files && req.files.length > 0) {
+        const roomPhotos = req.files.filter(file => 
+          file.fieldname === `rooms[${roomIndex}][photos]` && file.mongoId
+        );
+        console.log(`[updateHotel] Room ${roomIndex}: Found ${roomPhotos.length} photos with fieldname "rooms[${roomIndex}][photos]"`);
+        room.photos = roomPhotos.map(file => ({
+          file: file.mongoId,
+          caption: file.originalname
+        }));
+      } else {
+        console.log(`[updateHotel] Room ${roomIndex}: No files or photos`);
+      }
+
+      rooms.push(room);
+      roomIndex++;
+    }
+    
+    console.log('[updateHotel] ===== ROOM PARSING END =====');
+    console.log('[updateHotel] Total rooms parsed:', rooms.length);
+    console.log('[updateHotel] Rooms with photos:', rooms.filter(r => r.photos.length > 0).length);
+
+    if (rooms.length > 0) {
+      updateData.rooms = rooms;
+    }
+
+    // Handle uploaded hotel images - store as MongoDB File references
     if (req.files && req.files.length > 0) {
-      const newImages = req.files.map(file => ({
-        file: file.mongoId, // Reference to File document in MongoDB
-        caption: file.originalname,
-      }));
-      updateData.images = [...(hotel.images || []), ...newImages];
+      const hotelImages = req.files.filter(file => 
+        file.fieldname === 'images' && file.mongoId
+      );
+      if (hotelImages.length > 0) {
+        const newImages = hotelImages.map(file => ({
+          file: file.mongoId,
+          caption: file.originalname,
+        }));
+        updateData.images = [...(hotel.images || []), ...newImages];
+      }
     }
 
     // Reset approval status if content changed
@@ -404,6 +535,13 @@ export const addRoomToHotel = async (req, res) => {
  */
 export const updateRoomInHotel = async (req, res) => {
   try {
+    console.log('\n\n🔥🔥🔥 [updateRoomInHotel] ENDPOINT CALLED 🔥🔥🔥');
+    console.log('[updateRoomInHotel] Hotel ID:', req.params.id);
+    console.log('[updateRoomInHotel] Room Index:', req.params.roomIndex);
+    console.log('[updateRoomInHotel] req.files:', req.files?.length);
+    console.log('[updateRoomInHotel] Files details:', req.files?.map(f => ({ fieldname: f.fieldname, mongoId: !!f.mongoId, originalname: f.originalname })));
+    console.log('[updateRoomInHotel] req.body:', req.body);
+    
     const hotel = await hotelRepo.findById(req.params.id);
     if (!hotel) return res.status(404).json({ success: false, message: 'Hotel not found' });
 

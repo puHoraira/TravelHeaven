@@ -1,4 +1,4 @@
-import { ArrowLeft, DollarSign, Globe, Mail, MapPin, Phone, Star } from 'lucide-react';
+import { ArrowLeft, BedDouble, Camera, Check, ChevronLeft, ChevronRight, DollarSign, Globe, Mail, MapPin, Phone, Star, Users, Wifi, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useParams } from 'react-router-dom';
@@ -81,12 +81,51 @@ export default function HotelDetail() {
   });
 
   const coverImage = useMemo(() => getImageUrl(hotel?.images?.[0]), [hotel]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showRoomBar, setShowRoomBar] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [roomImageIndex, setRoomImageIndex] = useState(0);
+
+  const allImages = useMemo(() => {
+    if (!hotel?.images) return [];
+    return hotel.images.map(img => getImageUrl(img)).filter(Boolean);
+  }, [hotel]);
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+  };
+
+  const openRoomDetails = (room) => {
+    setSelectedRoom(room);
+    setRoomImageIndex(0);
+    setShowRoomBar(true);
+  };
+
+  const nextRoomImage = () => {
+    if (!selectedRoom?.photos?.length) return;
+    setRoomImageIndex((prev) => (prev + 1) % selectedRoom.photos.length);
+  };
+
+  const prevRoomImage = () => {
+    if (!selectedRoom?.photos?.length) return;
+    setRoomImageIndex((prev) => (prev - 1 + selectedRoom.photos.length) % selectedRoom.photos.length);
+  };
 
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
         const { data } = await api.get(`/hotels/${id}`);
+        console.log('[HotelDetail] Loaded hotel data:', data);
+        console.log('[HotelDetail] Room photos:', data.rooms?.map(r => ({ 
+          roomType: r.roomType, 
+          photoCount: r.photos?.length,
+          firstPhoto: r.photos?.[0]
+        })));
         setHotel(data);
         setDetails({
           name: data.name || '',
@@ -237,194 +276,688 @@ export default function HotelDetail() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link to="/hotels" className="btn btn-ghost inline-flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" /> Back
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">{hotel.name}</h1>
-        </div>
-        <div className="flex items-center gap-4 text-sm text-gray-700">
-          <span className="inline-flex items-center gap-1 font-medium">
-            <Star className="h-4 w-4 text-yellow-400" fill="currentColor" />
-            {hotel.rating?.average?.toFixed(1) || '0.0'}
-            <span className="text-gray-400">({hotel.rating?.count || 0})</span>
-          </span>
-          <span className="inline-flex items-center gap-2 font-medium">
-            <DollarSign className="h-4 w-4" />
-            {formatPriceRange(hotel.priceRange)}
-          </span>
-        </div>
-      </div>
-
-      {/* Gallery / Cover */}
-      {coverImage && (
-        <div className="overflow-hidden rounded-lg">
-          <img src={coverImage} alt={hotel.name} className="h-64 w-full object-cover" />
-        </div>
-      )}
-
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Left: Details */}
-        <div className="md:col-span-2 space-y-6">
-          <div className="card space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">About</h2>
-              {isOwner && (
-                <button className="btn-primary btn-sm" onClick={() => setEditOpen(v => !v)}>
-                  {editOpen ? 'Cancel' : 'Edit details'}
-                </button>
-              )}
-            </div>
-            {!editOpen ? (
-              <>
-                <p className="text-gray-700">{hotel.description}</p>
-                {hotel.amenities?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 text-sm text-blue-700">
-                    {hotel.amenities.map((am) => (
-                      <span key={am} className="rounded-full bg-blue-50 px-3 py-1">{am}</span>
-                    ))}
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Hero Section with Image Gallery */}
+      <div className="relative">
+        {allImages.length > 0 ? (
+          <div className="relative h-[60vh] min-h-[500px] overflow-hidden group">
+            <img 
+              src={allImages[currentImageIndex]} 
+              alt={`${hotel.name} - Image ${currentImageIndex + 1}`} 
+              className="h-full w-full object-cover" 
+            />
+            
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+            
+            {/* Hotel Info Overlay */}
+            <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+              <div className="max-w-7xl mx-auto">
+                <Link to="/hotels" className="inline-flex items-center gap-2 text-white/90 hover:text-white mb-4 transition-colors">
+                  <ArrowLeft className="h-4 w-4" /> Back to Hotels
+                </Link>
+                
+                <h1 className="text-5xl font-bold mb-4 drop-shadow-lg">{hotel.name}</h1>
+                
+                <div className="flex flex-wrap items-center gap-6 text-lg">
+                  <div className="flex items-center gap-2 bg-yellow-500/90 backdrop-blur-sm px-4 py-2 rounded-full">
+                    <Star className="h-5 w-5" fill="currentColor" />
+                    <span className="font-bold">{hotel.rating?.average?.toFixed(1) || '0.0'}</span>
+                    <span className="text-white/80">({hotel.rating?.count || 0} reviews)</span>
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="space-y-3">
-                <div className="grid md:grid-cols-2 gap-3">
-                  <input name="name" value={details.name} onChange={onDetailsChange} className="input" placeholder="Hotel name" />
-                  <input name="amenities" value={details.amenities} onChange={onDetailsChange} className="input" placeholder="Amenities (comma-separated)" />
-                </div>
-                <textarea name="description" value={details.description} onChange={onDetailsChange} className="input" rows={3} placeholder="Description" />
-                <div className="grid md:grid-cols-3 gap-3">
-                  <input type="number" name="priceMin" value={details.priceMin} onChange={onDetailsChange} className="input" placeholder="Price min" />
-                  <input type="number" name="priceMax" value={details.priceMax} onChange={onDetailsChange} className="input" placeholder="Price max" />
-                  <input name="currency" value={details.currency} onChange={onDetailsChange} className="input" placeholder="Currency" />
-                </div>
-                <div className="grid md:grid-cols-3 gap-3">
-                  <input name="phone" value={details.phone} onChange={onDetailsChange} className="input" placeholder="Phone" />
-                  <input name="email" value={details.email} onChange={onDetailsChange} className="input" placeholder="Email" />
-                  <input name="website" value={details.website} onChange={onDetailsChange} className="input" placeholder="Website" />
-                </div>
-                <div className="grid md:grid-cols-2 gap-3">
-                  <input name="addressLine" value={details.addressLine} onChange={onDetailsChange} className="input" placeholder="Address line" />
-                  <input name="city" value={details.city} onChange={onDetailsChange} className="input" placeholder="City" />
-                  <input name="country" value={details.country} onChange={onDetailsChange} className="input" placeholder="Country" />
-                  <input name="zipCode" value={details.zipCode} onChange={onDetailsChange} className="input" placeholder="ZIP Code" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Append Images</label>
-                  <input name="images" type="file" multiple onChange={onDetailsChange} className="input" />
-                </div>
-                <div className="flex justify-end">
-                  <button className="btn-primary" onClick={saveDetails}>Save</button>
+                  
+                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+                    <MapPin className="h-5 w-5" />
+                    <span>{hotel.address?.city || hotel.locationId?.city || 'Location'}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+                    <DollarSign className="h-5 w-5" />
+                    <span className="font-semibold">{formatPriceRange(hotel.priceRange)}</span>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            {/* Image Navigation */}
+            {allImages.length > 1 && (
+              <>
+                <button
+                  onClick={prevImage}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 p-3 rounded-full shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+                <button
+                  onClick={nextImage}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 p-3 rounded-full shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+                
+                {/* Image Counter */}
+                <div className="absolute top-6 right-6 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full font-medium">
+                  <Camera className="h-4 w-4 inline mr-2" />
+                  {currentImageIndex + 1} / {allImages.length}
+                </div>
+                
+                {/* Thumbnail Navigation */}
+                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex gap-2">
+                  {allImages.slice(0, 8).map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentImageIndex(idx)}
+                      className={`h-2 rounded-full transition-all ${
+                        idx === currentImageIndex ? 'w-12 bg-white' : 'w-2 bg-white/50 hover:bg-white/70'
+                      }`}
+                    />
+                  ))}
+                  {allImages.length > 8 && (
+                    <span className="text-white/70 text-xs ml-2">+{allImages.length - 8}</span>
+                  )}
+                </div>
+              </>
             )}
           </div>
-
-          {/* Rooms */}
-          <div className="card space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">Rooms</h2>
-              {isOwner && (
-                <button type="button" className="btn-primary btn-sm" onClick={() => setManageOpen((v) => !v)}>
-                  {manageOpen ? 'Cancel' : 'Add/Manage Rooms'}
-                </button>
-              )}
+        ) : (
+          <div className="h-[400px] bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <div className="text-center text-white">
+              <Camera className="h-24 w-24 mx-auto mb-4 opacity-50" />
+              <h1 className="text-5xl font-bold mb-2">{hotel.name}</h1>
+              <p className="text-xl opacity-90">No photos available yet</p>
             </div>
-            {hotel.rooms?.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {hotel.rooms.map((room, idx) => (
-                  <div key={idx} className="rounded-lg border p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{room.roomType || 'Room'}</h3>
-                        {room.bedType && <p className="text-sm text-gray-600">Bed: {room.bedType}</p>}
-                        {room.capacity && <p className="text-sm text-gray-600">Sleeps: {room.capacity}</p>}
-                      </div>
-                      <div className="text-right font-medium text-gray-900">
-                        {room.currency || 'USD'} {room.pricePerNight}
-                        <div className="text-xs text-gray-500">per night</div>
-                      </div>
-                    </div>
-                    {room.amenities?.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-blue-700">
-                        {room.amenities.map((am) => (
-                          <span key={am} className="rounded-full bg-blue-50 px-3 py-1">{am}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* Left Column: Main Info */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* About Section */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                  <div className="h-1 w-12 bg-blue-600 rounded-full"></div>
+                  About This Property
+                </h2>
+                {isOwner && (
+                  <button 
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg"
+                    onClick={() => setEditOpen(v => !v)}
+                  >
+                    {editOpen ? 'Cancel' : 'Edit Details'}
+                  </button>
+                )}
+              </div>
+              
+              {!editOpen ? (
+                <div className="space-y-6">
+                  <p className="text-gray-700 text-lg leading-relaxed">{hotel.description || 'No description available.'}</p>
+                  
+                  {hotel.amenities?.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Amenities & Features</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {hotel.amenities.map((am) => (
+                          <div key={am} className="flex items-center gap-2 text-gray-700 bg-blue-50 px-4 py-3 rounded-lg border border-blue-100">
+                            <Check className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                            <span className="font-medium">{am}</span>
+                          </div>
                         ))}
                       </div>
-                    )}
-                    {getImageUrl(room.photos?.[0]) && (
-                      <img src={getImageUrl(room.photos?.[0])} alt={room.photos?.[0]?.caption || 'Room photo'} className="mt-3 h-40 w-full rounded object-cover" />
-                    )}
-                    {room.notes && (
-                      <p className="mt-2 text-sm text-gray-600">{room.notes}</p>
-                    )}
-                    {isOwner && (
-                      <div className="mt-3 flex justify-end">
-                        <button className="btn-danger btn-sm" onClick={() => deleteRoom(idx)}>Delete</button>
-                      </div>
-                    )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Hotel Name</label>
+                      <input name="name" value={details.name} onChange={onDetailsChange} className="input w-full" placeholder="Hotel name" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Amenities (comma-separated)</label>
+                      <input name="amenities" value={details.amenities} onChange={onDetailsChange} className="input w-full" placeholder="WiFi, Pool, Gym" />
+                    </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-600">No rooms listed yet.</p>
-            )}
-
-            {isOwner && manageOpen && (
-              <div className="rounded border p-4 bg-gray-50 space-y-3">
-                <h3 className="font-semibold">Add a Room</h3>
-                <div className="grid md:grid-cols-2 gap-3">
-                  <input name="roomType" value={roomForm.roomType} onChange={handleRoomChange} className="input" placeholder="Room type (e.g., Deluxe)" />
-                  <input name="bedType" value={roomForm.bedType} onChange={handleRoomChange} className="input" placeholder="Bed type (e.g., King)" />
-                  <input type="number" name="capacity" value={roomForm.capacity} onChange={handleRoomChange} className="input" placeholder="Capacity" />
-                  <input type="number" step="0.01" name="pricePerNight" value={roomForm.pricePerNight} onChange={handleRoomChange} className="input" placeholder="Price per night" />
-                  <input name="currency" value={roomForm.currency} onChange={handleRoomChange} className="input" placeholder="Currency" />
-                  <input name="amenities" value={roomForm.amenities} onChange={handleRoomChange} className="input" placeholder="Amenities (comma-separated)" />
-                  <input name="photos" type="file" multiple onChange={handleRoomChange} className="input md:col-span-2" />
-                  <textarea name="notes" value={roomForm.notes} onChange={handleRoomChange} className="input md:col-span-2" rows={2} placeholder="Notes (optional)" />
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea name="description" value={details.description} onChange={onDetailsChange} className="input w-full" rows={4} placeholder="Describe your hotel..." />
+                  </div>
+                  
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Min Price</label>
+                      <input type="number" name="priceMin" value={details.priceMin} onChange={onDetailsChange} className="input w-full" placeholder="100" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Max Price</label>
+                      <input type="number" name="priceMax" value={details.priceMax} onChange={onDetailsChange} className="input w-full" placeholder="500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                      <input name="currency" value={details.currency} onChange={onDetailsChange} className="input w-full" placeholder="BDT" />
+                    </div>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                      <input name="phone" value={details.phone} onChange={onDetailsChange} className="input w-full" placeholder="+880..." />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <input name="email" value={details.email} onChange={onDetailsChange} className="input w-full" placeholder="contact@hotel.com" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                      <input name="website" value={details.website} onChange={onDetailsChange} className="input w-full" placeholder="https://..." />
+                    </div>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Address Line</label>
+                      <input name="addressLine" value={details.addressLine} onChange={onDetailsChange} className="input w-full" placeholder="123 Main Street" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                      <input name="city" value={details.city} onChange={onDetailsChange} className="input w-full" placeholder="Dhaka" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                      <input name="country" value={details.country} onChange={onDetailsChange} className="input w-full" placeholder="Bangladesh" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                      <input name="zipCode" value={details.zipCode} onChange={onDetailsChange} className="input w-full" placeholder="1000" />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Upload More Images</label>
+                    <input name="images" type="file" multiple accept="image/*" onChange={onDetailsChange} className="input w-full" />
+                  </div>
+                  
+                  <div className="flex justify-end gap-3 pt-4 border-t">
+                    <button className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" onClick={() => setEditOpen(false)}>
+                      Cancel
+                    </button>
+                    <button className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-md" onClick={saveDetails}>
+                      Save Changes
+                    </button>
+                  </div>
                 </div>
-                <div className="flex justify-end">
-                  <button type="button" className="btn-primary" onClick={addRoom}>Add Room</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+            </div>
 
-        {/* Right: Contact & Location */}
-        <div className="space-y-6">
-          <div className="card space-y-3">
-            <h2 className="text-xl font-semibold text-gray-900">Location</h2>
-            <div className="flex items-start gap-2 text-gray-700">
-              <MapPin className="mt-0.5 h-5 w-5" />
-              <div>{formatAddress(hotel)}</div>
+            {/* Rooms Section */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                  <div className="h-1 w-12 bg-blue-600 rounded-full"></div>
+                  Available Rooms
+                </h2>
+                {isOwner && (
+                  <button 
+                    type="button" 
+                    className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-md hover:shadow-lg"
+                    onClick={() => setManageOpen((v) => !v)}
+                  >
+                    {manageOpen ? 'Cancel' : '+ Add Room'}
+                  </button>
+                )}
+              </div>
+              
+              {hotel.rooms?.length > 0 ? (
+                <div className="grid gap-6 md:grid-cols-2">
+                  {hotel.rooms.map((room, idx) => (
+                    <div 
+                      key={idx} 
+                      className="group relative rounded-2xl border-2 border-gray-200 overflow-hidden bg-white hover:border-blue-500 hover:shadow-2xl transition-all duration-300 cursor-pointer"
+                      onClick={() => openRoomDetails(room)}
+                    >
+                      {/* Room Image */}
+                      {getImageUrl(room.photos?.[0]) ? (
+                        <div className="relative h-64 overflow-hidden">
+                          <img 
+                            src={getImageUrl(room.photos?.[0])} 
+                            alt={room.roomType || 'Room photo'} 
+                            className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                          />
+                          
+                          {/* Photo Count Badge */}
+                          {room.photos?.length > 1 && (
+                            <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-semibold flex items-center gap-1">
+                              <Camera className="w-4 h-4" />
+                              {room.photos.length} Photos
+                            </div>
+                          )}
+                          
+                          {/* Gradient Overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                      ) : (
+                        <div className="h-64 bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 flex items-center justify-center">
+                          <div className="text-center text-gray-500">
+                            <Camera className="w-16 h-16 mx-auto mb-3 opacity-40" />
+                            <p className="text-sm font-medium">No photos yet</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Room Details */}
+                      <div className="p-6 space-y-4">
+                        {/* Room Type & Bed Type */}
+                        <div>
+                          <h3 className="text-2xl font-bold text-gray-900 mb-2">{room.roomType || 'Room'}</h3>
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                            {room.bedType && (
+                              <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-lg">
+                                <BedDouble className="w-4 h-4 text-gray-700" />
+                                <span className="font-medium">{room.bedType}</span>
+                              </div>
+                            )}
+                            {room.capacity && (
+                              <div className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-lg">
+                                <Users className="w-4 h-4 text-gray-700" />
+                                <span className="font-medium">{room.capacity} Guests</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Amenities */}
+                        {room.amenities?.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {room.amenities.slice(0, 4).map((am) => (
+                              <span key={am} className="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full font-medium border border-blue-200">
+                                {am}
+                              </span>
+                            ))}
+                            {room.amenities.length > 4 && (
+                              <span className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-medium border border-gray-300">
+                                +{room.amenities.length - 4} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Price & CTA */}
+                        <div className="flex items-end justify-between pt-4 border-t border-gray-200">
+                          <div>
+                            <div className="text-sm text-gray-500 mb-1">Starting from</div>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-4xl font-bold text-gray-900">{room.pricePerNight}</span>
+                              <span className="text-lg text-gray-600 font-medium">{room.currency || 'BDT'}</span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">per night</div>
+                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openRoomDetails(room);
+                            }}
+                            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                          >
+                            View Details
+                          </button>
+                        </div>
+
+                        {room.notes && (
+                          <p className="text-sm text-gray-600 italic pt-3 border-t">{room.notes}</p>
+                        )}
+                      </div>
+
+                      {/* Owner Actions */}
+                      {isOwner && (
+                        <div className="px-6 pb-5" onClick={(e) => e.stopPropagation()}>
+                          <button 
+                            className="w-full px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+                            onClick={() => deleteRoom(idx)}
+                          >
+                            Delete Room
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                  <BedDouble className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-600 text-lg font-medium">No rooms available yet</p>
+                  {isOwner && (
+                    <p className="text-gray-500 text-sm mt-2">Click "Add Room" to create your first room listing</p>
+                  )}
+                </div>
+              )}
+
+              {isOwner && manageOpen && (
+                <div className="mt-6 rounded-xl border-2 border-blue-200 p-6 bg-blue-50/50 backdrop-blur-sm">
+                  <h3 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
+                    <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">+</div>
+                    Add New Room
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Room Type *</label>
+                        <input name="roomType" value={roomForm.roomType} onChange={handleRoomChange} className="input w-full" placeholder="e.g., Deluxe Suite" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Bed Type</label>
+                        <input name="bedType" value={roomForm.bedType} onChange={handleRoomChange} className="input w-full" placeholder="e.g., King Size" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Guest Capacity</label>
+                        <input type="number" name="capacity" value={roomForm.capacity} onChange={handleRoomChange} className="input w-full" placeholder="2" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Price per Night</label>
+                        <input type="number" step="0.01" name="pricePerNight" value={roomForm.pricePerNight} onChange={handleRoomChange} className="input w-full" placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                        <input name="currency" value={roomForm.currency} onChange={handleRoomChange} className="input w-full" placeholder="BDT" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Amenities (comma-separated)</label>
+                        <input name="amenities" value={roomForm.amenities} onChange={handleRoomChange} className="input w-full" placeholder="WiFi, TV, AC" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Room Photos</label>
+                      <input name="photos" type="file" multiple accept="image/*" onChange={handleRoomChange} className="input w-full" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Additional Notes (Optional)</label>
+                      <textarea name="notes" value={roomForm.notes} onChange={handleRoomChange} className="input w-full" rows={2} placeholder="Any special information about this room..." />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4">
+                      <button type="button" className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" onClick={() => setManageOpen(false)}>
+                        Cancel
+                      </button>
+                      <button type="button" className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-md" onClick={addRoom}>
+                        Add Room
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {(hotel.contactInfo?.phone || hotel.contactInfo?.email || hotel.contactInfo?.website) && (
-            <div className="card space-y-3">
-              <h2 className="text-xl font-semibold text-gray-900">Contact</h2>
-              {hotel.contactInfo?.phone && (
-                <div className="flex items-center gap-2 text-gray-700">
-                  <Phone className="h-4 w-4" /> {hotel.contactInfo.phone}
-                </div>
-              )}
-              {hotel.contactInfo?.email && (
-                <div className="flex items-center gap-2 text-gray-700">
-                  <Mail className="h-4 w-4" /> {hotel.contactInfo.email}
-                </div>
-              )}
-              {hotel.contactInfo?.website && (
-                <a href={hotel.contactInfo.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:underline">
-                  <Globe className="h-4 w-4" /> Visit website
-                </a>
-              )}
+          {/* Right Column: Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+            
+            {/* Location Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <MapPin className="h-6 w-6 text-blue-600" />
+                Location
+              </h3>
+              <div className="space-y-3">
+                <p className="text-gray-700">{formatAddress(hotel)}</p>
+                {hotel.address?.city && (
+                  <div className="pt-3 border-t">
+                    <button className="w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      View on Map
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+
+            {/* Contact Card */}
+            {(hotel.contactInfo?.phone || hotel.contactInfo?.email || hotel.contactInfo?.website) && (
+              <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Contact Information</h3>
+                <div className="space-y-3">
+                  {hotel.contactInfo?.phone && (
+                    <a href={`tel:${hotel.contactInfo.phone}`} className="flex items-center gap-3 text-gray-700 hover:text-blue-600 transition-colors p-3 rounded-lg hover:bg-blue-50">
+                      <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Phone className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Phone</div>
+                        <div className="font-medium">{hotel.contactInfo.phone}</div>
+                      </div>
+                    </a>
+                  )}
+                  {hotel.contactInfo?.email && (
+                    <a href={`mailto:${hotel.contactInfo.email}`} className="flex items-center gap-3 text-gray-700 hover:text-blue-600 transition-colors p-3 rounded-lg hover:bg-blue-50">
+                      <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Mail className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Email</div>
+                        <div className="font-medium text-sm">{hotel.contactInfo.email}</div>
+                      </div>
+                    </a>
+                  )}
+                  {hotel.contactInfo?.website && (
+                    <a href={hotel.contactInfo.website} target="_blank" rel="noreferrer" className="flex items-center gap-3 text-gray-700 hover:text-blue-600 transition-colors p-3 rounded-lg hover:bg-blue-50">
+                      <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Globe className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500">Website</div>
+                        <div className="font-medium text-sm truncate">Visit Website</div>
+                      </div>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Rating Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Guest Rating</h3>
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center h-24 w-24 bg-yellow-100 rounded-full mb-3">
+                  <div className="text-3xl font-bold text-yellow-600">
+                    {hotel.rating?.average?.toFixed(1) || '0.0'}
+                  </div>
+                </div>
+                <div className="flex items-center justify-center gap-1 mb-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star 
+                      key={star} 
+                      className={`h-5 w-5 ${
+                        star <= Math.round(hotel.rating?.average || 0)
+                          ? 'text-yellow-400 fill-yellow-400'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-gray-600 text-sm">
+                  Based on {hotel.rating?.count || 0} review{hotel.rating?.count !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Enhanced Room Details Modal/Drawer */}
+      {showRoomBar && selectedRoom && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fadeIn" 
+            onClick={() => setShowRoomBar(false)}
+          />
+          <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 max-h-[85vh] overflow-y-auto animate-slide-up">
+            
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-6 flex items-center justify-between rounded-t-3xl z-10">
+              <div>
+                <h2 className="text-3xl font-bold mb-1">{selectedRoom.roomType}</h2>
+                <p className="text-blue-100 text-sm">Detailed room information</p>
+              </div>
+              <button 
+                onClick={() => setShowRoomBar(false)}
+                className="h-10 w-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-8">
+              
+              {/* Room Images Gallery */}
+              {selectedRoom.photos?.length > 0 ? (
+                <div className="relative overflow-hidden rounded-2xl group shadow-2xl max-w-2xl mx-auto">
+                  <div className="aspect-square w-full">
+                    <img 
+                      src={getImageUrl(selectedRoom.photos[roomImageIndex])} 
+                      alt={selectedRoom.photos[roomImageIndex]?.caption || `Room photo ${roomImageIndex + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  
+                  {/* Navigation Arrows */}
+                  {selectedRoom.photos.length > 1 && (
+                    <>
+                      <button
+                        onClick={prevRoomImage}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 p-3 rounded-full shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                      >
+                        <ChevronLeft className="h-6 w-6" />
+                      </button>
+                      <button
+                        onClick={nextRoomImage}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 p-3 rounded-full shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110"
+                      >
+                        <ChevronRight className="h-6 w-6" />
+                      </button>
+                      
+                      {/* Thumbnail Indicators */}
+                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+                        {selectedRoom.photos.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setRoomImageIndex(idx)}
+                            className={`h-2 rounded-full transition-all ${
+                              idx === roomImageIndex ? 'w-12 bg-white' : 'w-2 bg-white/50 hover:bg-white/70'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      
+                      {/* Photo Counter */}
+                      <div className="absolute top-6 right-6 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full font-medium">
+                        <Camera className="h-4 w-4 inline mr-2" />
+                        {roomImageIndex + 1} / {selectedRoom.photos.length}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl aspect-square max-w-2xl mx-auto flex items-center justify-center">
+                  <div className="text-center text-gray-400">
+                    <Camera className="h-20 w-20 mx-auto mb-4 opacity-40" />
+                    <p className="text-lg font-medium">No photos available</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Room Details Grid */}
+              <div className="grid md:grid-cols-2 gap-8">
+                
+                {/* Left Column */}
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6">
+                    <h3 className="text-sm font-semibold text-blue-600 uppercase tracking-wide mb-3">Room Details</h3>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                          <BedDouble className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-600">Bed Type</div>
+                          <div className="text-lg font-semibold text-gray-900">{selectedRoom.bedType || 'Not specified'}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                          <Users className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-600">Guest Capacity</div>
+                          <div className="text-lg font-semibold text-gray-900">
+                            {selectedRoom.capacity || 1} Guest{selectedRoom.capacity > 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Price Section */}
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6">
+                    <h3 className="text-sm font-semibold text-green-600 uppercase tracking-wide mb-3">Pricing</h3>
+                    <div className="flex items-baseline gap-3">
+                      <span className="text-5xl font-bold text-gray-900">{selectedRoom.pricePerNight}</span>
+                      <div>
+                        <div className="text-xl font-semibold text-gray-700">{selectedRoom.currency || 'BDT'}</div>
+                        <div className="text-sm text-gray-600">per night</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-6">
+                  
+                  {/* Amenities */}
+                  {selectedRoom.amenities?.length > 0 && (
+                    <div className="bg-gray-50 rounded-xl p-6">
+                      <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4 flex items-center gap-2">
+                        <Wifi className="h-5 w-5" />
+                        Room Amenities
+                      </h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        {selectedRoom.amenities.map((am) => (
+                          <div key={am} className="flex items-center gap-2 text-gray-700 bg-white px-4 py-3 rounded-lg shadow-sm border border-gray-200">
+                            <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            <span className="text-sm font-medium">{am}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Additional Notes */}
+                  {selectedRoom.notes && (
+                    <div className="bg-amber-50 border-l-4 border-amber-400 rounded-lg p-6">
+                      <h3 className="text-sm font-semibold text-amber-800 uppercase tracking-wide mb-2">Additional Information</h3>
+                      <p className="text-gray-700 leading-relaxed">{selectedRoom.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end pt-6 border-t">
+                <button 
+                  className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
+                  onClick={() => setShowRoomBar(false)}
+                >
+                  Close Details
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

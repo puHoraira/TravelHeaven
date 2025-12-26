@@ -7,6 +7,7 @@ import {
   Coffee,
   DollarSign,
   ExternalLink,
+  Eye,
   Info,
   MapPin,
   Navigation,
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import './Transportation.css';
 
@@ -283,6 +285,13 @@ const TransportCard = ({ transport, onBook }) => {
 
       {/* Contact & Booking */}
       <div className="flex flex-wrap gap-2 mt-auto pt-4 border-t">
+        <Link
+          to={`/transportation/${transport._id}`}
+          className="btn bg-blue-600 hover:bg-blue-700 text-white flex-1 flex items-center justify-center gap-2"
+        >
+          <Eye className="h-4 w-4" />
+          View Details
+        </Link>
         {transport.booking?.onlineUrl && (
           <a
             href={transport.booking.onlineUrl}
@@ -298,20 +307,10 @@ const TransportCard = ({ transport, onBook }) => {
         {transport.booking?.phoneNumbers && transport.booking.phoneNumbers[0] && (
           <a
             href={`tel:${transport.booking.phoneNumbers[0]}`}
-            className="btn bg-green-600 hover:bg-green-700 text-white flex-1 flex items-center justify-center gap-2"
+            className="btn bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2 px-4"
           >
             <Phone className="h-4 w-4" />
-            Call Now
-          </a>
-        )}
-        {transport.contactInfo?.whatsapp && (
-          <a
-            href={`https://wa.me/${transport.contactInfo.whatsapp.replace(/[^0-9]/g, '')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2 px-4"
-          >
-            WhatsApp
+            Call
           </a>
         )}
       </div>

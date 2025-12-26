@@ -19,6 +19,7 @@ import Locations from './pages/Locations';
 import Hotels from './pages/Hotels';
 import HotelDetail from './pages/HotelDetail';
 import Transportation from './pages/Transportation';
+import TransportDetail from './pages/TransportDetail';
 import BDRailway from './pages/BDRailway';
 import TrainList from './pages/TrainList';
 import Profile from './pages/Profile';
@@ -34,7 +35,6 @@ import GuideDashboard from './pages/guide/Dashboard';
 import GuideLocations from './pages/guide/Locations';
 import GuideHotels from './pages/guide/Hotels';
 import GuideTransport from './pages/guide/Transport';
-import GuideHotelManage from './pages/guide/HotelManage';
 
 import UserBookings from './pages/user/Bookings';
 
@@ -84,6 +84,7 @@ function App() {
           <Route path="/hotels" element={<Hotels />} />
           <Route path="/hotels/:id" element={<HotelDetail />} />
           <Route path="/transportation" element={<Transportation />} />
+          <Route path="/transportation/:id" element={<TransportDetail />} />
           <Route path="/railway" element={<BDRailway />} />
           <Route path="/trains" element={<TrainList />} />
           <Route path="/profile" element={<Profile />} />
@@ -99,7 +100,6 @@ function App() {
           <Route path="/guide" element={<ProtectedRoute requiredRole="guide"><GuideDashboard /></ProtectedRoute>} />
           <Route path="/guide/locations" element={<ProtectedRoute requiredRole="guide"><GuideLocations /></ProtectedRoute>} />
           <Route path="/guide/hotels" element={<ProtectedRoute requiredRole="guide"><GuideHotels /></ProtectedRoute>} />
-          <Route path="/guide/hotels/:id" element={<ProtectedRoute requiredRole="guide"><GuideHotelManage /></ProtectedRoute>} />
           <Route path="/guide/transport" element={<ProtectedRoute requiredRole="guide"><GuideTransport /></ProtectedRoute>} />
 
           {/* User Bookings */}

@@ -139,11 +139,12 @@ export const createTransport = async (req, res) => {
  */
 export const getTransportation = async (req, res) => {
   try {
-    const { page = 1, limit = 10, locationId, type } = req.query;
+    const { page = 1, limit = 10, locationId, type, guideId } = req.query;
 
     const filter = {};
     if (locationId) filter.locationId = locationId;
     if (type) filter.type = type;
+    if (guideId) filter.guideId = guideId;
 
     const result = await transportRepo.findApproved(filter, {
       page: parseInt(page),

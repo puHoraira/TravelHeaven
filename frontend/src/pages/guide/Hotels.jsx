@@ -30,12 +30,14 @@ import {
   XCircle
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import LocationSearchInput from '../../components/LocationSearchInput';
 import api from '../../lib/api';
 import './Hotels.css';
 
 const GuideHotel = () => {
+  const navigate = useNavigate();
   const [myHotels, setMyHotels] = useState([]);
   const [loading, setLoading] = useState(false);
   const [viewingHotel, setViewingHotel] = useState(null);
@@ -95,8 +97,12 @@ const GuideHotel = () => {
     pricePerNight: '',
     currency: 'BDT',
     amenities: [],
-    notes: ''
+    notes: '',
+    photos: []
   });
+
+  const [roomPhotoPreview, setRoomPhotoPreview] = useState([]);
+  const [editingRoomIndex, setEditingRoomIndex] = useState(null);
 
   useEffect(() => {
     fetchMyHotels();
@@ -203,11 +209,92 @@ const GuideHotel = () => {
       return;
     }
 
-    setForm(prev => ({
-      ...prev,
-      rooms: [...prev.rooms, { ...newRoom }]
-    }));
+    // If editing an existing hotel, use API to add/update room
+    if (editingId) {
+      addOrUpdateRoomAPI();
+      return;
+    }
 
+    // Otherwise, add to form state (for new hotel creation)
+    if (editingRoomIndex !== null) {
+      // Update existing room in form
+      setForm(prev => ({
+        ...prev,
+        rooms: prev.rooms.map((room, idx) => 
+          idx === editingRoomIndex ? { ...newRoom } : room
+        )
+      }));
+      setEditingRoomIndex(null);
+      toast.success('Room updated');
+    } else {
+      // Add new room to form
+      setForm(prev => ({
+        ...prev,
+        rooms: [...prev.rooms, { ...newRoom }]
+      }));
+      toast.success('Room added');
+    }
+
+    resetRoomForm();
+  };
+
+  const addOrUpdateRoomAPI = async () => {
+    if (!editingId) return;
+
+    try {
+      const fd = new FormData();
+      fd.append('roomType', newRoom.roomType);
+      if (newRoom.bedType) fd.append('bedType', newRoom.bedType);
+      fd.append('capacity', String(parseInt(newRoom.capacity) || 1));
+      fd.append('pricePerNight', String(parseFloat(newRoom.pricePerNight) || 0));
+      fd.append('currency', newRoom.currency || 'BDT');
+      if (newRoom.notes) fd.append('notes', newRoom.notes);
+      
+      // Amenities
+      if (newRoom.amenities && newRoom.amenities.length > 0) {
+        newRoom.amenities.forEach(amenity => {
+          fd.append('amenities', amenity);
+        });
+      }
+      
+      // Photos
+      if (newRoom.photos && newRoom.photos.length > 0) {
+        Array.from(newRoom.photos).forEach(f => fd.append('photos', f));
+      }
+      
+      let res;
+      if (editingRoomIndex !== null) {
+        // UPDATE existing room via API
+        res = await api.put(`/hotels/${editingId}/rooms/${editingRoomIndex}`, fd);
+        toast.success('Room updated successfully');
+      } else {
+        // ADD new room via API
+        res = await api.post(`/hotels/${editingId}/rooms`, fd);
+        toast.success('Room added successfully');
+      }
+      
+      // Update the hotel data
+      const updatedHotel = res.data || res.data?.data;
+      
+      // Update form state with the updated hotel data
+      if (updatedHotel && updatedHotel.rooms) {
+        setForm(prev => ({
+          ...prev,
+          rooms: updatedHotel.rooms
+        }));
+      }
+      
+      // Refresh hotel list
+      await fetchMyHotels();
+      
+      resetRoomForm();
+    } catch (err) {
+      console.error('Room operation error:', err);
+      toast.error(err?.response?.data?.message || 'Failed to save room');
+    }
+  };
+
+  const resetRoomForm = () => {
     setNewRoom({
       roomType: '',
       bedType: '',
@@ -215,16 +302,74 @@ const GuideHotel = () => {
       pricePerNight: '',
       currency: 'BDT',
       amenities: [],
-      notes: ''
+      notes: '',
+      photos: []
     });
-    toast.success('Room added');
+    setRoomPhotoPreview([]);
+    setEditingRoomIndex(null);
   };
 
-  const removeRoom = (index) => {
+  const removeRoom = async (index) => {
+    // If editing an existing hotel, delete via API
+    if (editingId) {
+      const ok = window.confirm('Delete this room?');
+      if (!ok) return;
+      
+      try {
+        const res = await api.delete(`/hotels/${editingId}/rooms/${index}`);
+        const updatedHotel = res.data || res.data?.data;
+        
+        // Update form state
+        if (updatedHotel && updatedHotel.rooms) {
+          setForm(prev => ({
+            ...prev,
+            rooms: updatedHotel.rooms
+          }));
+        }
+        
+        // Clear edit mode if deleting the room being edited
+        if (editingRoomIndex === index) {
+          resetRoomForm();
+        }
+        
+        await fetchMyHotels();
+        toast.success('Room deleted successfully');
+      } catch (err) {
+        console.error('Delete room error:', err);
+        toast.error(err?.response?.data?.message || 'Failed to delete room');
+      }
+      return;
+    }
+
+    // Otherwise, remove from form state (for new hotel creation)
+    if (editingRoomIndex === index) {
+      resetRoomForm();
+    }
     setForm(prev => ({
       ...prev,
       rooms: prev.rooms.filter((_, idx) => idx !== index)
     }));
+    toast.success('Room removed');
+  };
+
+  const editRoom = (room, index) => {
+    setNewRoom({
+      roomType: room.roomType || '',
+      bedType: room.bedType || '',
+      capacity: room.capacity || '',
+      pricePerNight: room.pricePerNight || '',
+      currency: room.currency || 'BDT',
+      amenities: room.amenities || [],
+      notes: room.notes || '',
+      photos: []
+    });
+    setRoomPhotoPreview([]);
+    setEditingRoomIndex(index);
+    window.scrollTo({ top: document.getElementById('room-form')?.offsetTop - 100, behavior: 'smooth' });
+  };
+
+  const cancelEditRoom = () => {
+    resetRoomForm();
   };
 
   const submitHotel = async (e) => {
@@ -291,31 +436,60 @@ const GuideHotel = () => {
       // Amenities
       formData.append('amenities', JSON.stringify(form.amenities || []));
 
-      // Rooms - ensure all fields are properly formatted
-      const roomsData = form.rooms.map(room => ({
-        roomType: room.roomType || '',
-        bedType: room.bedType || '',
-        capacity: parseInt(room.capacity) || 1,
-        pricePerNight: parseFloat(room.pricePerNight) || 0,
-        currency: room.currency || 'BDT',
-        amenities: room.amenities || [],
-        notes: room.notes || ''
-      }));
-      formData.append('rooms', JSON.stringify(roomsData));
+      // Rooms - ONLY send rooms when creating a NEW hotel
+      // When editing, rooms are managed via separate API endpoints
+      if (!editingId) {
+        // Send rooms as individual FormData entries with photos
+        form.rooms.forEach((room, index) => {
+          formData.append(`rooms[${index}][roomType]`, room.roomType || '');
+          formData.append(`rooms[${index}][bedType]`, room.bedType || '');
+          formData.append(`rooms[${index}][capacity]`, parseInt(room.capacity) || 1);
+          formData.append(`rooms[${index}][pricePerNight]`, parseFloat(room.pricePerNight) || 0);
+          formData.append(`rooms[${index}][currency]`, room.currency || 'BDT');
+          formData.append(`rooms[${index}][notes]`, room.notes || '');
+          
+          // Add amenities array
+          if (room.amenities && room.amenities.length > 0) {
+            room.amenities.forEach(amenity => {
+              formData.append(`rooms[${index}][amenities]`, amenity);
+            });
+          }
+          
+          // Add room photos if they exist (only File objects)
+          if (room.photos && room.photos.length > 0) {
+            Array.from(room.photos).forEach(photo => {
+              // Only append if it's a File object
+              if (photo instanceof File) {
+                formData.append(`rooms[${index}][photos]`, photo);
+              }
+            });
+          }
+        });
+      }
 
-      // Images
+      // Images - only append NEW images if provided
       if (form.images && form.images.length > 0) {
         Array.from(form.images).forEach(file => {
           formData.append('images', file);
         });
       }
 
-      const response = await api.post('/hotels', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      let response;
+      if (editingId) {
+        // UPDATE existing hotel
+        response = await api.put(`/hotels/${editingId}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        toast.success('Hotel updated successfully! Awaiting re-approval.');
+      } else {
+        // CREATE new hotel
+        response = await api.post('/hotels', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        toast.success('Hotel submitted for approval!');
+      }
 
-      toast.success('Hotel submitted for approval!');
-      fetchMyHotels();
+      await fetchMyHotels();
       setActiveTab('list'); // Switch to list view
       setImagePreview([]); // Clear previews
       setEditingId(null);
@@ -368,16 +542,24 @@ const GuideHotel = () => {
 
   const editHotel = (hotel) => {
     setEditingId(hotel._id);
+    
+    // Extract coordinates from GeoJSON location format
+    let locationCoordinates = null;
+    if (hotel.location && hotel.location.coordinates && hotel.location.coordinates.length === 2) {
+      // GeoJSON format is [longitude, latitude]
+      locationCoordinates = {
+        longitude: hotel.location.coordinates[0],
+        latitude: hotel.location.coordinates[1]
+      };
+    }
+    
     setForm({
       name: hotel.name,
       description: hotel.description,
       locationId: hotel.locationId?._id || '',
-      locationName: hotel.locationId?.name || '',
-      locationAddress: hotel.address?.street || '',
-      locationCoordinates: hotel.coordinates ? {
-        latitude: hotel.coordinates.latitude,
-        longitude: hotel.coordinates.longitude
-      } : null,
+      locationName: hotel.locationId?.name || hotel.address?.city || '',
+      locationAddress: hotel.address?.street || `${hotel.address?.city || ''}, ${hotel.address?.country || ''}`.trim(),
+      locationCoordinates: locationCoordinates,
       address: hotel.address || { street: '', city: '', country: '', zipCode: '' },
       contactInfo: hotel.contactInfo || { phone: '', email: '', website: '' },
       priceRange: hotel.priceRange || { min: '', max: '', currency: 'BDT' },
@@ -673,18 +855,18 @@ const GuideHotel = () => {
                       {/* Action Buttons */}
                       <div className="flex gap-2 pt-3 border-t">
                         <button 
+                          onClick={() => editHotel(h)} 
+                          className="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-1 transform hover:scale-105"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          Edit
+                        </button>
+                        <button 
                           onClick={() => viewHotel(h)} 
                           className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-1 transform hover:scale-105"
                         >
                           <Eye className="w-4 h-4" />
                           View
-                        </button>
-                        <button 
-                          onClick={() => editHotel(h)} 
-                          className="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-1 transform hover:scale-105"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                          Edit
                         </button>
                         <button 
                           onClick={() => deleteHotel(h._id)} 
@@ -721,6 +903,20 @@ const GuideHotel = () => {
             </div>
 
             <form onSubmit={submitHotel} className="p-6 space-y-8">
+              {/* Edit Mode Warning Banner */}
+              {editingId && (
+                <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                  <Info className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-amber-900 mb-1">Editing Existing Hotel</h4>
+                    <p className="text-sm text-amber-700">
+                      You are currently editing an existing hotel. Changes will require re-approval. 
+                      You can manage rooms individually using the room management section below.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Basic Information */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-4">
@@ -938,11 +1134,23 @@ const GuideHotel = () => {
                   <h3 className="text-lg font-semibold text-gray-800">Rooms</h3>
                 </div>
                 
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl border-2 border-purple-200 space-y-4">
-                  <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <Plus className="w-5 h-5 text-purple-600" />
-                    Add Room Type
-                  </h4>
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl border-2 border-purple-200 space-y-4" id="room-form">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                      <Plus className="w-5 h-5 text-purple-600" />
+                      {editingRoomIndex !== null ? 'Edit Room Type' : 'Add Room Type'}
+                    </h4>
+                    {editingRoomIndex !== null && (
+                      <button
+                        type="button"
+                        onClick={cancelEditRoom}
+                        className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                      >
+                        <X className="w-4 h-4" />
+                        Cancel Edit
+                      </button>
+                    )}
+                  </div>
                   
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
@@ -1009,13 +1217,44 @@ const GuideHotel = () => {
                     </div>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Room Photos</label>
+                    <div className="flex items-center justify-center w-full">
+                      <label className="w-full flex flex-col items-center px-4 py-6 bg-white border-2 border-purple-300 border-dashed rounded-lg cursor-pointer hover:bg-purple-50 transition">
+                        <Camera className="w-8 h-8 text-purple-400" />
+                        <span className="mt-2 text-sm text-gray-600">Upload room photos (multiple)</span>
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (files && files.length > 0) {
+                              setNewRoom(prev => ({ ...prev, photos: files }));
+                              const previews = Array.from(files).map(file => URL.createObjectURL(file));
+                              setRoomPhotoPreview(previews);
+                            }
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    {roomPhotoPreview.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2 mt-3">
+                        {roomPhotoPreview.map((preview, idx) => (
+                          <img key={idx} src={preview} alt={`Room preview ${idx + 1}`} className="h-20 w-full object-cover rounded border-2 border-purple-200" />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <button 
                     type="button" 
                     onClick={addRoom} 
                     className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 flex items-center justify-center gap-2"
                   >
                     <Plus className="w-5 h-5" />
-                    Add Room to Hotel
+                    {editingRoomIndex !== null ? 'Update Room' : 'Add Room to Hotel'}
                   </button>
                 </div>
 
@@ -1027,7 +1266,12 @@ const GuideHotel = () => {
                     </h4>
                     <div className="space-y-2">
                       {form.rooms.map((room, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-4 bg-white border-2 border-purple-100 rounded-lg hover:border-purple-300 transition-all">
+                        <div 
+                          key={idx} 
+                          className={`flex items-center justify-between p-4 bg-white border-2 rounded-lg hover:border-purple-300 transition-all ${
+                            editingRoomIndex === idx ? 'border-blue-500 bg-blue-50' : 'border-purple-100'
+                          }`}
+                        >
                           <div className="flex-1">
                             <p className="font-semibold text-gray-800">{room.roomType}</p>
                             <p className="text-sm text-gray-600 mt-1">
@@ -1043,13 +1287,24 @@ const GuideHotel = () => {
                               </div>
                             )}
                           </div>
-                          <button 
-                            type="button" 
-                            onClick={() => removeRoom(idx)} 
-                            className="ml-4 text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-all"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                          <div className="flex gap-2 ml-4">
+                            <button 
+                              type="button" 
+                              onClick={() => editRoom(room, idx)} 
+                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-2 rounded-lg transition-all"
+                              title="Edit room"
+                            >
+                              <Edit2 className="w-5 h-5" />
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => removeRoom(idx)} 
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-all"
+                              title="Delete room"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1145,207 +1400,316 @@ const GuideHotel = () => {
         )}
       </div>
 
-      {/* View Hotel Modal */}
+      {/* View Hotel Modal - Modern Tourist-Style Preview */}
       {viewingHotel && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setViewingHotel(null)}>
-          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <HotelIcon className="w-6 h-6" />
-                <div>
-                  <h2 className="text-xl font-bold">{viewingHotel.name}</h2>
-                  <p className="text-sm text-purple-100">{viewingHotel.address?.city}, {viewingHotel.address?.country}</p>
-                </div>
-              </div>
-              <button onClick={() => setViewingHotel(null)} className="text-white hover:text-purple-200 transition-colors">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={() => setViewingHotel(null)}>
+          <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden flex flex-col shadow-2xl my-8" onClick={(e) => e.stopPropagation()}>
             
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Status Banner */}
-              <div className={`p-4 rounded-lg border-l-4 ${
-                viewingHotel.approvalStatus === 'approved' ? 'bg-green-50 border-green-500' :
-                viewingHotel.approvalStatus === 'pending' ? 'bg-yellow-50 border-yellow-500' :
-                'bg-red-50 border-red-500'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-gray-800">Status: {statusBadge(viewingHotel.approvalStatus)}</p>
-                    {viewingHotel.rating?.average > 0 && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        Rating: {viewingHotel.rating.average.toFixed(1)} ⭐ ({viewingHotel.rating.count} reviews)
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Images */}
-              {viewingHotel.images && viewingHotel.images.length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Camera className="w-4 h-4" />
-                    Photos
-                  </h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    {viewingHotel.images.map((img, idx) => (
-                      <img key={idx} src={img.url} alt={img.caption} className="w-full h-32 object-cover rounded-lg shadow-sm" />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Description */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="font-semibold mb-2 flex items-center gap-2">
-                  <Info className="w-4 h-4" />
-                  About
-                </h3>
-                <p className="text-gray-700 leading-relaxed">{viewingHotel.description}</p>
-              </div>
-
-              {/* Location */}
-              {viewingHotel.coordinates && (
-                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-green-600" />
-                    Location
-                  </h3>
-                  <p className="text-gray-700">{viewingHotel.address?.street}</p>
-                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-                    <Navigation className="w-3 h-3" />
-                    <span className="font-mono">
-                      {viewingHotel.coordinates.latitude?.toFixed(6)}, {viewingHotel.coordinates.longitude?.toFixed(6)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Price Range */}
-              {viewingHotel.priceRange && (
-                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-green-600" />
-                    Pricing
-                  </h3>
-                  <p className="text-2xl font-bold text-green-700">
-                    {viewingHotel.priceRange.min} - {viewingHotel.priceRange.max} {viewingHotel.priceRange.currency}
-                  </p>
-                  <p className="text-sm text-gray-600">per night</p>
-                </div>
-              )}
-
-              {/* Rooms */}
-              {viewingHotel.rooms && viewingHotel.rooms.length > 0 && (
-                <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <BedDouble className="w-4 h-4 text-indigo-600" />
-                    Room Types ({viewingHotel.rooms.length})
-                  </h3>
-                  <div className="space-y-3">
-                    {viewingHotel.rooms.map((room, idx) => (
-                      <div key={idx} className="bg-white rounded-lg p-3 border border-indigo-100">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-medium">{room.roomType}</p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {room.bedType} bed • {room.capacity} guests
-                            </p>
-                            {room.amenities && room.amenities.length > 0 && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                {room.amenities.join(', ')}
-                              </p>
-                            )}
+            {/* Hero Image Section */}
+            {viewingHotel.images && viewingHotel.images.length > 0 ? (
+              <div className="relative h-80 overflow-hidden">
+                <img 
+                  src={getImageUrl(viewingHotel.images[0])} 
+                  alt={viewingHotel.name} 
+                  className="w-full h-full object-cover" 
+                />
+                
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                
+                {/* Hotel Info Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        {statusBadge(viewingHotel.approvalStatus)}
+                        <span className="text-sm bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                          Guide Preview
+                        </span>
+                      </div>
+                      <h2 className="text-4xl font-bold mb-2 drop-shadow-lg">{viewingHotel.name}</h2>
+                      <div className="flex flex-wrap items-center gap-4 text-lg">
+                        <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                          <MapPin className="h-5 w-5" />
+                          <span>{viewingHotel.address?.city}, {viewingHotel.address?.country}</span>
+                        </div>
+                        {viewingHotel.rating?.average > 0 && (
+                          <div className="flex items-center gap-2 bg-yellow-500/90 backdrop-blur-sm px-3 py-1 rounded-full">
+                            <Star className="h-5 w-5" fill="currentColor" />
+                            <span className="font-bold">{viewingHotel.rating.average.toFixed(1)}</span>
+                            <span className="text-white/80">({viewingHotel.rating.count} reviews)</span>
                           </div>
-                          <p className="font-bold text-indigo-700">
-                            {room.pricePerNight} {room.currency}
-                          </p>
+                        )}
+                        {viewingHotel.priceRange && (
+                          <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                            <DollarSign className="h-5 w-5" />
+                            <span className="font-semibold">
+                              {viewingHotel.priceRange.currency} {viewingHotel.priceRange.min} - {viewingHotel.priceRange.max}/night
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setViewingHotel(null)} 
+                      className="h-10 w-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Image Counter */}
+                {viewingHotel.images.length > 1 && (
+                  <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full">
+                    <Camera className="h-4 w-4 inline mr-2" />
+                    {viewingHotel.images.length} Photos
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="relative h-80 bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                <div className="text-center text-white">
+                  <Camera className="h-24 w-24 mx-auto mb-4 opacity-50" />
+                  <h2 className="text-4xl font-bold mb-2">{viewingHotel.name}</h2>
+                  <p className="text-xl opacity-90">No photos uploaded yet</p>
+                </div>
+                <button 
+                  onClick={() => setViewingHotel(null)} 
+                  className="absolute top-4 right-4 h-10 w-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
+                >
+                  <X className="w-6 h-6 text-white" />
+                </button>
+              </div>
+            )}
+            
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+              <div className="grid gap-8 lg:grid-cols-3">
+                
+                {/* Left Column: Main Info */}
+                <div className="lg:col-span-2 space-y-6">
+                  
+                  {/* About Section */}
+                  <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-3">
+                      <div className="h-1 w-10 bg-blue-600 rounded-full"></div>
+                      About This Property
+                    </h3>
+                    <p className="text-gray-700 text-lg leading-relaxed">{viewingHotel.description}</p>
+                    
+                    {viewingHotel.amenities && viewingHotel.amenities.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="text-lg font-semibold text-gray-900 mb-3">Amenities & Features</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {viewingHotel.amenities.map((amenity, idx) => (
+                            <div key={idx} className="flex items-center gap-2 text-gray-700 bg-blue-50 px-4 py-3 rounded-lg border border-blue-100">
+                              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                              <span className="font-medium capitalize">{amenity.replace('-', ' ')}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
-              )}
 
-              {/* Amenities */}
-              {viewingHotel.amenities && viewingHotel.amenities.length > 0 && (
-                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Star className="w-4 h-4 text-purple-600" />
-                    Amenities
-                  </h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    {viewingHotel.amenities.map((amenity, idx) => (
-                      <div key={idx} className="bg-white rounded-lg p-2 border border-purple-100 flex items-center gap-2 text-sm">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                        <span className="capitalize">{amenity.replace('-', ' ')}</span>
+                  {/* Rooms Section */}
+                  {viewingHotel.rooms && viewingHotel.rooms.length > 0 && (
+                    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+                      <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                        <div className="h-1 w-10 bg-blue-600 rounded-full"></div>
+                        Available Rooms ({viewingHotel.rooms.length})
+                      </h3>
+                      <div className="grid gap-6 md:grid-cols-2">
+                        {viewingHotel.rooms.map((room, idx) => (
+                          <div key={idx} className="rounded-xl border-2 border-gray-200 overflow-hidden bg-white hover:border-blue-400 hover:shadow-lg transition-all">
+                            {room.photos && room.photos.length > 0 && getImageUrl(room.photos[0]) ? (
+                              <div className="relative h-48 overflow-hidden">
+                                <img 
+                                  src={getImageUrl(room.photos[0])} 
+                                  alt={room.roomType} 
+                                  className="h-full w-full object-cover" 
+                                />
+                                {room.photos.length > 1 && (
+                                  <div className="absolute top-3 right-3 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+                                    <Camera className="w-4 h-4 inline mr-1" />
+                                    {room.photos.length}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                <Camera className="w-12 h-12 text-gray-400 opacity-40" />
+                              </div>
+                            )}
+
+                            <div className="p-5 space-y-3">
+                              <h4 className="text-xl font-bold text-gray-900">{room.roomType}</h4>
+                              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                                {room.bedType && (
+                                  <div className="flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-lg">
+                                    <BedDouble className="w-4 h-4" />
+                                    <span className="capitalize">{room.bedType}</span>
+                                  </div>
+                                )}
+                                {room.capacity && (
+                                  <div className="flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-lg">
+                                    <span>{room.capacity} Guests</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {room.amenities && room.amenities.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {room.amenities.slice(0, 3).map((am, i) => (
+                                    <span key={i} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
+                                      {am}
+                                    </span>
+                                  ))}
+                                  {room.amenities.length > 3 && (
+                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                                      +{room.amenities.length - 3} more
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="flex items-baseline justify-between pt-3 border-t">
+                                <div>
+                                  <div className="text-3xl font-bold text-gray-900">
+                                    {room.pricePerNight}
+                                    <span className="text-lg text-gray-600 ml-1">{room.currency || 'BDT'}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-500">per night</div>
+                                </div>
+                              </div>
+
+                              {room.notes && (
+                                <p className="text-sm text-gray-600 italic pt-2 border-t">{room.notes}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {/* Contact */}
-              {viewingHotel.contactInfo && (
-                <div className="bg-pink-50 rounded-lg p-4 border border-pink-200">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-pink-600" />
-                    Contact Information
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    {viewingHotel.contactInfo.phone && (
-                      <p className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-pink-500" />
-                        <a href={`tel:${viewingHotel.contactInfo.phone}`} className="text-blue-600 hover:underline">
-                          {viewingHotel.contactInfo.phone}
-                        </a>
-                      </p>
-                    )}
-                    {viewingHotel.contactInfo.email && (
-                      <p className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-pink-500" />
-                        <a href={`mailto:${viewingHotel.contactInfo.email}`} className="text-blue-600 hover:underline">
-                          {viewingHotel.contactInfo.email}
-                        </a>
-                      </p>
-                    )}
-                    {viewingHotel.contactInfo.website && (
-                      <p className="flex items-center gap-2">
-                        <Globe className="w-4 h-4 text-pink-500" />
-                        <a href={viewingHotel.contactInfo.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                          {viewingHotel.contactInfo.website}
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </p>
-                    )}
+                {/* Right Column: Sidebar */}
+                <div className="lg:col-span-1 space-y-6">
+                  
+                  {/* Location Card */}
+                  <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <MapPin className="h-6 w-6 text-blue-600" />
+                      Location
+                    </h3>
+                    <div className="space-y-2">
+                      <p className="text-gray-700">{viewingHotel.address?.street || 'No street address'}</p>
+                      <p className="text-gray-600">{viewingHotel.address?.city}, {viewingHotel.address?.country}</p>
+                      {viewingHotel.address?.zipCode && (
+                        <p className="text-gray-600">ZIP: {viewingHotel.address.zipCode}</p>
+                      )}
+                      {viewingHotel.coordinates && (
+                        <div className="pt-3 border-t text-xs text-gray-500 font-mono">
+                          📍 {viewingHotel.coordinates.latitude?.toFixed(6)}, {viewingHotel.coordinates.longitude?.toFixed(6)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Contact Card */}
+                  {viewingHotel.contactInfo && (
+                    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+                      <h3 className="text-xl font-bold text-gray-900 mb-4">Contact Information</h3>
+                      <div className="space-y-3">
+                        {viewingHotel.contactInfo.phone && (
+                          <a href={`tel:${viewingHotel.contactInfo.phone}`} className="flex items-center gap-3 text-gray-700 hover:text-blue-600 transition-colors p-3 rounded-lg hover:bg-blue-50">
+                            <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Phone className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500">Phone</div>
+                              <div className="font-medium">{viewingHotel.contactInfo.phone}</div>
+                            </div>
+                          </a>
+                        )}
+                        {viewingHotel.contactInfo.email && (
+                          <a href={`mailto:${viewingHotel.contactInfo.email}`} className="flex items-center gap-3 text-gray-700 hover:text-blue-600 transition-colors p-3 rounded-lg hover:bg-blue-50">
+                            <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Mail className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500">Email</div>
+                              <div className="font-medium text-sm">{viewingHotel.contactInfo.email}</div>
+                            </div>
+                          </a>
+                        )}
+                        {viewingHotel.contactInfo.website && (
+                          <a href={viewingHotel.contactInfo.website} target="_blank" rel="noreferrer" className="flex items-center gap-3 text-gray-700 hover:text-blue-600 transition-colors p-3 rounded-lg hover:bg-blue-50">
+                            <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Globe className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500">Website</div>
+                              <div className="font-medium text-sm truncate flex items-center gap-1">
+                                Visit Website
+                                <ExternalLink className="w-3 h-3" />
+                              </div>
+                            </div>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stats Card */}
+                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl shadow-md p-6 border border-blue-100">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Stats</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-2">
+                        <span className="text-gray-600">Total Rooms</span>
+                        <span className="font-bold text-lg text-purple-600">{viewingHotel.rooms?.length || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2">
+                        <span className="text-gray-600">Views</span>
+                        <span className="font-bold text-lg text-blue-600">{viewingHotel.views || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2">
+                        <span className="text-gray-600">Status</span>
+                        {statusBadge(viewingHotel.approvalStatus)}
+                      </div>
+                      <div className="pt-3 border-t text-xs text-gray-500">
+                        Created: {new Date(viewingHotel.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Footer */}
-            <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                Created {new Date(viewingHotel.createdAt).toLocaleDateString()}
+            <div className="sticky bottom-0 bg-gradient-to-r from-gray-50 to-blue-50 border-t px-8 py-5 flex items-center justify-between">
+              <div className="text-sm text-gray-600 flex items-center gap-2">
+                <Info className="w-4 h-4" />
+                This is how tourists will see your hotel
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <button 
                   onClick={() => {
                     setViewingHotel(null);
                     editHotel(viewingHotel);
                   }}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+                  className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold flex items-center gap-2 transition-all shadow-md hover:shadow-lg"
                 >
                   <Edit2 className="w-4 h-4" />
                   Edit Hotel
                 </button>
                 <button 
                   onClick={() => setViewingHotel(null)}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors"
+                  className="px-6 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 rounded-xl font-semibold transition-all"
                 >
-                  Close
+                  Close Preview
                 </button>
               </div>
             </div>

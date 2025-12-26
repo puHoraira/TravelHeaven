@@ -1,37 +1,18 @@
-/* Hotels Grid - Horizontal Scroll Carousel */
+/* Hotels Grid - Responsive Grid Layout */
 .hotels-grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.5rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-behavior: smooth;
-  scroll-snap-type: x mandatory;
-  padding: 1rem 0.5rem;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(220, 38, 38, 0.5) rgba(220, 38, 38, 0.1);
+  padding: 1rem 0;
 }
 
-.hotels-grid::-webkit-scrollbar {
-  height: 8px;
+@media (max-width: 768px) {
+  .hotels-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
-.hotels-grid::-webkit-scrollbar-track {
-  background: rgba(220, 38, 38, 0.1);
-  border-radius: 10px;
-}
-
-.hotels-grid::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, #b91c1c, #dc2626);
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.hotels-grid::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(90deg, #dc2626, #ef4444);
-}
-
-/* Hotel Card - Carousel Item */
+/* Hotel Card */
 .hotel-card {
   background: linear-gradient(145deg, 
     rgba(220, 38, 38, 0.15), 
@@ -47,45 +28,35 @@
   position: relative;
   box-shadow: 0 8px 24px rgba(220, 38, 38, 0.15);
   
-  width: 320px;
-  min-width: 320px;
-  max-width: 320px;
-  height: 450px;
-  min-height: 450px;
-  max-height: 450px;
-  
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
-  scroll-snap-align: center;
-  will-change: transform;
-  animation: cardSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation: cardFadeIn 0.5s ease-out backwards;
 }
 
 /* Staggered Animation */
-.hotel-card:nth-child(1) { animation-delay: 0.1s; }
-.hotel-card:nth-child(2) { animation-delay: 0.2s; }
-.hotel-card:nth-child(3) { animation-delay: 0.3s; }
-.hotel-card:nth-child(4) { animation-delay: 0.4s; }
-.hotel-card:nth-child(5) { animation-delay: 0.5s; }
-.hotel-card:nth-child(6) { animation-delay: 0.6s; }
-.hotel-card:nth-child(7) { animation-delay: 0.7s; }
-.hotel-card:nth-child(8) { animation-delay: 0.8s; }
-.hotel-card:nth-child(9) { animation-delay: 0.9s; }
+.hotel-card:nth-child(1) { animation-delay: 0.05s; }
+.hotel-card:nth-child(2) { animation-delay: 0.1s; }
+.hotel-card:nth-child(3) { animation-delay: 0.15s; }
+.hotel-card:nth-child(4) { animation-delay: 0.2s; }
+.hotel-card:nth-child(5) { animation-delay: 0.25s; }
+.hotel-card:nth-child(6) { animation-delay: 0.3s; }
+.hotel-card:nth-child(7) { animation-delay: 0.35s; }
+.hotel-card:nth-child(8) { animation-delay: 0.4s; }
+.hotel-card:nth-child(9) { animation-delay: 0.45s; }
 
-@keyframes cardSlideIn {
+@keyframes cardFadeIn {
   from {
     opacity: 0;
-    transform: translateX(100px) scale(0.9);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translateY(0);
   }
 }
 
 .hotel-card:hover {
-  transform: translateY(-12px) scale(1.05);
+  transform: translateY(-8px);
   box-shadow: 0 20px 50px rgba(239, 68, 68, 0.35);
   border-color: rgba(239, 68, 68, 0.6);
   z-index: 10;
@@ -94,9 +65,7 @@
 /* Hotel Image */
 .hotel-card img {
   width: 100%;
-  height: 180px;
-  min-height: 180px;
-  max-height: 180px;
+  height: 200px;
   object-fit: cover;
   transition: transform 0.4s ease;
   flex-shrink: 0;

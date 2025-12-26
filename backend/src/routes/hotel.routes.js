@@ -32,7 +32,7 @@ router.post(
   '/',
   authenticate,
   authorize('guide'),
-  upload.array('images', 5),
+  upload.any(), // Accept any field names including rooms[0][photos]
   saveToMongoDB,
   hotelValidation,
   validate,
@@ -49,7 +49,7 @@ router.put(
   '/:id',
   authenticate,
   authorize('guide', 'admin'),
-  upload.array('images', 5),
+  upload.any(), // Accept any field names including rooms[0][photos]
   saveToMongoDB,
   updateHotel
 );

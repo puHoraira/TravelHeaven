@@ -194,10 +194,12 @@ export const updateProfile = async (req, res) => {
     }
 
     if (profilePayload && typeof profilePayload === 'object') {
-      user.profile = {
-        ...(user.profile || {}),
-        ...profilePayload,
-      };
+      user.profile = user.profile || {};
+      // Merge profile data
+      Object.keys(profilePayload).forEach(key => {
+        user.profile[key] = profilePayload[key];
+      });
+      user.markModified('profile');
       hasChanges = true;
     }
 
@@ -214,19 +216,22 @@ export const updateProfile = async (req, res) => {
     }
 
     if (guideInfoPayload && typeof guideInfoPayload === 'object') {
-      user.guideInfo = {
-        ...(user.guideInfo || {}),
-        ...guideInfoPayload,
-      };
+      user.guideInfo = user.guideInfo || {};
+      // Merge guide info data
+      Object.keys(guideInfoPayload).forEach(key => {
+        user.guideInfo[key] = guideInfoPayload[key];
+      });
+      user.markModified('guideInfo');
       hasChanges = true;
     }
 
-      // Avatar upload is stored in MongoDB via saveToMongoDB middleware
-      if (req.savedFile?.url || req.file?.url || req.file?.mongoId) {
-        const fileUrl = req.savedFile?.url || req.file?.url || `/api/files/${req.file.mongoId}`;
-        user.profile = user.profile || {};
-        user.profile.avatar = fileUrl;
-        hasChanges = true;
+    // Avatar upload is stored in MongoDB via saveToMongoDB middleware
+    if (req.savedFile?.url || req.file?.url || req.file?.mongoId) {
+      const fileUrl = req.savedFile?.url || req.file?.url || `/api/files/${req.file.mongoId}`;
+      user.profile = user.profile || {};
+      user.profile.avatar = fileUrl;
+      user.markModified('profile');
+      hasChanges = true;
     }
 
     if (!hasChanges) {
@@ -244,6 +249,7 @@ export const updateProfile = async (req, res) => {
       data: buildUserResponse(user),
     });
   } catch (error) {
+    console.error('Profile update error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update profile',

@@ -14,7 +14,6 @@ import {
   Star,
   Clock,
   DollarSign,
-  Users,
   Wifi,
   Coffee,
   Zap,

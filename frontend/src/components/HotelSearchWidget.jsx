@@ -7,7 +7,6 @@ import {
   ExternalLink, 
   Phone, 
   Loader2,
-  Navigation,
   Star,
   DollarSign,
   Users,
@@ -15,6 +14,7 @@ import {
   Mail
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getImageUrlFromMixed } from '../lib/media';
 import api from '../lib/api';
 
 /**
@@ -113,20 +113,7 @@ const HotelSearchWidget = ({ locationName, coords, onSelectHotel }) => {
   };
 
   const getImageUrl = (image) => {
-    if (!image) return null;
-    
-    // Handle MongoDB file reference objects
-    if (typeof image === 'object' && image.file) {
-      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
-    }
-    
-    // Handle string paths (legacy format)
-    if (typeof image === 'string') {
-      if (image.startsWith('http')) return image;
-      return `http://localhost:5000${image}`;
-    }
-    
-    return null;
+    return getImageUrlFromMixed(image);
   };
 
   return (

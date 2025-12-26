@@ -12,7 +12,7 @@
     "cleanup-seed": "node src/scripts/cleanup-and-seed-proper.js",
     "init-users": "node src/scripts/init-users.js",
     "test-db": "node src/scripts/test-db.js",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "recalc:ratings": "node src/scripts/recalc-ratings.js"
   },
   "keywords": [

@@ -11,7 +11,7 @@ import {
   Users,
   X
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 
@@ -47,7 +47,7 @@ const RailwaySearchWidget = ({ from, to, date, onSelectTrain }) => {
     setEditedTo(to || '');
   }, [from, to]);
 
-  const searchTrains = async () => {
+  const searchTrains = useCallback(async () => {
     const searchFrom = editedFrom || from;
     const searchTo = editedTo || to;
 
@@ -130,14 +130,14 @@ const RailwaySearchWidget = ({ from, to, date, onSelectTrain }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [bearerToken, deviceId, deviceKey, editedFrom, editedTo, from, journeyDate, selectedSeatClass, to]);
 
   // Auto-search when journey date changes
   useEffect(() => {
     if (journeyDate && from && to && expanded) {
       searchTrains();
     }
-  }, [journeyDate]);
+  }, [journeyDate, from, to, expanded, searchTrains]);
 
   const handleBookTrain = (train, seatType) => {
     if (onSelectTrain) {

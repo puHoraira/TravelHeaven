@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import api from '../lib/api';
 import { 
   Star, 
@@ -24,11 +24,7 @@ const GuideProfile = () => {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewData, setReviewData] = useState({ rating: 5, title: '', comment: '' });
 
-  useEffect(() => {
-    fetchGuideData();
-  }, [id]);
-
-  const fetchGuideData = async () => {
+  const fetchGuideData = useCallback(async () => {
     try {
       setLoading(true);
       const [guideRes, reviewsRes] = await Promise.all([
@@ -42,7 +38,11 @@ const GuideProfile = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchGuideData();
+  }, [fetchGuideData]);
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();

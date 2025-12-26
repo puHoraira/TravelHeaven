@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DollarSign, Plus, X, TrendingUp, TrendingDown, PieChart, Calendar } from 'lucide-react';
 
 /**

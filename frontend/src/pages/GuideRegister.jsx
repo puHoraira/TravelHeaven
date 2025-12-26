@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
-import { Briefcase, MapPin, Upload, FileText } from 'lucide-react';
+import { Briefcase, Upload, FileText } from 'lucide-react';
 
 const GuideRegister = () => {
   const navigate = useNavigate();
@@ -59,7 +59,7 @@ const GuideRegister = () => {
       formData.append('experience', data.experience);
       formData.append('verificationDocument', verificationFile);
 
-      const response = await api.post('/auth/register-guide', formData, {
+      await api.post('/auth/register-guide', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

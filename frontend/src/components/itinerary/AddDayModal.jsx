@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Save, Calendar, MapPin, Clock, DollarSign, FileText, GripVertical } from 'lucide-react';
+import { X, Plus, Trash2, Save, Calendar, MapPin, Clock, DollarSign, FileText } from 'lucide-react';
 import LocationSearchInput from '../LocationSearchInput';
 import toast from 'react-hot-toast';
 

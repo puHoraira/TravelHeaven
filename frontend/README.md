@@ -39,7 +39,11 @@ Copy-Item .env.example .env
 
 Edit `.env` to point to your backend API:
 ```
-VITE_API_URL=http://localhost:5000/api
+# Local dev (recommended): use Vite proxy in vite.config.js
+VITE_API_URL=/api
+
+# Deployment example (set to your backend origin)
+# VITE_API_URL=https://your-backend.example.com/api
 ```
 
 ### Development Server

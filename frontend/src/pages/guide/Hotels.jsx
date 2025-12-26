@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { getImageUrlFromMixed } from '../../lib/media';
 import LocationSearchInput from '../../components/LocationSearchInput';
 import api from '../../lib/api';
 import './Hotels.css';
@@ -163,20 +164,7 @@ const GuideHotel = () => {
   };
 
   const getImageUrl = (image) => {
-    if (!image) return null;
-    
-    // Handle MongoDB file reference objects
-    if (typeof image === 'object' && image.file) {
-      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
-    }
-    
-    // Handle string paths (legacy format)
-    if (typeof image === 'string') {
-      if (image.startsWith('http')) return image;
-      return `http://localhost:5000${image}`;
-    }
-    
-    return null;
+    return getImageUrlFromMixed(image);
   };
 
   const toggleAmenity = (amenity) => {
@@ -310,7 +298,7 @@ const GuideHotel = () => {
         });
       }
 
-      const response = await api.post('/hotels', formData, {
+      await api.post('/hotels', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 

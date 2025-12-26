@@ -17,7 +17,7 @@ import {
   Trash2,
   Users,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import AddDayModal from '../../components/itinerary/AddDayModal';
@@ -76,7 +76,7 @@ export default function ViewItinerary() {
 
   const currentUserId = normalizeId(user?._id || user?.id);
 
-  const normalizeItineraryData = (rawItinerary) => {
+  const normalizeItineraryData = useCallback((rawItinerary) => {
     if (!rawItinerary) return rawItinerary;
 
     const normalizeCoordinate = (source) => {
@@ -132,13 +132,9 @@ export default function ViewItinerary() {
       ...rawItinerary,
       days: normalizedDays,
     };
-  };
+  }, []);
 
-  useEffect(() => {
-    fetchItinerary();
-  }, [id, location.pathname]);
-
-  const fetchItinerary = async () => {
+  const fetchItinerary = useCallback(async () => {
     try {
       const endpoint = location.pathname.endsWith('/view')
         ? `/itineraries/${id}/view`
@@ -192,7 +188,11 @@ export default function ViewItinerary() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, location.pathname, navigate, normalizeItineraryData, user]);
+
+  useEffect(() => {
+    fetchItinerary();
+  }, [fetchItinerary]);
 
   const ownerId = normalizeId(itinerary?.ownerId);
   const isOwner = Boolean(currentUserId && ownerId && currentUserId === ownerId);
@@ -261,7 +261,7 @@ export default function ViewItinerary() {
 
   const handleSaveDay = async (dayData) => {
     try {
-      const response = await api.put(`/itineraries/${id}`, {
+      await api.put(`/itineraries/${id}`, {
         days: [...(itinerary.days || []), dayData]
       });
       
@@ -652,7 +652,7 @@ export default function ViewItinerary() {
               <MapView 
                 days={itinerary.days || []} 
                 activeDay={activeDay}
-                onMarkerClick={(dayIndex, stopIndex) => {
+                onMarkerClick={(dayIndex) => {
                   setActiveDay(dayIndex);
                   if (dayRefs.current[dayIndex]) {
                     dayRefs.current[dayIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });

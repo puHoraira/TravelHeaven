@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapPin, Navigation, Calendar, Clock, DollarSign } from 'lucide-react';
+import { MapPin, Calendar, DollarSign } from 'lucide-react';
 
 // Fix for default marker icons in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -119,8 +119,8 @@ const AutoFitBounds = ({ positions }) => {
  * Displays an interactive map with day-by-day journey visualization
  */
 const JourneyMap = ({ days = [], activeDay = null, onMarkerClick }) => {
-  const [mapCenter, setMapCenter] = useState([23.8103, 90.4125]); // Default: Dhaka
-  const [mapZoom, setMapZoom] = useState(7);
+  const defaultCenter = [23.8103, 90.4125]; // Default: Dhaka
+  const defaultZoom = 7;
 
   // Extract all coordinates from days
   const allPositions = [];
@@ -179,16 +179,6 @@ const JourneyMap = ({ days = [], activeDay = null, onMarkerClick }) => {
     }
   });
 
-  // If no coordinates, use default center
-  useEffect(() => {
-    if (allPositions.length > 0) {
-      // Calculate center of all positions
-      const avgLat = allPositions.reduce((sum, pos) => sum + pos[0], 0) / allPositions.length;
-      const avgLng = allPositions.reduce((sum, pos) => sum + pos[1], 0) / allPositions.length;
-      setMapCenter([avgLat, avgLng]);
-    }
-  }, [allPositions.length]);
-
   if (allPositions.length === 0) {
     return (
       <div className="w-full h-96 bg-gray-100 rounded-xl flex items-center justify-center">
@@ -204,8 +194,8 @@ const JourneyMap = ({ days = [], activeDay = null, onMarkerClick }) => {
   return (
     <div className="w-full h-96 rounded-xl overflow-hidden shadow-lg border-4 border-white">
       <MapContainer
-        center={mapCenter}
-        zoom={mapZoom}
+        center={defaultCenter}
+        zoom={defaultZoom}
         className="w-full h-full"
         scrollWheelZoom={true}
       >

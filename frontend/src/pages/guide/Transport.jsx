@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { getImageUrlFromMixed } from '../../lib/media';
 import { 
   MapPin, Plus, Trash2, X, Eye, Edit2, Bus, Camera, Info, Navigation,
   Building2, DollarSign, Clock, Star, Phone, ExternalLink
@@ -12,7 +13,6 @@ const GuideTransport = () => {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [viewingTransport, setViewingTransport] = useState(null);
-  const [editingTransport, setEditingTransport] = useState(null);
   const [form, setForm] = useState({
     name: '',
     type: 'bus',
@@ -179,20 +179,7 @@ const GuideTransport = () => {
   };
 
   const getImageUrl = (image) => {
-    if (!image) return null;
-    
-    // Handle MongoDB file reference objects
-    if (typeof image === 'object' && image.file) {
-      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
-    }
-    
-    // Handle string paths (legacy format)
-    if (typeof image === 'string') {
-      if (image.startsWith('http')) return image;
-      return `http://localhost:5000${image}`;
-    }
-    
-    return null;
+    return getImageUrlFromMixed(image);
   };
 
   const submitTransport = async (e) => {
@@ -283,7 +270,7 @@ const GuideTransport = () => {
         Array.from(form.images).forEach((file) => fd.append('images', file));
       }
       
-      const res = await api.post('/transportation', fd);
+      await api.post('/transportation', fd);
       toast.success('Transport submitted for approval');
       
       // Reset form
@@ -379,7 +366,6 @@ const GuideTransport = () => {
       booking: transport.booking || { onlineUrl: '', phoneNumbers: [], counterLocations: [] },
       facilities: transport.facilities || []
     });
-    setEditingTransport(transport._id);
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
     toast.info('Editing transport - Update and resubmit');

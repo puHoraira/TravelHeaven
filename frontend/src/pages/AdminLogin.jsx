@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
-import { Shield, MapPin } from 'lucide-react';
+import { Shield } from 'lucide-react';
 
 const AdminLogin = () => {
   const navigate = useNavigate();

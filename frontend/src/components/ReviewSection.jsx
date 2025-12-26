@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import { getImageUrlFromMixed } from '../lib/media';
 import { 
   Star, ThumbsUp, Camera, X, Send, MessageCircle, 
-  Image as ImageIcon, User, Calendar, CheckCircle 
+  Calendar, CheckCircle 
 } from 'lucide-react';
 import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
@@ -13,7 +14,7 @@ import { useAuthStore } from '../store/authStore';
  * Different strategies for submitting reviews with or without images
  */
 class ReviewSubmissionStrategy {
-  async submit(data) {
+  async submit() {
     throw new Error('Submit method must be implemented');
   }
 }
@@ -160,7 +161,7 @@ class ReviewFormBuilder {
  * Main ReviewSection Component
  * Implements Composite Pattern: Contains multiple sub-components
  */
-const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onReviewSubmitted, onReviewsChange }) => {
+const ReviewSection = ({ reviewType, referenceId, guideId, onReviewSubmitted, onReviewsChange }) => {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -181,23 +182,7 @@ const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onRevie
   // Singleton Pattern: Single instance of form builder
   const formBuilder = new ReviewFormBuilder();
 
-  useEffect(() => {
-    fetchReviews();
-    checkIfUserReviewed();
-    
-    // Observer Pattern: Subscribe to review updates
-    const updateHandler = (data) => {
-      if (data.referenceId === referenceId) {
-        fetchReviews();
-        checkIfUserReviewed();
-      }
-    };
-    reviewNotifier.subscribe(updateHandler);
-
-    return () => reviewNotifier.unsubscribe(updateHandler);
-  }, [referenceId, user]);
-
-  const checkIfUserReviewed = async () => {
+  const checkIfUserReviewed = useCallback(async () => {
     if (!user || user.role !== 'user') {
       setHasReviewed(false);
       return;
@@ -212,9 +197,9 @@ const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onRevie
     } catch (error) {
       console.error('Failed to check review status:', error);
     }
-  };
+  }, [referenceId, reviewType, user]);
 
-  const fetchReviews = async (page = 1) => {
+  const fetchReviews = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const response = await api.get('/reviews', {
@@ -241,7 +226,23 @@ const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onRevie
     } finally {
       setLoading(false);
     }
-  };
+  }, [onReviewsChange, referenceId, reviewType]);
+
+  useEffect(() => {
+    fetchReviews();
+    checkIfUserReviewed();
+
+    // Observer Pattern: Subscribe to review updates
+    const updateHandler = (payload) => {
+      if (payload.referenceId === referenceId) {
+        fetchReviews();
+        checkIfUserReviewed();
+      }
+    };
+    reviewNotifier.subscribe(updateHandler);
+
+    return () => reviewNotifier.unsubscribe(updateHandler);
+  }, [checkIfUserReviewed, fetchReviews, referenceId]);
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
@@ -300,11 +301,10 @@ const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onRevie
       // Factory Pattern: Select appropriate submission strategy
       const strategy = ReviewStrategyFactory.createStrategy(images.length > 0);
       
-      let response;
       if (images.length > 0) {
-        response = await strategy.submit(reviewData, images);
+        await strategy.submit(reviewData, images);
       } else {
-        response = await strategy.submit(reviewData);
+        await strategy.submit(reviewData);
       }
 
       toast.success('Review submitted successfully!');
@@ -370,20 +370,7 @@ const ReviewSection = ({ reviewType, referenceId, locationName, guideId, onRevie
   };
 
   const getImageUrl = (image) => {
-    if (!image) return null;
-    
-    // Handle MongoDB file reference objects
-    if (typeof image === 'object' && image.file) {
-      return `http://localhost:5000/api/files/${image.file._id || image.file}`;
-    }
-    
-    // Handle string paths (legacy format)
-    if (typeof image === 'string') {
-      if (image.startsWith('http')) return image;
-      return `http://localhost:5000${image}`;
-    }
-    
-    return null;
+    return getImageUrlFromMixed(image);
   };
 
   // Calculate average rating

@@ -24,7 +24,6 @@ const TransportSearchWidget = ({ from, to, fromCoords, toCoords, onSelectTranspo
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [isClicked, setIsClicked] = useState(false);
   const [selectedTransport, setSelectedTransport] = useState(null);
   const [transportDetails, setTransportDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -148,9 +147,7 @@ const TransportSearchWidget = ({ from, to, fromCoords, toCoords, onSelectTranspo
         {!expanded && (
           <button
             onClick={() => {
-              setIsClicked(true);
               searchTransport();
-              setTimeout(() => setIsClicked(false), 300);
             }}
             disabled={loading || !from || !to}
             className="btn btn-sm flex items-center gap-2"

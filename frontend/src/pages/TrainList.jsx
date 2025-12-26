@@ -1,11 +1,14 @@
-import { useState } from 'react';
-import { Train, Search, Loader2, Calendar, MapPin, Clock, ArrowRight, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Train, Search, Loader2, Calendar, MapPin, Clock, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/api';
 import { trains, searchTrains as filterTrains } from '../data/trainList';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './TrainList.css';
 
 const TrainList = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTrain, setSelectedTrain] = useState(null);
   const [trainRoutes, setTrainRoutes] = useState(null);
@@ -24,15 +27,21 @@ const TrainList = () => {
     uniqueTrains[train.name].push(train.number);
   });
 
+  const getTrainNameByNumber = useMemo(() => {
+    const map = new Map(trains.map((train) => [train.number, train.name]));
+    return (trainNumber) => map.get(trainNumber) || null;
+  }, []);
+
   // Fetch train route details
-  const fetchTrainRoutes = async (trainNumber, trainName) => {
+  const fetchTrainRoutes = async (trainNumber, trainName, dateOverride) => {
     try {
       setLoading(true);
+      const dateToUse = dateOverride || selectedDate;
       setSelectedTrain({ number: trainNumber, name: trainName });
       
       const response = await api.post('/railway/routes', {
         trainNumber,
-        date: selectedDate
+        date: dateToUse
       });
 
       console.log('API Response:', response.data);
@@ -69,10 +78,27 @@ const TrainList = () => {
     }
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const trainNumber = params.get('trainNumber');
+    const date = params.get('date');
+    const trainNameParam = params.get('trainName');
+
+    if (!trainNumber) return;
+
+    const dateToUse = /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? date : selectedDate;
+    if (dateToUse !== selectedDate) setSelectedDate(dateToUse);
+
+    const resolvedName = trainNameParam || getTrainNameByNumber(trainNumber) || `Train ${trainNumber}`;
+    fetchTrainRoutes(trainNumber, resolvedName, dateToUse);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
   // Close route details
   const closeRouteDetails = () => {
     setSelectedTrain(null);
     setTrainRoutes(null);
+    navigate('/trains', { replace: true });
   };
 
   return (

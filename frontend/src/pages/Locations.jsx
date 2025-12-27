@@ -234,49 +234,47 @@ const Locations = () => {
   };
 
   // Handle reviews change - calculate rating from actual reviews
-  const handleReviewsChange = (reviews) => {
+  // Memoized to avoid triggering ReviewSection effects repeatedly.
+  const handleReviewsChange = useCallback((reviews) => {
     setLocationReviews(reviews);
-    
-    if (!selectedLocation?._id) return; // Safety check
-    
-    if (reviews.length === 0) {
-      // No reviews, set to 0
+
+    const selectedId = selectedLocation?._id?.toString();
+    if (!selectedId) return;
+
+    const safeReviews = Array.isArray(reviews) ? reviews : [];
+    if (safeReviews.length === 0) {
       const updatedRating = { average: 0, count: 0 };
-      
-      // Update selected location
-      setSelectedLocation(prev => ({
+
+      setSelectedLocation((prev) => ({
         ...prev,
-        rating: updatedRating
+        rating: updatedRating,
       }));
-      
-      // Update in locations list
-      setLocations(prev => prev.map(loc => 
-        loc._id === selectedLocation._id 
-          ? { ...loc, rating: updatedRating }
-          : loc
-      ));
-    } else {
-      // Calculate from reviews
-      const average = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
-      const updatedRating = {
-        average: parseFloat(average.toFixed(2)),
-        count: reviews.length
-      };
-      
-      // Update selected location
-      setSelectedLocation(prev => ({
-        ...prev,
-        rating: updatedRating
-      }));
-      
-      // Update in locations list
-      setLocations(prev => prev.map(loc => 
-        loc._id === selectedLocation._id 
-          ? { ...loc, rating: updatedRating }
-          : loc
-      ));
+
+      setLocations((prev) =>
+        prev.map((loc) =>
+          loc?._id?.toString() === selectedId ? { ...loc, rating: updatedRating } : loc
+        )
+      );
+      return;
     }
-  };
+
+    const average = safeReviews.reduce((sum, review) => sum + (review?.rating || 0), 0) / safeReviews.length;
+    const updatedRating = {
+      average: parseFloat(average.toFixed(2)),
+      count: safeReviews.length,
+    };
+
+    setSelectedLocation((prev) => ({
+      ...prev,
+      rating: updatedRating,
+    }));
+
+    setLocations((prev) =>
+      prev.map((loc) =>
+        loc?._id?.toString() === selectedId ? { ...loc, rating: updatedRating } : loc
+      )
+    );
+  }, [selectedLocation?._id]);
 
   // Calculate average rating from reviews
   const calculateAverageRating = () => {

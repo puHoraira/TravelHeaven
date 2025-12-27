@@ -190,9 +190,21 @@ const ReviewSection = ({ reviewType, referenceId, guideId, onReviewSubmitted, on
 
     try {
       const response = await api.get('/reviews', {
-        params: { reviewType, referenceId, userId: user._id }
+        params: { reviewType, referenceId }
       });
-      const userReview = response.data?.data?.find(r => r.userId?._id === user._id || r.userId === user._id);
+
+      const list = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response?.data?.data)
+          ? response.data.data
+          : Array.isArray(response)
+            ? response
+            : [];
+
+      const userReview = list.find((review) => {
+        const reviewUserId = review?.userId?._id || review?.userId;
+        return reviewUserId?.toString?.() === user._id?.toString?.();
+      });
       setHasReviewed(!!userReview);
     } catch (error) {
       console.error('Failed to check review status:', error);
@@ -205,16 +217,19 @@ const ReviewSection = ({ reviewType, referenceId, guideId, onReviewSubmitted, on
       const response = await api.get('/reviews', {
         params: { reviewType, referenceId, page, limit: 10 }
       });
-      
-      console.log('Reviews fetched:', response.data); // Debug log
-      console.log('Reviews array:', response.data?.data); // Debug log
-      console.log('Reviews length:', response.data?.data?.length); // Debug log
-      
-      const reviewsData = response.data?.data || response.data || [];
-      console.log('Setting reviews to:', reviewsData); // Debug log
-      
+
+      const reviewsData = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response?.data?.data)
+          ? response.data.data
+          : Array.isArray(response)
+            ? response
+            : [];
+
+      const paginationData = response?.pagination || response?.data?.pagination;
+
       setReviews(reviewsData);
-      setPagination(response.data?.pagination || { page: 1, pages: 1, total: reviewsData.length });
+      setPagination(paginationData || { page: 1, pages: 1, total: reviewsData.length });
       
       // Notify parent component about reviews change
       if (onReviewsChange) {

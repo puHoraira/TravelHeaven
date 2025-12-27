@@ -18,7 +18,7 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['approval', 'reminder', 'system'],
+    enum: ['approval', 'reminder', 'system', 'message'],
     default: 'system',
   },
   metadata: {

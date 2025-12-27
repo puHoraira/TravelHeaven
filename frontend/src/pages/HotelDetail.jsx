@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { Link, useParams } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
+import { getImageUrlFromMixed } from '../lib/media';
 import './HotelDetail.css';
 
 const formatAddress = (hotel) => {
@@ -21,17 +22,7 @@ const formatPriceRange = (priceRange) => {
   return 'Pricing unavailable';
 };
 
-const getImageUrl = (img) => {
-  if (!img) return '';
-  if (typeof img === 'string') return img;
-
-  const file = img?.file ?? img;
-  if (!file) return '';
-  if (typeof file === 'string') return `/api/files/${file}`;
-  if (typeof file === 'object') return file.url || (file._id ? `/api/files/${file._id}` : '');
-
-  return '';
-};
+const getImageUrl = (img) => getImageUrlFromMixed(img) || '';
 
 export default function HotelDetail() {
   const { id } = useParams();

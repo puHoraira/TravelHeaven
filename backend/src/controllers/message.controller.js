@@ -1,6 +1,9 @@
 import Message from '../models/Message.js';
 import { User } from '../models/User.js';
 import mongoose from 'mongoose';
+import { NotificationRepository } from '../patterns/Repository.js';
+
+const notificationRepo = new NotificationRepository();
 
 // Generate unique conversation ID between two users
 const generateConversationId = (userId1, userId2) => {
@@ -178,12 +181,34 @@ export const sendMessage = async (req, res) => {
     console.log('Sender:', senderId.toString());
     console.log('Receiver:', receiverId);
 
+    const trimmedMessage = message.trim();
+
     const newMessage = await Message.create({
       conversationId,
       sender: senderId,
       receiver: receiverId,
-      message: message.trim(),
+      message: trimmedMessage,
     });
+
+    // Create a notification for the receiver (best-effort; do not fail message send)
+    try {
+      const senderName = req.user?.username || req.user?.email || 'Someone';
+      const snippet = trimmedMessage.length > 140 ? `${trimmedMessage.slice(0, 137)}...` : trimmedMessage;
+
+      await notificationRepo.create({
+        userId: receiverId,
+        title: `New message from ${senderName}`,
+        message: snippet,
+        type: 'message',
+        metadata: {
+          fromUserId: senderId.toString(),
+          conversationId,
+          messageId: newMessage._id.toString(),
+        },
+      });
+    } catch (notificationError) {
+      console.warn('Failed to create message notification:', notificationError?.message || notificationError);
+    }
 
     await newMessage.populate('sender', '_id username profile');
     await newMessage.populate('receiver', '_id username profile');

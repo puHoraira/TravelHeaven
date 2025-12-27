@@ -155,8 +155,8 @@ export default function DayCard({ day, dayNumber, onRemoveStop, onEditDay, onAdd
           </div>
         )}
 
-        {/* Transport Suggestions */}
-        {day.stops && day.stops.length >= 2 && (
+        {/* Transport Suggestions (only for active day to reduce clutter) */}
+        {isActive && day.stops && day.stops.length >= 2 && (
           <div className="mt-4 pt-4 border-t">
             {(() => {
               const firstStop = day.stops[0];
@@ -197,8 +197,8 @@ export default function DayCard({ day, dayNumber, onRemoveStop, onEditDay, onAdd
           </div>
         )}
 
-        {/* Hotel Suggestions */}
-        {day.stops && day.stops.length > 0 && (
+        {/* Hotel Suggestions (only for active day to reduce clutter) */}
+        {isActive && day.stops && day.stops.length > 0 && (
           <div className="mt-4 pt-4 border-t">
             <h4 className="font-medium text-gray-700 mb-3">Accommodation Options</h4>
             <div className="space-y-3">

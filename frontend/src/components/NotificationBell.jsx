@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Bell, CheckCircle2, Inbox, Loader2, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 
 const typeStyles = {
   approval: 'border-blue-100 bg-blue-50 text-blue-700',
   reminder: 'border-amber-100 bg-amber-50 text-amber-700',
+  message: 'border-blue-100 bg-blue-50 text-blue-700',
   system: 'border-gray-100 bg-gray-50 text-gray-700',
+};
+
+const getMetadataValue = (metadata, key) => {
+  if (!metadata || !key) return undefined;
+  if (typeof metadata.get === 'function') return metadata.get(key);
+  return metadata[key];
 };
 
 const formatRelativeTime = (value) => {
@@ -32,6 +40,7 @@ const formatRelativeTime = (value) => {
 
 const NotificationBell = () => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
@@ -101,6 +110,20 @@ const NotificationBell = () => {
     }
   };
 
+  const handleNotificationClick = async (notification) => {
+    if (!notification?._id) return;
+
+    await markNotificationRead(notification._id);
+
+    if (notification.type === 'message') {
+      const fromUserId = getMetadataValue(notification.metadata, 'fromUserId');
+      if (fromUserId) {
+        setOpen(false);
+        navigate(`/chat/${fromUserId}`);
+      }
+    }
+  };
+
   const handleMarkAll = async () => {
     try {
       setMarkingAll(true);
@@ -140,7 +163,7 @@ const NotificationBell = () => {
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-gray-900">Notifications</p>
-              <p className="text-xs text-gray-500">Updates from approvals and itineraries</p>
+              <p className="text-xs text-gray-500">Updates from messages and approvals</p>
             </div>
             <button
               type="button"
@@ -171,7 +194,7 @@ const NotificationBell = () => {
                   <button
                     key={notification._id}
                     type="button"
-                    onClick={() => markNotificationRead(notification._id)}
+                    onClick={() => handleNotificationClick(notification)}
                     className={`flex w-full gap-3 px-4 py-3 text-left transition-colors ${
                       notification.isRead ? 'bg-white hover:bg-gray-50' : 'bg-blue-50/60 hover:bg-blue-50'
                     }`}

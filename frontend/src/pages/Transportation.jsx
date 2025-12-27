@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   Bus,
+  Camera,
   Car,
   CheckCircle,
   Clock,
@@ -26,6 +27,7 @@ import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
+import { getImageUrlFromMixed } from '../lib/media';
 import './Transportation.css';
 
 const TransportIcon = ({ type }) => {
@@ -148,9 +150,29 @@ const TransportSearchDialog = ({ onSearch }) => {
 const TransportCard = ({ transport, onBook }) => {
   const hasRoute = transport.route?.from?.name && transport.route?.to?.name;
   const nearbyInfo = transport.matchType === 'nearby-stops' ? transport : null;
+  const coverImage = getImageUrlFromMixed(transport.images?.[0]);
 
   return (
     <div className="card hover:shadow-lg transition-shadow">
+      <Link to={`/transportation/${transport._id}`} className="block">
+        {coverImage ? (
+          <img
+            src={coverImage}
+            alt={transport.name}
+            className="h-40 w-full rounded-lg object-cover mb-4"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
+          />
+        ) : (
+          <div className="h-40 w-full rounded-lg bg-gray-100 flex items-center justify-center mb-4">
+            <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
+              <Camera className="h-4 w-4" />
+              No image
+            </div>
+          </div>
+        )}
+      </Link>
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-start gap-3">

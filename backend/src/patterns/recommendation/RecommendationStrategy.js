@@ -55,6 +55,31 @@ const transportPriceOf = (t) => {
   return 0;
 };
 
+const isLocationItem = (item) => {
+  return Boolean(item && (item.category || item.entryFee || item.city || item.region));
+};
+
+const isHotelItem = (item) => {
+  return Boolean(
+    item
+      && (
+        typeof item.pricePerNight === 'number'
+        || typeof item.priceRange?.min === 'number'
+        || (Array.isArray(item.rooms) && item.rooms.length > 0)
+      )
+  );
+};
+
+const isTransportItem = (item) => {
+  return Boolean(
+    item
+      && (typeof item.type === 'string')
+      && (typeof item.price === 'number' || typeof item.pricing?.amount === 'number')
+      && !isHotelItem(item)
+      && !isLocationItem(item)
+  );
+};
+
 /**
  * Concrete Strategy - Budget Optimized Strategy
  * Minimizes costs while maximizing value and experiences
@@ -97,7 +122,7 @@ export class BudgetOptimizedStrategy extends RecommendationStrategy {
     const { budget } = preferences;
     
     // For locations: prioritize rating and low/no cost
-    if (item.category || item.type === 'location') {
+    if (isLocationItem(item) || item.type === 'location') {
       const entryFee = typeof item.entryFee === 'number' ? item.entryFee : (item.entryFee?.amount || 0);
       const costScore = entryFee ? (1 - entryFee / Math.max(1, budget * 0.1)) : 1;
       const ratingScore = ratingOf(item) / 5;
@@ -105,7 +130,7 @@ export class BudgetOptimizedStrategy extends RecommendationStrategy {
     }
 
     // For hotels: prioritize low price and decent rating
-    if (item) {
+    if (isHotelItem(item)) {
       const ppn = hotelPricePerNightOf(item, budget);
       const costScore = 1 - (ppn / Math.max(1, budget * 0.4));
       const ratingScore = ratingOf(item) / 5;
@@ -113,7 +138,7 @@ export class BudgetOptimizedStrategy extends RecommendationStrategy {
     }
 
     // For transport: prioritize low cost
-    if (item) {
+    if (isTransportItem(item)) {
       const price = transportPriceOf(item);
       const costScore = 1 - (price / Math.max(1, budget * 0.3));
       const reliabilityScore = ratingOf(item) / 5;
@@ -175,7 +200,7 @@ export class ActivityDrivenStrategy extends RecommendationStrategy {
 
     // For locations: prioritize rating and category match
     if (item.category || item.type === 'location') {
-      const ratingScore = (item.rating || 3) / 5;
+      const ratingScore = ratingOf(item) / 5;
       const categoryMatch = item.relevanceScore || 0.5;
       const popularityScore = (item.reviewCount || 0) / 100; // Normalize
       return (ratingScore * 0.4) + (categoryMatch * 0.4) + (Math.min(popularityScore, 1) * 0.2);
@@ -183,7 +208,7 @@ export class ActivityDrivenStrategy extends RecommendationStrategy {
 
     // For hotels: prioritize amenities and location
     if (item.pricePerNight !== undefined) {
-      const ratingScore = (item.rating || 3) / 5;
+      const ratingScore = ratingOf(item) / 5;
       const amenitiesScore = (item.amenities?.length || 0) / 10;
       return (ratingScore * 0.6) + (Math.min(amenitiesScore, 1) * 0.4);
     }
@@ -265,14 +290,14 @@ export class ComfortPrioritizedStrategy extends RecommendationStrategy {
   calculateScore(item, preferences) {
     // For locations: prioritize rating and less crowding
     if (item.category || item.type === 'location') {
-      const ratingScore = (item.rating || 3) / 5;
+      const ratingScore = ratingOf(item) / 5;
       const crowdScore = item.crowdLevel ? (1 - item.crowdLevel / 5) : 0.5;
       return (ratingScore * 0.7) + (crowdScore * 0.3);
     }
 
     // For hotels: prioritize rating, amenities, and room quality
     if (item.pricePerNight !== undefined) {
-      const ratingScore = (item.rating || 3) / 5;
+      const ratingScore = ratingOf(item) / 5;
       const amenitiesScore = (item.amenities?.length || 0) / 10;
       const qualityScore = item.starRating ? (item.starRating / 5) : 0.5;
       return (ratingScore * 0.5) + (Math.min(amenitiesScore, 1) * 0.3) + (qualityScore * 0.2);
@@ -280,7 +305,7 @@ export class ComfortPrioritizedStrategy extends RecommendationStrategy {
 
     // For transport: prioritize rating and comfort class
     if (item.price !== undefined) {
-      const ratingScore = (item.rating || 3) / 5;
+      const ratingScore = ratingOf(item) / 5;
       const comfortScore = item.class === 'first' || item.class === 'business' ? 1 : 0.5;
       return (ratingScore * 0.6) + (comfortScore * 0.4);
     }
@@ -337,7 +362,7 @@ export class TimeEfficientStrategy extends RecommendationStrategy {
   calculateScore(item, preferences) {
     // For hotels: prioritize central location and easy access
     if (item.pricePerNight !== undefined) {
-      const ratingScore = (item.rating || 3) / 5;
+      const ratingScore = ratingOf(item) / 5;
       const centralityScore = item.distanceFromCenter ? 
         (1 - Math.min(item.distanceFromCenter / 10, 1)) : 0.5;
       return (ratingScore * 0.4) + (centralityScore * 0.6);
@@ -369,7 +394,7 @@ export class TimeEfficientStrategy extends RecommendationStrategy {
       const cluster = clusters[clusterIndex % clusters.length];
       if (cluster && cluster.length > 0) {
         // Take highest rated from cluster
-        const best = cluster.sort((a, b) => (b.rating || 0) - (a.rating || 0))[0];
+        const best = cluster.sort((a, b) => ratingOf(b) - ratingOf(a))[0];
         selected.push(best);
         cluster.shift();
       }

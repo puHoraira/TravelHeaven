@@ -59,6 +59,8 @@ export default function ViewItinerary() {
   const [showEditDayModal, setShowEditDayModal] = useState(false);
   const [editingDayIndex, setEditingDayIndex] = useState(null);
   const [autoOpenAddStop, setAutoOpenAddStop] = useState(false);
+  const [pinsGenerating, setPinsGenerating] = useState(false);
+  const [pinsProgress, setPinsProgress] = useState(null);
 
   const normalizeId = (value) => {
     if (!value) return '';
@@ -75,6 +77,32 @@ export default function ViewItinerary() {
   };
 
   const currentUserId = normalizeId(user?._id || user?.id);
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const hasCoords = (source) => {
+    if (!source) return false;
+    const latRaw = source.latitude ?? source.lat;
+    const lngRaw = source.longitude ?? source.lng ?? source.lon;
+    const lat = typeof latRaw === 'number' ? latRaw : parseFloat(latRaw);
+    const lng = typeof lngRaw === 'number' ? lngRaw : parseFloat(lngRaw);
+    return Number.isFinite(lat) && Number.isFinite(lng);
+  };
+
+  const hasMissingMapPins = useMemo(() => {
+    if (!itinerary?.days?.length) return false;
+    for (const day of itinerary.days) {
+      for (const stop of day?.stops || []) {
+        const hasAnyRef = Boolean(stop?.locationId || stop?.hotelId || stop?.transportId);
+        const hasCustomCoords = hasCoords(stop?.customCoordinates);
+        const hasMapCoords = hasCoords(stop?.coordinates);
+        const hasName = Boolean(stop?.customName || stop?.name);
+        const isCustomLike = stop?.type === 'custom' || !hasAnyRef;
+        if (isCustomLike && hasName && !hasCustomCoords && !hasMapCoords) return true;
+      }
+    }
+    return false;
+  }, [itinerary]);
 
   const normalizeItineraryData = useCallback((rawItinerary) => {
     if (!rawItinerary) return rawItinerary;
@@ -133,6 +161,159 @@ export default function ViewItinerary() {
       days: normalizedDays,
     };
   }, []);
+
+  const geocodePlaceName = useCallback(async (rawName) => {
+    const name = String(rawName || '').trim();
+    if (!name) return null;
+
+    const destinationContext = itinerary?.destination ? `, ${itinerary.destination}` : '';
+    const queries = [
+      `${name}${destinationContext}`.trim(),
+      destinationContext ? `${name}, Bangladesh` : `${name}${destinationContext}`.trim(),
+      `${name}`.trim(),
+    ].filter(Boolean);
+
+    const fetchOne = async (query) => {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=${encodeURIComponent(query)}`;
+      const response = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!response.ok) {
+        // Nominatim can rate-limit (429) or temporarily fail (503).
+        if (response.status === 429 || response.status === 503) {
+          await sleep(1500);
+        }
+        return null;
+      }
+      const results = await response.json();
+      const first = Array.isArray(results) ? results[0] : null;
+      if (!first) return null;
+      const latitude = parseFloat(first.lat);
+      const longitude = parseFloat(first.lon);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+      return { latitude, longitude };
+    };
+
+    try {
+      for (const query of queries) {
+        const coords = await fetchOne(query);
+        if (coords) return coords;
+        await sleep(250);
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, [itinerary?.destination]);
+
+  const handleGenerateMapPins = useCallback(async () => {
+    if (!itinerary?.days?.length) {
+      toast.error('No itinerary days found');
+      return;
+    }
+
+    if (pinsGenerating) return;
+    setPinsGenerating(true);
+    setPinsProgress({ done: 0, total: 0 });
+
+    try {
+      const cache = new globalThis.Map();
+      const missing = [];
+      let resolvedCount = 0;
+
+      itinerary.days.forEach((day, dayIndex) => {
+        (day?.stops || []).forEach((stop, stopIndex) => {
+          const hasAnyRef = Boolean(stop?.locationId || stop?.hotelId || stop?.transportId);
+          const hasCustomCoords = hasCoords(stop?.customCoordinates);
+          const hasMapCoords = hasCoords(stop?.coordinates);
+          const hasName = Boolean(stop?.customName || stop?.name);
+          const isCustomLike = stop?.type === 'custom' || !hasAnyRef;
+          if (isCustomLike && hasName && !hasCustomCoords && !hasMapCoords) {
+            missing.push({ dayIndex, stopIndex, name: stop.customName || stop.name });
+          }
+        });
+      });
+
+      if (!missing.length) {
+        toast.success('No missing map pins found');
+        return;
+      }
+
+      setPinsProgress({ done: 0, total: missing.length });
+
+      const updatedDays = itinerary.days.map((day) => ({
+        dayNumber: day.dayNumber,
+        date: day.date,
+        title: day.title,
+        description: day.description,
+        stops: (day.stops || []).map((stop) => {
+          const toId = (value) => {
+            if (!value) return undefined;
+            if (typeof value === 'string') return value;
+            if (typeof value === 'object') return value._id || value.id || undefined;
+            return undefined;
+          };
+
+          return {
+            locationId: toId(stop.locationId),
+            hotelId: toId(stop.hotelId),
+            transportId: toId(stop.transportId),
+            timeOfDay: stop.timeOfDay,
+            customName: stop.customName,
+            customDescription: stop.customDescription,
+            customCoordinates: stop.customCoordinates,
+            order: stop.order,
+            notes: stop.notes,
+            estimatedCost: stop.estimatedCost,
+          };
+        }),
+      }));
+
+      for (let i = 0; i < missing.length; i++) {
+        const item = missing[i];
+        const key = String(item.name || '').trim().toLowerCase();
+
+        let coords = cache.get(key);
+        if (coords === undefined) {
+          coords = await geocodePlaceName(item.name);
+          cache.set(key, coords || null);
+          await sleep(1100);
+        }
+
+        if (coords) {
+          const targetStop = updatedDays[item.dayIndex]?.stops?.[item.stopIndex];
+          if (targetStop) {
+            targetStop.customCoordinates = {
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+            };
+            if (!targetStop.customName && item.name) {
+              targetStop.customName = item.name;
+            }
+            resolvedCount += 1;
+          }
+        }
+
+        setPinsProgress({ done: i + 1, total: missing.length });
+      }
+
+      if (resolvedCount === 0) {
+        toast.error('Could not find coordinates for any stops. Try more specific place names.');
+        return;
+      }
+
+      const updateResponse = await api.put(`/itineraries/${id}`, { days: updatedDays });
+      const updated = updateResponse?.data || updateResponse;
+      const normalizedUpdated = normalizeItineraryData(updated);
+      setItinerary(normalizedUpdated);
+
+      toast.success(`Added pins for ${resolvedCount}/${missing.length} stops`);
+    } catch (error) {
+      console.error('Failed to generate map pins:', error);
+      toast.error(error?.message || 'Failed to generate map pins');
+    } finally {
+      setPinsGenerating(false);
+      setPinsProgress(null);
+    }
+  }, [geocodePlaceName, id, itinerary, normalizeItineraryData, pinsGenerating]);
 
   const fetchItinerary = useCallback(async () => {
     try {
@@ -648,6 +829,29 @@ export default function ViewItinerary() {
               <MapPin />
               Your Journey on Map
             </h2>
+
+            {canEdit && hasMissingMapPins && (
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="text-sm text-gray-600">
+                  Missing pins detected for some stops.
+                  {pinsProgress && (
+                    <span className="ml-2 text-gray-500">
+                      ({pinsProgress.done}/{pinsProgress.total})
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="btn-primary flex items-center gap-2"
+                  onClick={handleGenerateMapPins}
+                  disabled={pinsGenerating}
+                >
+                  {pinsGenerating ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
+                  {pinsGenerating ? 'Generating Pins…' : 'Generate Map Pins'}
+                </button>
+              </div>
+            )}
+
             <div className="map-container relative z-0">
               <MapView 
                 days={itinerary.days || []} 

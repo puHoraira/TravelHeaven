@@ -725,7 +725,7 @@ const Locations = () => {
         <>
           <div className="locations-grid">
             {filteredLocations.map((location) => {
-              const coverImage = location.images?.[0]?.url;
+              const coverImage = location.images?.[0];
               const guideName = location.guideId?.profile
                 ? `${location.guideId.profile.firstName || ''} ${location.guideId.profile.lastName || ''}`.trim()
                 : location.guideId?.username;
@@ -742,7 +742,7 @@ const Locations = () => {
                   className="location-card card flex h-full flex-col gap-4 cursor-pointer hover:shadow-xl transition-shadow"
                   onClick={() => handleViewDetails(location)}
                 >
-                  {coverImage && (
+                  {getImageUrl(coverImage) ? (
                     <img
                       src={getImageUrl(coverImage)}
                       alt={location.name}
@@ -751,6 +751,13 @@ const Locations = () => {
                         e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
                       }}
                     />
+                  ) : (
+                    <div className="h-40 w-full rounded-lg bg-gray-100 flex items-center justify-center">
+                      <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
+                        <ImageIcon className="h-4 w-4" />
+                        No image
+                      </div>
+                    </div>
                   )}
                   <div className="flex flex-1 flex-col gap-3">
                     <div className="flex items-start justify-between gap-2">

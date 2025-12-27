@@ -50,6 +50,12 @@ export class RecommendationFacade {
       const availableOptions = await this.fetchAvailableOptions(preferences);
       console.log(`✅ Fetched ${availableOptions.locations.length} locations, ${availableOptions.hotels.length} hotels, ${availableOptions.transport.length} transport options`);
 
+      const availableCounts = {
+        locations: availableOptions.locations.length,
+        hotels: availableOptions.hotels.length,
+        transport: availableOptions.transport.length,
+      };
+
       // If we have no approved locations, we can't build an itinerary
       if (!availableOptions.locations || availableOptions.locations.length === 0) {
         return {
@@ -63,6 +69,12 @@ export class RecommendationFacade {
       // Step 2: Build and execute filter chain
       const filteredOptions = await this.applyFilters(availableOptions, preferences);
       console.log(`✅ Filtered to ${filteredOptions.options.locations.length} locations, ${filteredOptions.options.hotels.length} hotels, ${filteredOptions.options.transport.length} transport options`);
+
+      const filteredCounts = {
+        locations: filteredOptions?.options?.locations?.length || 0,
+        hotels: filteredOptions?.options?.hotels?.length || 0,
+        transport: filteredOptions?.options?.transport?.length || 0,
+      };
 
       // If filters remove everything, return a friendly error
       if (!filteredOptions?.options?.locations || filteredOptions.options.locations.length === 0) {
@@ -107,6 +119,10 @@ export class RecommendationFacade {
           filtersApplied: filteredOptions.filterChain || [],
           strategyUsed: recommendations.strategy,
           enhancements: preferences.enhancements || [],
+          counts: {
+            available: availableCounts,
+            filtered: filteredCounts,
+          },
         },
       };
     } catch (error) {
@@ -519,8 +535,10 @@ export class RecommendationFacade {
       recommendations: comparisons.map((rec, idx) => ({
         strategy: strategies[idx],
         summary: rec.summary,
-        cost: rec.itinerary?.estimatedCost || 0,
+        ok: Boolean(rec?.success),
+        cost: rec?.summary?.totalCost || 0,
         destinationCount: rec.itinerary?.destinations?.length || 0,
+        error: rec?.error || null,
       })),
     };
   }

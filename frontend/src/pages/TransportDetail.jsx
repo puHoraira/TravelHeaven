@@ -33,6 +33,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../lib/api';
+import { getImageUrlFromMixed } from '../lib/media';
 
 const TransportIcon = ({ type, className = "h-5 w-5" }) => {
   const icons = {
@@ -76,14 +77,7 @@ const TransportDetail = () => {
     }
   }, [id, navigate]);
 
-  const getImageUrl = (image) => {
-    if (!image) return null;
-    if (typeof image === 'string') return image;
-    if (image.file?._id) return `http://localhost:5000/api/files/${image.file._id}`;
-    if (image.file) return `http://localhost:5000/api/files/${image.file}`;
-    if (image._id) return `http://localhost:5000/api/files/${image._id}`;
-    return null;
-  };
+  const getImageUrl = (image) => getImageUrlFromMixed(image);
 
   const facilityIcons = {
     ac: Wind,

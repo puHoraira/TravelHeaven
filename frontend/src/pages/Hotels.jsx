@@ -2,6 +2,7 @@ import {
   Building2,
   DollarSign,
   Globe,
+  Image as ImageIcon,
   Mail,
   MapPin,
   Phone,
@@ -13,6 +14,7 @@ import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
+import { getImageUrlFromMixed } from '../lib/media';
 import './Hotels.css';
 
 const formatPriceRange = (priceRange) => {
@@ -158,7 +160,7 @@ const Hotels = () => {
         <>
           <div className="hotels-grid">
             {filteredHotels.map((hotel) => {
-              const coverImage = hotel.images?.[0]?.url;
+              const coverImage = getImageUrlFromMixed(hotel.images?.[0]);
               const city = hotel.address?.city || hotel.locationId?.city;
               const country = hotel.address?.country || hotel.locationId?.country;
               const approvalStatus = hotel.approvalStatus;
@@ -170,15 +172,25 @@ const Hotels = () => {
 
               return (
                 <div key={hotel._id} className="hotel-card card flex h-full flex-col gap-4">
-                  {coverImage && (
-                    <Link to={`/hotels/${hotel._id}`}>
+                  <Link to={`/hotels/${hotel._id}`}>
+                    {coverImage ? (
                       <img
                         src={coverImage}
                         alt={hotel.name}
                         className="h-40 w-full rounded-lg object-cover hover:opacity-95"
+                        onError={(e) => {
+                          e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+                        }}
                       />
-                    </Link>
-                  )}
+                    ) : (
+                      <div className="h-40 w-full rounded-lg bg-gray-100 flex items-center justify-center">
+                        <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
+                          <ImageIcon className="h-4 w-4" />
+                          No image
+                        </div>
+                      </div>
+                    )}
+                  </Link>
 
                   <div className="flex flex-1 flex-col gap-3">
                     <div className="flex items-start justify-between gap-3">

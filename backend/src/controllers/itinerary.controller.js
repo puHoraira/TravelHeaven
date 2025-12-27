@@ -131,6 +131,16 @@ const normalizeAiPlan = (plan) => {
   const startDate = p.startDate ? new Date(p.startDate) : null;
   const endDate = p.endDate ? new Date(p.endDate) : null;
 
+  const normalizeCoordinate = (source) => {
+    if (!source) return null;
+    const latValue = source.lat ?? source.latitude;
+    const lngValue = source.lng ?? source.longitude;
+    const lat = typeof latValue === 'number' ? latValue : parseFloat(latValue);
+    const lng = typeof lngValue === 'number' ? lngValue : parseFloat(lngValue);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return { latitude: lat, longitude: lng };
+    return null;
+  };
+
   const days = Array.isArray(p.days) ? p.days : [];
   const normalizedDays = days
     .map((d, idx) => {
@@ -144,6 +154,10 @@ const normalizeAiPlan = (plan) => {
           timeOfDay: (a.time_of_day || a.timeOfDay || '').toString(),
           customName: (a.place_name || a.placeName || a.customName || '').toString(),
           customDescription: (a.description || a.customDescription || '').toString(),
+          customCoordinates:
+            normalizeCoordinate(a.customCoordinates)
+            || normalizeCoordinate(a.coordinates)
+            || undefined,
           order: aIdx,
         }))
         .filter((s) => s.customName);

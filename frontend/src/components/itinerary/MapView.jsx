@@ -139,7 +139,12 @@ function FitBounds({ positions }) {
   
   useEffect(() => {
     if (positions && positions.length > 0) {
-      const validPositions = positions.filter(pos => pos && pos[0] && pos[1]);
+      const validPositions = positions.filter(
+        (pos) => Array.isArray(pos)
+          && pos.length === 2
+          && Number.isFinite(pos[0])
+          && Number.isFinite(pos[1])
+      );
       if (validPositions.length > 0) {
         const bounds = L.latLngBounds(validPositions);
         map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
@@ -149,6 +154,18 @@ function FitBounds({ positions }) {
   
   return null;
 }
+
+const readLatLng = (source) => {
+  if (!source) return null;
+
+  const latRaw = source.latitude ?? source.lat;
+  const lngRaw = source.longitude ?? source.lng ?? source.lon;
+  const lat = typeof latRaw === 'number' ? latRaw : parseFloat(latRaw);
+  const lng = typeof lngRaw === 'number' ? lngRaw : parseFloat(lngRaw);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+};
 
 /**
  * MapView Component - Interactive map display for itinerary stops
@@ -187,39 +204,47 @@ export default function MapView({
           let lat, lng, name, description, type;
 
           // Check if it's a location with coordinates
-          if (stop.locationId?.coordinates?.latitude && stop.locationId?.coordinates?.longitude) {
-            lat = stop.locationId.coordinates.latitude;
-            lng = stop.locationId.coordinates.longitude;
+          const locationCoords = readLatLng(stop.locationId?.coordinates);
+          if (locationCoords) {
+            lat = locationCoords.lat;
+            lng = locationCoords.lng;
             name = stop.locationId.name;
             description = stop.locationId.description;
             type = 'location';
           }
           // Check if it's a hotel with coordinates
-          else if (stop.hotelId?.coordinates?.latitude && stop.hotelId?.coordinates?.longitude) {
-            lat = stop.hotelId.coordinates.latitude;
-            lng = stop.hotelId.coordinates.longitude;
+          else {
+            const hotelCoords = readLatLng(stop.hotelId?.coordinates);
+            if (hotelCoords) {
+              lat = hotelCoords.lat;
+              lng = hotelCoords.lng;
             name = stop.hotelId.name;
             description = stop.hotelId.description;
             type = 'hotel';
-          }
-          // Check for custom coordinates
-          else if (stop.customCoordinates?.latitude && stop.customCoordinates?.longitude) {
-            lat = stop.customCoordinates.latitude;
-            lng = stop.customCoordinates.longitude;
-            name = stop.customName || 'Custom Stop';
-            description = stop.customDescription || stop.notes;
-            type = 'custom';
-          }
-          // Legacy coordinate format (lat/lng)
-          else if (stop.coordinates?.lat && stop.coordinates?.lng) {
-            lat = stop.coordinates.lat;
-            lng = stop.coordinates.lng;
-            name = stop.name || 'Stop';
-            description = stop.notes;
-            type = stop.type || 'custom';
+            } else {
+              // Check for custom coordinates (supports latitude/longitude, lat/lng, lat/lon)
+              const customCoords = readLatLng(stop.customCoordinates);
+              if (customCoords) {
+                lat = customCoords.lat;
+                lng = customCoords.lng;
+                name = stop.customName || stop.name || 'Custom Stop';
+                description = stop.customDescription || stop.notes;
+                type = stop.type || 'custom';
+              } else {
+                // Legacy coordinate format (lat/lng)
+                const legacyCoords = readLatLng(stop.coordinates);
+                if (legacyCoords) {
+                  lat = legacyCoords.lat;
+                  lng = legacyCoords.lng;
+                  name = stop.name || stop.customName || 'Stop';
+                  description = stop.notes;
+                  type = stop.type || 'custom';
+                }
+              }
+            }
           }
 
-          if (lat && lng) {
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
             const position = [lat, lng];
             allPositions.push(position);
             route.push(position);
@@ -242,12 +267,12 @@ export default function MapView({
     });
   } else {
     // Legacy flat stops array
-    const validStops = stops.filter(
-      stop => stop.coordinates?.lat && stop.coordinates?.lng
-    );
+    const validStops = stops.filter((stop) => Boolean(readLatLng(stop?.coordinates) || readLatLng(stop?.customCoordinates)));
     
     validStops.forEach((stop, index) => {
-      const position = [stop.coordinates.lat, stop.coordinates.lng];
+      const coords = readLatLng(stop.coordinates) || readLatLng(stop.customCoordinates);
+      if (!coords) return;
+      const position = [coords.lat, coords.lng];
       allPositions.push(position);
       route.push(position);
       

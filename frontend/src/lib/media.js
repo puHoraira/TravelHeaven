@@ -21,6 +21,11 @@ export const getFileUrl = (fileIdOrPath) => {
     return fileIdOrPath;
   }
 
+  // Data/blob URLs (client-side previews)
+  if (typeof fileIdOrPath === 'string' && (fileIdOrPath.startsWith('data:') || fileIdOrPath.startsWith('blob:'))) {
+    return fileIdOrPath;
+  }
+
   // If it is already a /api/files/... path
   if (typeof fileIdOrPath === 'string' && fileIdOrPath.startsWith('/api/')) {
     return `${API_BASE}${fileIdOrPath}`;
@@ -38,10 +43,22 @@ export const getFileUrl = (fileIdOrPath) => {
 export const getImageUrlFromMixed = (image) => {
   if (!image) return null;
 
+  // Common direct URL shape
+  if (typeof image === 'object' && typeof image.url === 'string') {
+    return getFileUrl(image.url);
+  }
+
+  // Common direct path shape
+  if (typeof image === 'object' && typeof image.path === 'string') {
+    return getFileUrl(image.path);
+  }
+
   // MongoDB file reference objects
   if (typeof image === 'object' && image.file) {
     const file = image.file;
-    const fileId = typeof file === 'object' ? (file._id || file.id) : file;
+    const fileId = typeof file === 'object'
+      ? (file._id || file.id || file.toString?.())
+      : file;
     return getFileUrl(fileId);
   }
 

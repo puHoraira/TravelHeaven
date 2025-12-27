@@ -25,6 +25,8 @@ import TrainList from './pages/TrainList';
 import Profile from './pages/Profile';
 import Guides from './pages/Guides';
 import GuideProfile from './pages/GuideProfile';
+import Messages from './pages/Messages';
+import ChatWindow from './pages/ChatWindow';
 
 // Role-specific pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -91,6 +93,8 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/guides" element={<Guides />} />
           <Route path="/guides/:id" element={<GuideProfile />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/chat/:userId" element={<ChatWindow />} />
 
           {/* Admin Dashboard - BIG DOMAIN for control */}
           <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />

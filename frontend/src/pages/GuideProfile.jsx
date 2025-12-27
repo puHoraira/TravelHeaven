@@ -175,6 +175,19 @@ const GuideProfile = () => {
                 </p>
               )}
 
+              {/* Action Buttons */}
+              {user && user._id !== guide._id && (
+                <div className="mb-6">
+                  <button
+                    onClick={() => navigate(`/chat/${guide._id}`)}
+                    className="bg-white text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-xl font-semibold shadow-lg transition flex items-center gap-2"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    Chat with {guide.profile?.firstName || guide.username}
+                  </button>
+                </div>
+              )}
+
               {/* Quick Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30">

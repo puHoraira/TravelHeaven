@@ -6,6 +6,7 @@ import AdminNav from './AdminNav';
 import GuideNav from './GuideNav';
 import UserNav from './UserNav';
 import NotificationBell from './NotificationBell';
+import MessageIcon from './MessageIcon';
 
 const Layout = () => {
   const { user, token, logout, getCurrentUser } = useAuthStore((state) => ({
@@ -55,6 +56,7 @@ const Layout = () => {
 
             <div className="flex items-center gap-4">
               <NotificationBell />
+              <MessageIcon />
 
               <Link to="/profile" className={navLinkClass('/profile')}>
                 {user?.profile?.avatar ? (

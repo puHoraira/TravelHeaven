@@ -21,6 +21,7 @@ import railwayRoutes from './routes/railway.routes.js';
 import recommendationRoutes from './routes/recommendation.routes.js';
 import fileRoutes from './routes/file.routes.js';
 import suggestionRoutes from './routes/suggestion.routes.js';
+import messageRoutes from './routes/message.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,6 +55,7 @@ app.use('/api/railway', railwayRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/suggestions', suggestionRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
